@@ -1,2 +1,8 @@
 # nnmbot
-Telegram Bot for filter films from NNMCLUB channel
+Telegram Bot for filter films from NNMCLUB channel <br> <br>
+Скрипрт на Python прослушивает Телеграм канал NNNMCLUB и пересылает сообщения  
+только о фильмах на ваш личный канал. <br> 
+Также получает Описание с сайта nnmclub и рейтинг фильма с Кинопоиска и Imdb.<br>
+Ведет локальную базу данных о пересланных сообщениях.<br>
+Исключает из пересылки повторяющиеся фильмы.<br>
+
