@@ -32,9 +32,6 @@ Id=["Название:", "Производство:", "Жанр:", "Режисс
     "Перевод:","Язык озвучки:", "Субтитры:", "Видео:", "Аудио 1:",
     "Аудио 2:", "Аудио 3:", "Скриншоты:", "Время раздачи:"]
 
-#url="https://nnmclub.to/forum/viewtopic.php?t=1695313"
-#url="https://nnmclub.to/forum/viewtopic.php?t=1695055"
-
 url = post_body = rating_url = []
 mydict = {}
 #k = v = ""
