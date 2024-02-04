@@ -183,12 +183,6 @@ async def normal_handler(event):
        print("Not exist in db - add, and send",id_nnm)
        db_add_film( connection, cursor, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
        await client.send_message(PeerChannel(chat_my),msg,parse_mode = 'html')
-
-    #cursor.execute('SELECT * FROM Films')
-    #tasks = cursor.fetchall()
-    #for task in tasks:
-    #    print(task)
-    
     #------End work with Database -----
 
 
