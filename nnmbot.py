@@ -43,39 +43,43 @@ def db_init( connection, cursor ):
     connection.commit()
 
 def db_add_film( connection, cursor, id_nnm, nnm_url, name, id_kpsk, id_imdb ):
-    
+    ''' Add new Film to database '''
     cur_date=datetime.now()
     cursor.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, date) VALUES(?, ?, ?, ?, ?, ?)",\
     (id_nnm, nnm_url, name, id_kpsk, id_imdb, cur_date))
     connection.commit()
 
 def db_exist_Id( cursor, id_kpsk, id_imdb ):
-
+    ''' Test exist Film in database '''
     cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk,id_imdb))
     return cursor.fetchone()
 
 def db_switch_download( cursor, id_nnm, download):
+    ''' Set tag in database for download film late '''
     cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?", (download,id_nnm))
     connection.commit()
 
 
-def db_list_data( cursor ):
-
+def db_list_all( cursor ):
+    ''' List all database '''
     cursor.execute('SELECT  * FROM Films')
-    tasks = cursor.fetchall()    
-    return tasks
-
-def db_list_download( cursor, download ):
-    cursor.execute("SELECT name,nnm_url FROM Films WHERE download = ?", (download,) )
-    rows = cursor.fetchall()
-    #for ddd in down_d:
-    #  print(ddd)
-    #down_list = [list(row) for row in rows]
+    rows = cursor.fetchall()    
     return rows
 
+def db_list_download( cursor, download ):
+    ''' List only records with set tag download '''
+    cursor.execute("SELECT name,nnm_url FROM Films WHERE download = ?", (download,) )
+    rows = cursor.fetchall()
+    #for row in rows:
+    #  print(dict(row))
+    return rows
 
+def db_clear_download( cursor, download ):
+    ''' List only records with set tag download '''
+    cursor.execute("UPDATE Films SET download=?", (download,))
+    connection.commit()
 
-
+# Connect to Telegram
 if USE_PROXY client = TelegramClient(session_name, api_id, api_hash,system_version,proxies=proxies).start(bot_token=mybot_token):
 else
 client = TelegramClient(session_name, api_id, api_hash,system_version).start(bot_token=mybot_token)
@@ -83,8 +87,44 @@ client = TelegramClient(session_name, api_id, api_hash,system_version).start(bot
 
 
 connection = sqlite3.connect(db_name)
+connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 db_init(connection,cursor)
+
+#Get reaction user
+@client.on(events.CallbackQuery())
+async def callback(event):
+    #if not event.via_inline:       
+      # Tag Film for download and clear buttons       
+      db_switch_download( cursor, event.data.decode(), 1)      
+     # await client.edit_message(event.sender_id, event.message_id,buttons=Button.clear())      
+    #else:
+     # pass
+
+#Parse My channel for command 
+@client.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern='^/.*'))
+async def normal_handler(event):
+    #print(event.message)
+    msg=event.message
+    if event.data == '/dblist':
+       # Get all database, Use with carefully may be many records
+       rows = db_list_all( cursor )
+       for row in rows:
+        #print(dict(row))        
+        message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
+        await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)       
+    elif event.data == '/dwlist':
+       # Get films tagget for download
+       rows = db_list_download( cursor, 1 )
+       for row in rows:
+        #print(dict(row))        
+        message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
+        await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+    elif event.data == '/dwclear':
+       # Clear all tag for download
+       db_clear_download( cursor, 0 )
+    else
+       # send help
 
 #Parse channel NNMCLUB for Films 
 @client.on(events.NewMessage(chats = [PeerChannel(channelId)],pattern='(?:.*Фильм.*)|(?:.*Новинки.*)'))
@@ -186,7 +226,7 @@ async def normal_handler(event):
 
 
     msg.message=msg.message+film_add_info
-    #await client.forward_messages(PeerChat(chat_my), event.message)
+    #await client.forward_messages(PeerChat(My_channelId), event.message)
     
     #------ work with Database -------
     if db_exist_Id(cursor,id_kpsk,id_imdb):
@@ -194,7 +234,7 @@ async def normal_handler(event):
     else:
        print("Not exist in db - add, and send",id_nnm)
        db_add_film( connection, cursor, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
-       await client.send_message(PeerChat(chat_my),film_add_info,parse_mode='md',
+       await client.send_message(PeerChannel(My_channelId),film_add_info,parse_mode='md',
                                  buttons=[ Button.inline('Add to DB', id_nnm),])
     #------End work with Database -----
 
