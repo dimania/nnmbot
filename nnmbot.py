@@ -11,20 +11,8 @@ import requests
 import re
 import sqlite3
 
-#---------------- basic vars --------
-api_id = <YOUR API ID>
-api_hash = <YOU API HASH>
-system_version = "0.2-nnmbot"
+import myconfig.py
 
-channelId = -1001776763737 # channel what monitor
-chat_my =   <-1008769769990> # You channel  where send
-
-db_name = 'my_database.db'
-
-proxies = {
-  "http": "socks5://127.0.0.1:1080",
-  "https": "socks5://127.0.0.1:1080",
-}
 
 #-------------- addition info vars
 Id=["Название:", "Производство:", "Жанр:", "Режиссер:",
@@ -48,7 +36,8 @@ def db_init( connection, cursor ):
     name TEXT,
     id_kpsk TEXT,
     id_imdb TEXT,
-    date TEXT
+    date TEXT,
+    download INT 
     )
     ''')
     connection.commit()
@@ -65,9 +54,32 @@ def db_exist_Id( cursor, id_kpsk, id_imdb ):
     cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk,id_imdb))
     return cursor.fetchone()
 
+def db_switch_download( cursor, id_nnm, download):
+    cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?", (download,id_nnm))
+    connection.commit()
 
 
-client = TelegramClient('session_tele_client2', api_id, api_hash,system_version="0.2-dmabot")
+def db_list_data( cursor ):
+
+    cursor.execute('SELECT  * FROM Films')
+    tasks = cursor.fetchall()    
+    return tasks
+
+def db_list_download( cursor, download ):
+    cursor.execute("SELECT name,nnm_url FROM Films WHERE download = ?", (download,) )
+    rows = cursor.fetchall()
+    #for ddd in down_d:
+    #  print(ddd)
+    #down_list = [list(row) for row in rows]
+    return rows
+
+
+
+
+if USE_PROXY client = TelegramClient(session_name, api_id, api_hash,system_version,proxies=proxies).start(bot_token=mybot_token):
+else
+client = TelegramClient(session_name, api_id, api_hash,system_version).start(bot_token=mybot_token)
+
 
 
 connection = sqlite3.connect(db_name)
@@ -182,7 +194,8 @@ async def normal_handler(event):
     else:
        print("Not exist in db - add, and send",id_nnm)
        db_add_film( connection, cursor, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
-       await client.send_message(PeerChannel(chat_my),msg,parse_mode = 'html')
+       await client.send_message(PeerChat(chat_my),film_add_info,parse_mode='md',
+                                 buttons=[ Button.inline('Add to DB', id_nnm),])
     #------End work with Database -----
 
 
