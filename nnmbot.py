@@ -80,9 +80,10 @@ def db_clear_download( cursor, download ):
     connection.commit()
 
 # Connect to Telegram
-if USE_PROXY client = TelegramClient(session_name, api_id, api_hash,system_version,proxies=proxies).start(bot_token=mybot_token):
-else
-client = TelegramClient(session_name, api_id, api_hash,system_version).start(bot_token=mybot_token)
+if USE_PROXY: 
+    client = TelegramClient(session_name, api_id, api_hash,system_version,proxies=proxies).start(bot_token=mybot_token)
+else:
+    client = TelegramClient(session_name, api_id, api_hash,system_version).start(bot_token=mybot_token)
 
 
 
@@ -123,7 +124,7 @@ async def normal_handler(event):
     elif event.data == '/dwclear':
        # Clear all tag for download
        db_clear_download( cursor, 0 )
-    else
+    else:
        # send help
        message="Use command:\n/dblist - list all records (carefully!)\n/dwlist - list films tagget for download\n/dwclear - clear tagget films"
        await client.send_message(PeerChannel(My_channelId),message,parse_mode='html')
