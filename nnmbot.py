@@ -5,6 +5,7 @@
 
 from telethon import TelegramClient, sync, events
 from telethon.tl.types import PeerChat, PeerChannel, MessageEntityTextUrl 
+from telethon.tl.custom import Button
 from datetime import datetime, date, time, timezone
 from bs4 import BeautifulSoup
 import requests
@@ -118,9 +119,9 @@ print(proxies)
 
 # Connect to Telegram
 if use_proxy: 
-    client = TelegramClient(session_name, api_id, api_hash, system_version, proxies=proxies).start(bot_token=mybot_token)
+    client = TelegramClient(session_name, api_id, api_hash, system_version=system_version, proxies=proxies).start(bot_token=mybot_token)
 else:
-    client = TelegramClient(session_name, api_id, api_hash, system_version).start(bot_token=mybot_token)
+    client = TelegramClient(session_name, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)
 
 
 connection = sqlite3.connect(db_name)
@@ -143,25 +144,26 @@ async def callback(event):
 async def normal_handler(event):
     #print(event.message)
     msg=event.message
-    if event.data == '/dblist':
+    if msg.message == '/dblist':
        # Get all database, Use with carefully may be many records
        rows = db_list_all( cursor )
        for row in rows:
           #print(dict(row))        
           message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
           await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)       
-    elif event.data == '/dwlist':
+    elif msg.message == '/dwlist':
        # Get films tagget for download
        rows = db_list_download( cursor, 1 )
        for row in rows:
         #print(dict(row))        
           message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
           await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
-    elif event.data == '/dwclear':
+    elif msg.message == '/dwclear':
        # Clear all tag for download
        db_clear_download( cursor, 0 )
     else:
        # send help
+       print(msg)
        message="Use command:\n/dblist - list all records (carefully!)\n/dwlist - list films tagget for download\n/dwclear - clear tagget films"
        await client.send_message(PeerChannel(My_channelId),message,parse_mode='html')
        

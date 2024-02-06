@@ -1,3 +1,4 @@
 myconfig.py
 my_database.db
+*.sesssion
 test/*

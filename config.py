@@ -16,6 +16,6 @@ proxies = {
   "https": "socks5://127.0.0.1:1080",
 }
 
-USE_PROXY = 0 # if use proxy set to 1
+use_proxy = 0 # if use proxy set to 1
 
 
