@@ -11,7 +11,8 @@ import requests
 import re
 import sqlite3
 
-import myconfig.py
+#load config file
+import myconfig
 
 
 #-------------- addition info vars
@@ -25,8 +26,32 @@ mydict = {}
 #k = v = ""
 #--------------------
 
-def db_init( connection, cursor ):
+
+def get_config( config ):
+    ''' set global variable from included config.py - import config directive''' 
+    global api_id
+    global api_hash
+    global mybot_token
+    global system_version
+    global session_name
+    global channelId
+    global My_channelId
+    global db_name
+    global proxies
+    global use_proxy
+    api_id         =  config.api_id
+    api_hash       =  config.api_hash
+    mybot_token    =  config.mybot_token
+    system_version =  config.system_version
+    session_name   =  config.session_name
+    channelId      =  config.channelId
+    My_channelId   =  config.My_channelId
+    db_name        =  config.db_name
+    proxies        =  config.proxies
+    use_proxy      =  config.use_proxy
     
+def db_init( connection, cursor ):
+    ''' Initialize database '''
     # Создаем таблицу Films
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS Films (
@@ -59,7 +84,6 @@ def db_switch_download( cursor, id_nnm, download):
     cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?", (download,id_nnm))
     connection.commit()
 
-
 def db_list_all( cursor ):
     ''' List all database '''
     cursor.execute('SELECT  * FROM Films')
@@ -79,12 +103,24 @@ def db_clear_download( cursor, download ):
     cursor.execute("UPDATE Films SET download=?", (download,))
     connection.commit()
 
-# Connect to Telegram
-if USE_PROXY: 
-    client = TelegramClient(session_name, api_id, api_hash,system_version,proxies=proxies).start(bot_token=mybot_token)
-else:
-    client = TelegramClient(session_name, api_id, api_hash,system_version).start(bot_token=mybot_token)
+# main()
 
+# !!! Correct parameter as in import derective above!
+get_config(myconfig)
+print(use_proxy)
+print(system_version)
+print(api_id)
+print(api_hash)
+print(session_name)
+print(mybot_token)
+print(proxies)
+#exit(0)
+
+# Connect to Telegram
+if use_proxy: 
+    client = TelegramClient(session_name, api_id, api_hash, system_version, proxies=proxies).start(bot_token=mybot_token)
+else:
+    client = TelegramClient(session_name, api_id, api_hash, system_version).start(bot_token=mybot_token)
 
 
 connection = sqlite3.connect(db_name)
