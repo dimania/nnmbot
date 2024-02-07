@@ -175,7 +175,7 @@ async def normal_handler(event):
 
     #Get URL nnmclub page with Film
     for url_entity, inner_text in msg.get_entities_text(MessageEntityTextUrl):
-        if re.search(r'viewtopic.php?t', url_entity.url):
+        if re.search(r'viewtopic.php\?t', url_entity.url):
            url = url_entity.url
            #print(url)
 
