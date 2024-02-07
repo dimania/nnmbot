@@ -2,3 +2,4 @@ myconfig.py
 my_database.db
 *.sesssion
 test/*
+__pycache__/*
