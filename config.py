@@ -11,6 +11,7 @@ My_channelId = <CYANNEL_ID> # channel or chat where send by example -10033333333
 db_name = 'database.db'  # database name, better set full path
 
 # if use proxy set here 
+# http required - use for set TelegramClient proxy parameter
 proxies = {
   "http": "socks5://127.0.0.1:1080",
   "https": "socks5://127.0.0.1:1080",

@@ -108,19 +108,13 @@ def db_clear_download( cursor, download ):
 
 # !!! Correct parameter as in import derective above!
 get_config(myconfig)
-print(use_proxy)
-print(system_version)
-print(api_id)
-print(api_hash)
-print(session_name)
-print(mybot_token)
-print(proxies)
-#exit(0)
 
 # Connect to Telegram
-if use_proxy: 
-    client = TelegramClient(session_name, api_id, api_hash, system_version=system_version, proxies=proxies).start(bot_token=mybot_token)
+if use_proxy:
+    prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))    
+    client = TelegramClient(session_name, api_id, api_hash, system_version=system_version, proxy=(prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=mybot_token)
 else:
+    proxies = None
     client = TelegramClient(session_name, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)
 
 
@@ -133,7 +127,11 @@ db_init(connection,cursor)
 @client.on(events.CallbackQuery())
 async def callback(event):
     #if not event.via_inline:       
-      # Tag Film for download and clear buttons       
+      # Tag Film for download and clear buttons
+      #print(event.data)
+      #print("----")
+      #print(event.get_message()) 
+      #print("----")
       db_switch_download( cursor, event.data.decode(), 1)      
       await client.edit_message(event.sender_id, event.message_id,buttons=Button.clear())      
     #else:
@@ -177,27 +175,27 @@ async def normal_handler(event):
 
     #Get URL nnmclub page with Film
     for url_entity, inner_text in msg.get_entities_text(MessageEntityTextUrl):
-        if re.search("viewtopic.php\?t", url_entity.url):
+        if re.search(r'viewtopic.php?t', url_entity.url):
            url = url_entity.url
            #print(url)
 
     #if URL exist get additional info for film
     if url:
-       page = requests.get(url)
+       page = requests.get(url,proxies=proxies)
 
        if page.status_code != 200: return
 
        # Parse data
-       soup = BeautifulSoup(page.text, "html.parser")
+       soup = BeautifulSoup(page.text, 'html.parser')
 
        # Select data where class - postbody
-       post_body=soup.find(class_="postbody")
+       post_body=soup.find(class_='postbody')
        text=post_body.get_text('\n', strip='True')
 
        # Get url picture with rating Film on Kinopoisk site 
        for a_hr in post_body.find_all(class_='postImg'):
            rat=a_hr.get('title')
-           if re.search("www.kinopoisk.ru/rating",rat):
+           if re.search('www.kinopoisk.ru/rating',rat):
               rating_url=rat
 
        k=Id[0]
@@ -208,7 +206,7 @@ async def normal_handler(event):
         if not line.strip():     
           continue    
         else: 
-          if re.search(":$",line):
+          if re.search(':$',line):
             k=line
             v=""
           elif k != "":
@@ -229,40 +227,40 @@ async def normal_handler(event):
            rat=a_hr.get('href')
            if rat.find('https://www.kinopoisk.ru/film/') != -1:
               id_kpsk=re.search("film/(.+?)/", rat).group(1)
-              kpsk_url="https://rating.kinopoisk.ru/"+id_kpsk+".xml"
+              kpsk_url='https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
            elif rat.find('https://www.imdb.com/title/') != -1:
-              id_imdb=re.search("title/(.+?)/", rat).group(1)
-              imdb_url=rat.replace("?ref_=plg_rt_1","ratings/?ref_=tt_ov_rt")
+              id_imdb=re.search('title/(.+?)/', rat).group(1)
+              imdb_url=rat.replace('?ref_=plg_rt_1','ratings/?ref_=tt_ov_rt')
            
-       id_nnm=re.search("viewtopic.php.t=(.+?)$",url).group(1)
+       id_nnm=re.search('viewtopic.php.t=(.+?)$',url).group(1)
        #print("kpsId=",id_kpsk,"\nimdbId=",id_imdb,"\nnnmbId=",id_nnm)
               
        # Get rating film from kinopoisk if not then from imdb site
        if kpsk_url:
           rat_url=kpsk_url
-          page = requests.get(rat_url,headers={'User-Agent': 'Mozilla/5.0'})
+          page = requests.get(rat_url,headers={'User-Agent': 'Mozilla/5.0'},proxies=proxies)
           # Parse data
-          soup = BeautifulSoup(page.text, "html.parser")
+          soup = BeautifulSoup(page.text, 'html.parser') #BUG me be better use xml.parser ?
           try:
            rating_xml=soup.find('rating')
            kpsk_r=rating_xml.find('kp_rating').get_text('\n', strip='True')
            imdb_r=rating_xml.find('imdb_rating').get_text('\n', strip='True')
           except:
-           print("Get kinopoisk rating error.")
+           print('Get kinopoisk rating error.')
        elif imdb_url:
           rat_url=imdb_url
-          page = requests.get(rat_url,headers={'User-Agent': 'Mozilla/5.0'})
+          page = requests.get(rat_url,headers={'User-Agent': 'Mozilla/5.0'},proxies=proxies)
           #print(page.status_code)
           # Parse data
-          soup = BeautifulSoup(page.text, "html.parser")
-          post_body=soup.find(class_="sc-5931bdee-1 gVydpF")
+          soup = BeautifulSoup(page.text, 'html.parser')
+          post_body=soup.find(class_='sc-5931bdee-1 gVydpF')
           imdb_r=post_body.get_text('\n', strip='True')
        else:
           kpsk_r="-"
           imdb_r="-"
 
     #film_add_info = "\n<b>Рейтинг:</b> КП[ "+kpsk_r+" ] Imdb[ "+imdb_r+" ]\n<b>"+Id[2]+"</b> "+mydict.get(Id[2])+"\n<b>"+Id[5]+"</b>\n"+mydict.get(Id[5])  
-    film_add_info = "\n________________\n"+\
+    film_add_info = "\n_________________________________\n"+\
                     "Рейтинг: КП[ "+kpsk_r+" ] Imdb[ "+imdb_r+" ]\n"+\
                     Id[2]+mydict.get(Id[2])+"\n"+\
                     Id[5]+"\n"+mydict.get(Id[5])  
@@ -270,14 +268,14 @@ async def normal_handler(event):
 
     msg.message=msg.message+film_add_info
     #await client.forward_messages(PeerChat(My_channelId), event.message)
-    
+    #print(msg.message)
     #------ work with Database -------
     if db_exist_Id(cursor,id_kpsk,id_imdb):
-       print("Exist in db - no add, and no send",id_nnm)
+       print('Exist in db - no add, and no send',id_nnm)
     else:
-       print("Not exist in db - add, and send",id_nnm)
+       print('Not exist in db - add, and send',id_nnm)
        db_add_film( connection, cursor, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
-       await client.send_message(PeerChannel(My_channelId),film_add_info,parse_mode='md',
+       await client.send_message(PeerChannel(My_channelId),msg,parse_mode='md',
                                  buttons=[ Button.inline('Add to DB', id_nnm),])
     #------End work with Database -----
 
@@ -285,5 +283,5 @@ async def normal_handler(event):
 
 client.start()
 client.run_until_disconnected()
-print("End.")
+print('End.')
 connection.close()
