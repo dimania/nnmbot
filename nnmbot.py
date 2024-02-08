@@ -128,16 +128,36 @@ db_init(connection,cursor)
 #Get reaction user
 @client.on(events.CallbackQuery())
 async def callback(event):
-    #if not event.via_inline:       
-      # Tag Film for download and clear buttons
-      #print(event.data)
-      #print("----")
-      #print(event.get_message()) 
-      #print("----")
-      db_switch_download( cursor, event.data.decode(), 1)      
-      await client.edit_message(event.sender_id, event.message_id,buttons=Button.clear())      
-    #else:
-     # pass
+     button_data=event.data.decode()
+     
+     if button_data ==  == '/dblist':
+       # Get all database, Use with carefully may be many records
+       rows = db_list_all( cursor )
+       for row in rows:
+          #print(dict(row))        
+          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
+          await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+     elif button_data == '/dwlist':
+       # Get films tagget for download
+       rows = db_list_download( cursor, 1 )
+       for row in rows:
+        #print(dict(row))        
+          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
+          await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+     elif button_data == '/dwclear':
+       # Clear all tag for download
+       db_clear_download( cursor, 0 )    
+     else      
+      #if not event.via_inline:       
+       # Tag Film for download and clear buttons
+       #print(event.data)
+       #print("----")
+       #print(event.get_message()) 
+       #print("----")
+       db_switch_download( cursor, button_data, 1)      
+       await client.edit_message(event.sender_id, event.message_id,buttons=Button.clear())      
+      #else:
+      # pass
 
 #Parse My channel for command 
 @client.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern='^/.*'))
@@ -161,9 +181,21 @@ async def normal_handler(event):
     elif msg.message == '/dwclear':
        # Clear all tag for download
        db_clear_download( cursor, 0 )
+    elif msg.message == 'm':
+       # show menu 
+       keyboard = [
+           [  
+             Button.inline("List All DB", b"/dblist"), 
+             Button.inline("List Films tagget", b"/dwlist")
+           ],
+           [
+             Button.inline("Clear Films tagget", b"/dwclear")
+           ]
+       ]
+       await client.send_message(PeerChannel(My_channelId), "Меню:", buttons=keyboard)    
     else:
        # send help
-       print(msg)
+       print(msg)       
        message="Use command:\n/dblist - list all records (carefully!)\n/dwlist - list films tagget for download\n/dwclear - clear tagget films"
        await client.send_message(PeerChannel(My_channelId),message,parse_mode='html')
        
