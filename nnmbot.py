@@ -109,6 +109,7 @@ def db_clear_download( cursor, download ):
 # !!! Correct parameter as in import derective above!
 get_config(myconfig)
 
+
 # Connect to Telegram
 if use_proxy:
     prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))    
@@ -122,6 +123,7 @@ connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 db_init(connection,cursor)
+
 
 #Get reaction user
 @client.on(events.CallbackQuery())
