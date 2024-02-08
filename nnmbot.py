@@ -130,7 +130,7 @@ db_init(connection,cursor)
 async def callback(event):
      button_data=event.data.decode()
      
-     if button_data ==  == '/dblist':
+     if button_data == '/dblist':
        # Get all database, Use with carefully may be many records
        rows = db_list_all( cursor )
        for row in rows:
@@ -147,15 +147,17 @@ async def callback(event):
      elif button_data == '/dwclear':
        # Clear all tag for download
        db_clear_download( cursor, 0 )    
-     else      
+     else:      
       #if not event.via_inline:       
        # Tag Film for download and clear buttons
-       #print(event.data)
+       print(event)
        #print("----")
-       #print(event.get_message()) 
+       print(event.sender_id)
+       print(event.message_id)
        #print("----")
        db_switch_download( cursor, button_data, 1)      
-       await client.edit_message(event.sender_id, event.message_id,buttons=Button.clear())      
+       #await client.edit_message(event.message_id,buttons=Button.clear())      
+       await client.edit_message(event.sender_id, event.message_id,buttons=Button.clear())       
       #else:
       # pass
 
