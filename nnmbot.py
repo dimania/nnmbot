@@ -25,9 +25,6 @@ Id=["Название:", "Производство:", "Жанр:", "Режисс
 
 url = post_body = rating_url = []
 mydict = {}
-#k = v = ""
-#--------------------
-
 
 def get_config( config ):
     ''' set global variable from included config.py - import config directive''' 
@@ -83,6 +80,13 @@ def db_exist_Id( cursor, id_kpsk, id_imdb ):
     cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk,id_imdb))
     return cursor.fetchone()
 
+def db_info( cursor ):
+    ''' Get Info database: all records, tagged for download records and tagged early records '''
+    cursor.execute("SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Films WHERE download = 1 UNION ALL SELECT COUNT(*) FROM Films WHERE download = 2")
+    rows = cursor.fetchall()
+    return rows 
+
+
 def db_switch_download( cursor, id_nnm, download):
     ''' Set tag in database for download film late '''
     cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?", (download,id_nnm))
@@ -104,8 +108,8 @@ def db_list_download( cursor, download ):
     return rows
 
 def db_clear_download( cursor, download ):
-    ''' Set to N records with set tag download '''
-    cursor.execute("UPDATE Films SET download=? WHERE download > 0", (download,))
+    ''' Set to N records with set tag download to 1 '''
+    cursor.execute("UPDATE Films SET download=? WHERE download = 1", (download,))
     connection.commit()
     return str(cursor.rowcount)
     
@@ -123,10 +127,10 @@ async def query_all_records( cursor ):
          message = "No records"
          await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
 
-async def query_tagged_records( cursor ): 
+async def query_tagged_records( cursor, tag ): 
     ''' Get films tagget for download '''
     logging.info(f"Query db records with set download tag ")
-    rows = db_list_download( cursor, 1 )
+    rows = db_list_download( cursor, tag )
     if rows:
       for row in rows:
          #print(dict(row))        
@@ -139,9 +143,9 @@ async def query_tagged_records( cursor ):
 async def query_clear_tagged_records( cursor ): 
     ''' Clear all tag for download '''
     logging.info(f"Query db for clear download tag ") 
-    rows = db_clear_download( cursor, 0 )
+    rows = db_clear_download( cursor, 2 )
     if rows:     
-        message = 'Clear Ok:'+rows      
+        message = 'Clear '+rows+'records'      
     else:
         message = "No records"         
     await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
@@ -152,20 +156,27 @@ async def query_tag_record( cursor, event, data  ):
     db_switch_download( cursor, data, 1)
     await event.edit(buttons=Button.clear())      
 
-
-
-
-
-
+async def query_info_db( cursor ): 
+    ''' Get info about database records '''
+    logging.info(f"Query info database ")
+    rows = db_info( cursor )
+    message="All records: "+str(rows[0][0])+"\nTagged records: "+str(rows[1][0])+"\nEarly tagged: "+str(rows[2][0])
+    await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+  
 
 # main()
-print('Begin.')
+print('Start bot.')
 # Enable logging
 # !!! Correct parameter as in import derective above!
 get_config(myconfig)
 
 logging.basicConfig(level=logging.INFO, filename=logfile,filemode="a",format="%(asctime)s %(levelname)s %(message)s")
 logging.info(f"Start bot.")
+
+connection = sqlite3.connect(db_name)
+connection.row_factory = sqlite3.Row
+cursor = connection.cursor()
+db_init(connection,cursor)
 
 # Connect to Telegram
 if use_proxy:
@@ -176,10 +187,6 @@ else:
     client = TelegramClient(session_name, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)
 
 
-connection = sqlite3.connect(db_name)
-connection.row_factory = sqlite3.Row
-cursor = connection.cursor()
-db_init(connection,cursor)
           
 #Get reaction user on Buttons
 @client.on(events.CallbackQuery())
@@ -192,10 +199,16 @@ async def callback(event):
        await query_all_records( cursor )       
      elif button_data == '/dwlist':
        # Get films tagget for download
-       await query_tagged_records( cursor )
+       await query_tagged_records( cursor, 1 )
      elif button_data == '/dwclear':
        # Clear all tag for download
-       await query_clear_tagged_records( cursor )       
+       await query_clear_tagged_records( cursor )
+     elif button_data == '/dwearly':
+       # Get films tagget early for download
+       await query_tagged_records( cursor, 2 ) 
+     elif button_data == '/dbinfo':
+       # Get info about DB`
+       await query_info_db( cursor )         
      else:
        await query_tag_record( cursor, event, button_data  )
              
@@ -211,10 +224,16 @@ async def normal_handler(event):
        await query_all_records( cursor )     
     elif msg.message == '/dwlist':
        # Get films tagget for download
-       await query_tagged_records( cursor )
+       await query_tagged_records( cursor, 1 )
     elif msg.message == '/dwclear':
        # Clear all tag for download
        await query_clear_tagged_records( cursor )
+    elif msg.message == '/dwearly':
+       # Get films tagget early for download
+       await query_tagged_records( cursor, 2 )
+    elif msg.message == '/dbinfo':
+       # Get info about DB
+       await query_info_db( cursor )   
     elif msg.message == '/m':
        # show menu 
        logging.info(f"Create menu buttons")
@@ -224,7 +243,13 @@ async def normal_handler(event):
              Button.inline("List Films tagged", b"/dwlist")
            ],
            [
-             Button.inline("Clear all Films tagged", b"/dwclear")
+             Button.inline("List Films tagged early", b"/dwearly")
+           ],
+           [
+             Button.inline("Clear all tagged Films", b"/dwclear")
+           ],
+           [
+             Button.inline("Get database info ", b"/dbinfo")
            ]
        ]
        await client.send_message(PeerChannel(My_channelId),"Work with database", buttons=keyboard)    
@@ -287,11 +312,6 @@ async def normal_handler(event):
             v=v+line
             mydict[k]=v
        
-       # test getted info
-       #i=0       
-       #for line in Id:  
-        # print(Id[i],"-->",mydict.get(Id[i]))
-        # i+=1
        kpsk_r = imdb_r = "-"
        kpsk_url = imdb_url = rat_url = ""
        id_kpsk = id_imdb = id_nnm = 0
@@ -311,9 +331,8 @@ async def normal_handler(event):
        id_nnm=re.search('viewtopic.php.t=(.+?)$',url).group(1)
        
        if db_exist_Id(cursor,id_kpsk,id_imdb):
-          logging.info(f"Film {id_nnm} exist in db - end analise.")
+          logging.info(f"Film {id_nnm} exist in db - end analize.")
           return
-       #print("kpsId=",id_kpsk,"\nimdbId=",id_imdb,"\nnnmbId=",id_nnm)
               
        # Get rating film from kinopoisk if not then from imdb site
        if kpsk_url:
@@ -327,12 +346,10 @@ async def normal_handler(event):
            imdb_r=rating_xml.find('imdb_rating').get_text('\n', strip='True')
            logging.info(f"Get rating from kinopoisk: {kpsk_url}")
           except:
-           print('Get kinopoisk rating error.')
            logging.info(f"No kinopoisk rating on site")
        elif imdb_url:
           rat_url=imdb_url
           page = requests.get(rat_url,headers={'User-Agent': 'Mozilla/5.0'},proxies=proxies)
-          #print(page.status_code)
           # Parse data
           soup = BeautifulSoup(page.text, 'html.parser')
           post_body=soup.find(class_='sc-5931bdee-1 gVydpF')
@@ -343,30 +360,17 @@ async def normal_handler(event):
           imdb_r="-"
 
     logging.info(f"Add info to message") 
-    #film_add_info = "\n<b>Рейтинг:</b> КП[ "+kpsk_r+" ] Imdb[ "+imdb_r+" ]\n<b>"+Id[2]+"</b> "+mydict.get(Id[2])+"\n<b>"+Id[5]+"</b>\n"+mydict.get(Id[5])  
     film_add_info = "\n_________________________________\n"+\
                     "Рейтинг: КП[ "+kpsk_r+" ] Imdb[ "+imdb_r+" ]\n"+\
                     Id[2]+mydict.get(Id[2])+"\n"+\
                     Id[5]+"\n"+mydict.get(Id[5])  
 
-
     msg.message=msg.message+film_add_info
-    #await client.forward_messages(PeerChat(My_channelId), event.message)
-    #print(msg.message)
-    #------ work with Database -------
-    #if db_exist_Id(cursor,id_kpsk,id_imdb):
-    #   logging.info(f"Exist in db - no add, and no send, id_nnm:{id_nnm}")
-    #   #print('Exist in db - no add, and no send',id_nnm)
-    #else:
-    #   print('Not exist in db - add, and send',id_nnm)
     logging.info(f"Film not exist in db - add and send, id_nnm:{id_nnm}\n Message:{msg}")
     db_add_film( connection, cursor, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
     await client.send_message(PeerChannel(My_channelId),msg,parse_mode='md',
-                                 buttons=[ Button.inline('Add to DB', id_nnm),])
-    #------End work with Database -----
-
-
-
+                                 buttons=[ Button.inline('Add Film to database', id_nnm),])
+    
 client.start()
 client.run_until_disconnected()
 logging.info(f"End.\n--------------------------")
