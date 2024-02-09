@@ -87,7 +87,8 @@ def db_switch_download( cursor, id_nnm, download):
     ''' Set tag in database for download film late '''
     cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?", (download,id_nnm))
     connection.commit()
-
+    return str(cursor.rowcount)
+  
 def db_list_all( cursor ):
     ''' List all database '''
     cursor.execute('SELECT  * FROM Films')
@@ -103,12 +104,62 @@ def db_list_download( cursor, download ):
     return rows
 
 def db_clear_download( cursor, download ):
-    ''' List only records with set tag download '''
-    cursor.execute("UPDATE Films SET download=?", (download,))
+    ''' Set to N records with set tag download '''
+    cursor.execute("UPDATE Films SET download=? WHERE download > 0", (download,))
     connection.commit()
+    return str(cursor.rowcount)
+    
+
+async def query_all_records( cursor ): 
+    ''' Get all database, Use with carefully may be many records '''
+    logging.info(f"Query all db records")
+    rows = db_list_all( cursor )
+    if rows:
+      for row in rows:
+         #print(dict(row))        
+         message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
+         await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+    else:
+         message = "No records"
+         await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+
+async def query_tagged_records( cursor ): 
+    ''' Get films tagget for download '''
+    logging.info(f"Query db records with set download tag ")
+    rows = db_list_download( cursor, 1 )
+    if rows:
+      for row in rows:
+         #print(dict(row))        
+         message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
+         await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+    else:
+         message = "No records"
+         await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+    
+async def query_clear_tagged_records( cursor ): 
+    ''' Clear all tag for download '''
+    logging.info(f"Query db for clear download tag ") 
+    rows = db_clear_download( cursor, 0 )
+    if rows:     
+        message = 'Clear Ok:'+rows      
+    else:
+        message = "No records"         
+    await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+
+async def query_tag_record( cursor, event, data  ): 
+    ''' Clear Button 'Add to DB' in message and set tag download to 1 '''
+    logging.info(f"By default Clear Button 'Add to DB' in message and set tag download to 1")
+    db_switch_download( cursor, data, 1)
+    await event.edit(buttons=Button.clear())      
+
+
+
+
+
+
 
 # main()
-
+print('Begin.')
 # Enable logging
 # !!! Correct parameter as in import derective above!
 get_config(myconfig)
@@ -129,41 +180,25 @@ connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 db_init(connection,cursor)
-
-
-#Get reaction user
+          
+#Get reaction user on Buttons
 @client.on(events.CallbackQuery())
 async def callback(event):
      logging.info(f"Get callback event {event}")
      button_data=event.data.decode()
-     logging.info(f"Get callback button:{button_data}")
+
      if button_data == '/dblist':
        # Get all database, Use with carefully may be many records
-       logging.info(f"Query all db records")
-       rows = db_list_all( cursor )
-       for row in rows:
-          #print(dict(row))        
-          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
-          await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+       await query_all_records( cursor )       
      elif button_data == '/dwlist':
        # Get films tagget for download
-       logging.info(f"Query db records with set download tag ")
-       rows = db_list_download( cursor, 1 )
-       for row in rows:
-        #print(dict(row))        
-          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
-          await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+       await query_tagged_records( cursor )
      elif button_data == '/dwclear':
        # Clear all tag for download
-       logging.info(f"Query db for clear download tag ") 
-       db_clear_download( cursor, 0 )    
+       await query_clear_tagged_records( cursor )       
      else:
-       #event.original_event.original_update.message.id
-       logging.info(f"By default Clear Button 'Add to DB' in message and set tag download to 1")
-       db_switch_download( cursor, button_data, 1)
-       await event.edit(buttons=Button.clear())      
-       #await client.edit_message([PeerChannel(My_channelId)],event.message_id,buttons=Button.clear())      
-       #await client.edit_message(event.sender_id, event.message_id,buttons=Button.clear())       
+       await query_tag_record( cursor, event, button_data  )
+             
       
 #Parse My channel for command 
 @client.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern='^/.*'))
@@ -173,37 +208,26 @@ async def normal_handler(event):
     msg=event.message
     if msg.message == '/dblist':
        # Get all database, Use with carefully may be many records
-       logging.info(f"Query all db records as new message")
-       rows = db_list_all( cursor )
-       for row in rows:
-          #print(dict(row))        
-          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
-          await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)       
+       await query_all_records( cursor )     
     elif msg.message == '/dwlist':
        # Get films tagget for download
-       logging.info(f"Query db records with set download tag as new message ")
-       rows = db_list_download( cursor, 1 )
-       for row in rows:
-        #print(dict(row))        
-          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
-          await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+       await query_tagged_records( cursor )
     elif msg.message == '/dwclear':
        # Clear all tag for download
-       logging.info(f"Query db for clear download tag as new message")
-       db_clear_download( cursor, 0 )
+       await query_clear_tagged_records( cursor )
     elif msg.message == '/m':
        # show menu 
        logging.info(f"Create menu buttons")
        keyboard = [
            [  
-             Button.inline("List All DB", b"/dblist"), 
-             Button.inline("List Films tagget", b"/dwlist")
+             #Button.inline("List All DB", b"/dblist"), 
+             Button.inline("List Films tagged", b"/dwlist")
            ],
            [
-             Button.inline("Clear Films tagget", b"/dwclear")
+             Button.inline("Clear all Films tagged", b"/dwclear")
            ]
        ]
-       await client.send_message(PeerChannel(My_channelId), "Меню:", buttons=keyboard)    
+       await client.send_message(PeerChannel(My_channelId),"Work with database", buttons=keyboard)    
     else:
        # send help
        logging.info(f"Send help message")
