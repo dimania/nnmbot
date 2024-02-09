@@ -86,7 +86,6 @@ def db_info( cursor ):
     rows = cursor.fetchall()
     return rows 
 
-
 def db_switch_download( cursor, id_nnm, download):
     ''' Set tag in database for download film late '''
     cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?", (download,id_nnm))
@@ -152,7 +151,7 @@ async def query_clear_tagged_records( cursor ):
 
 async def query_tag_record( cursor, event, data  ): 
     ''' Clear Button 'Add to DB' in message and set tag download to 1 '''
-    logging.info(f"By default Clear Button 'Add to DB' in message and set tag download to 1")
+    logging.info(f"Clear Button 'Add to DB' in message and set tag download to 1 for id_nnm={data}")    
     db_switch_download( cursor, data, 1)
     await event.edit(buttons=Button.clear())      
 
@@ -208,9 +207,14 @@ async def callback(event):
        await query_tagged_records( cursor, 2 ) 
      elif button_data == '/dbinfo':
        # Get info about DB`
-       await query_info_db( cursor )         
+       await query_info_db( cursor )
+     elif button_data.find('XX',0,2) != -1:
+       # Add to Film to DB and remove Button 'Add to DB'
+       data=button_data       
+       datta = data.replace('XX','')
+       await query_tag_record( cursor, event, data )
      else:
-       await query_tag_record( cursor, event, button_data  )
+       pass
              
       
 #Parse My channel for command 
@@ -368,8 +372,9 @@ async def normal_handler(event):
     msg.message=msg.message+film_add_info
     logging.info(f"Film not exist in db - add and send, id_nnm:{id_nnm}\n Message:{msg}")
     db_add_film( connection, cursor, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
+    bdata='XX'+id_nnm
     await client.send_message(PeerChannel(My_channelId),msg,parse_mode='md',
-                                 buttons=[ Button.inline('Add Film to database', id_nnm),])
+                                 buttons=[ Button.inline('Add Film to database', bdata),])
     
 client.start()
 client.run_until_disconnected()
