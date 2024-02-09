@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 import requests
 import re
 import sqlite3
+import logging
 
 #load config file
 import myconfig
@@ -39,6 +40,7 @@ def get_config( config ):
     global My_channelId
     global db_name
     global proxies
+    global logfile
     global use_proxy
     api_id         =  config.api_id
     api_hash       =  config.api_hash
@@ -49,6 +51,7 @@ def get_config( config ):
     My_channelId   =  config.My_channelId
     db_name        =  config.db_name
     proxies        =  config.proxies
+    logfile        =  config.logfile
     use_proxy      =  config.use_proxy
     
 def db_init( connection, cursor ):
@@ -106,13 +109,16 @@ def db_clear_download( cursor, download ):
 
 # main()
 
+# Enable logging
 # !!! Correct parameter as in import derective above!
 get_config(myconfig)
 
+logging.basicConfig(level=logging.INFO, filename=logfile,filemode="a",format="%(asctime)s %(levelname)s %(message)s")
+logging.info(f"Start bot.")
 
 # Connect to Telegram
 if use_proxy:
-    prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))    
+    prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))  
     client = TelegramClient(session_name, api_id, api_hash, system_version=system_version, proxy=(prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=mybot_token)
 else:
     proxies = None
@@ -128,10 +134,12 @@ db_init(connection,cursor)
 #Get reaction user
 @client.on(events.CallbackQuery())
 async def callback(event):
+     logging.info(f"Get callback event {event}")
      button_data=event.data.decode()
-     
+     logging.info(f"Get callback button:{button_data}")
      if button_data == '/dblist':
        # Get all database, Use with carefully may be many records
+       logging.info(f"Query all db records")
        rows = db_list_all( cursor )
        for row in rows:
           #print(dict(row))        
@@ -139,6 +147,7 @@ async def callback(event):
           await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
      elif button_data == '/dwlist':
        # Get films tagget for download
+       logging.info(f"Query db records with set download tag ")
        rows = db_list_download( cursor, 1 )
        for row in rows:
         #print(dict(row))        
@@ -146,28 +155,25 @@ async def callback(event):
           await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
      elif button_data == '/dwclear':
        # Clear all tag for download
+       logging.info(f"Query db for clear download tag ") 
        db_clear_download( cursor, 0 )    
-     else:      
-      #if not event.via_inline:       
-       # Tag Film for download and clear buttons
-       print(event)
-       #print("----")
-       print(event.sender_id)
-       print(event.message_id)
-       #print("----")
-       db_switch_download( cursor, button_data, 1)      
-       #await client.edit_message(event.message_id,buttons=Button.clear())      
-       await client.edit_message(event.sender_id, event.message_id,buttons=Button.clear())       
-      #else:
-      # pass
-
+     else:
+       #event.original_event.original_update.message.id
+       logging.info(f"By default Clear Button 'Add to DB' in message and set tag download to 1")
+       db_switch_download( cursor, button_data, 1)
+       await event.edit(buttons=Button.clear())      
+       #await client.edit_message([PeerChannel(My_channelId)],event.message_id,buttons=Button.clear())      
+       #await client.edit_message(event.sender_id, event.message_id,buttons=Button.clear())       
+      
 #Parse My channel for command 
 @client.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern='^/.*'))
 async def normal_handler(event):
     #print(event.message)
+    logging.info(f"Get NewMessage event: {event}\nEvent message:{event.message}")
     msg=event.message
     if msg.message == '/dblist':
        # Get all database, Use with carefully may be many records
+       logging.info(f"Query all db records as new message")
        rows = db_list_all( cursor )
        for row in rows:
           #print(dict(row))        
@@ -175,6 +181,7 @@ async def normal_handler(event):
           await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)       
     elif msg.message == '/dwlist':
        # Get films tagget for download
+       logging.info(f"Query db records with set download tag as new message ")
        rows = db_list_download( cursor, 1 )
        for row in rows:
         #print(dict(row))        
@@ -182,9 +189,11 @@ async def normal_handler(event):
           await client.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
     elif msg.message == '/dwclear':
        # Clear all tag for download
+       logging.info(f"Query db for clear download tag as new message")
        db_clear_download( cursor, 0 )
-    elif msg.message == 'm':
+    elif msg.message == '/m':
        # show menu 
+       logging.info(f"Create menu buttons")
        keyboard = [
            [  
              Button.inline("List All DB", b"/dblist"), 
@@ -197,7 +206,7 @@ async def normal_handler(event):
        await client.send_message(PeerChannel(My_channelId), "Меню:", buttons=keyboard)    
     else:
        # send help
-       print(msg)       
+       logging.info(f"Send help message")
        message="Use command:\n/dblist - list all records (carefully!)\n/dwlist - list films tagget for download\n/dwclear - clear tagget films"
        await client.send_message(PeerChannel(My_channelId),message,parse_mode='html')
        
@@ -207,6 +216,7 @@ async def normal_handler(event):
 @client.on(events.NewMessage(chats = [PeerChannel(channelId)],pattern='(?:.*Фильм.*)|(?:.*Новинки.*)'))
 async def normal_handler(event):
     #print(event.message)
+    logging.info(f"Get new message in NNMCLUB Channel: {event.message}")
     msg=event.message
 
     #Get URL nnmclub page with Film
@@ -214,12 +224,16 @@ async def normal_handler(event):
         if re.search(r'viewtopic.php\?t', url_entity.url):
            url = url_entity.url
            #print(url)
-
+           
+    logging.info(f"Get URL nnmclub page with Film: {url}") 
+    
     #if URL exist get additional info for film
     if url:
        page = requests.get(url,proxies=proxies)
 
-       if page.status_code != 200: return
+       if page.status_code != 200: 
+         logging.error(f"Can't open url:{url}, status:{page.status}") 
+         return
 
        # Parse data
        soup = BeautifulSoup(page.text, 'html.parser')
@@ -264,11 +278,17 @@ async def normal_handler(event):
            if rat.find('https://www.kinopoisk.ru/film/') != -1:
               id_kpsk=re.search("film/(.+?)/", rat).group(1)
               kpsk_url='https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+              logging.info(f"Create url rating from kinopoisk: {kpsk_url}")
            elif rat.find('https://www.imdb.com/title/') != -1:
               id_imdb=re.search('title/(.+?)/', rat).group(1)
               imdb_url=rat.replace('?ref_=plg_rt_1','ratings/?ref_=tt_ov_rt')
+              logging.info(f"Create url rating from imdb: {imdb_url}")
            
        id_nnm=re.search('viewtopic.php.t=(.+?)$',url).group(1)
+       
+       if db_exist_Id(cursor,id_kpsk,id_imdb):
+          logging.info(f"Film {id_nnm} exist in db - end analise.")
+          return
        #print("kpsId=",id_kpsk,"\nimdbId=",id_imdb,"\nnnmbId=",id_nnm)
               
        # Get rating film from kinopoisk if not then from imdb site
@@ -281,8 +301,10 @@ async def normal_handler(event):
            rating_xml=soup.find('rating')
            kpsk_r=rating_xml.find('kp_rating').get_text('\n', strip='True')
            imdb_r=rating_xml.find('imdb_rating').get_text('\n', strip='True')
+           logging.info(f"Get rating from kinopoisk: {kpsk_url}")
           except:
            print('Get kinopoisk rating error.')
+           logging.info(f"No kinopoisk rating on site")
        elif imdb_url:
           rat_url=imdb_url
           page = requests.get(rat_url,headers={'User-Agent': 'Mozilla/5.0'},proxies=proxies)
@@ -291,10 +313,12 @@ async def normal_handler(event):
           soup = BeautifulSoup(page.text, 'html.parser')
           post_body=soup.find(class_='sc-5931bdee-1 gVydpF')
           imdb_r=post_body.get_text('\n', strip='True')
+          logging.info(f"Get rating from imdb: {imdb_url}")
        else:
           kpsk_r="-"
           imdb_r="-"
 
+    logging.info(f"Add info to message") 
     #film_add_info = "\n<b>Рейтинг:</b> КП[ "+kpsk_r+" ] Imdb[ "+imdb_r+" ]\n<b>"+Id[2]+"</b> "+mydict.get(Id[2])+"\n<b>"+Id[5]+"</b>\n"+mydict.get(Id[5])  
     film_add_info = "\n_________________________________\n"+\
                     "Рейтинг: КП[ "+kpsk_r+" ] Imdb[ "+imdb_r+" ]\n"+\
@@ -306,12 +330,14 @@ async def normal_handler(event):
     #await client.forward_messages(PeerChat(My_channelId), event.message)
     #print(msg.message)
     #------ work with Database -------
-    if db_exist_Id(cursor,id_kpsk,id_imdb):
-       print('Exist in db - no add, and no send',id_nnm)
-    else:
-       print('Not exist in db - add, and send',id_nnm)
-       db_add_film( connection, cursor, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
-       await client.send_message(PeerChannel(My_channelId),msg,parse_mode='md',
+    #if db_exist_Id(cursor,id_kpsk,id_imdb):
+    #   logging.info(f"Exist in db - no add, and no send, id_nnm:{id_nnm}")
+    #   #print('Exist in db - no add, and no send',id_nnm)
+    #else:
+    #   print('Not exist in db - add, and send',id_nnm)
+    logging.info(f"Film not exist in db - add and send, id_nnm:{id_nnm}\n Message:{msg}")
+    db_add_film( connection, cursor, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
+    await client.send_message(PeerChannel(My_channelId),msg,parse_mode='md',
                                  buttons=[ Button.inline('Add to DB', id_nnm),])
     #------End work with Database -----
 
@@ -319,5 +345,6 @@ async def normal_handler(event):
 
 client.start()
 client.run_until_disconnected()
+logging.info(f"End.\n--------------------------")
 print('End.')
 connection.close()

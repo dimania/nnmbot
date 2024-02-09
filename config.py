@@ -17,6 +17,8 @@ proxies = {
   "https": "socks5://127.0.0.1:1080",
 }
 
+logfile = 'nnmbot.log'
+
 use_proxy = 0 # if use proxy set to 1
 
 
