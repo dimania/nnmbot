@@ -18,7 +18,6 @@ import asyncio
 #load config file
 import myconfig
 
-
 #-------------- addition info vars
 Id=["Название:", "Производство:", "Жанр:", "Режиссер:",
     "Актеры:", "Описание:", "Продолжительность:", "Качество видео:",
@@ -27,6 +26,8 @@ Id=["Название:", "Производство:", "Жанр:", "Режисс
 
 url = post_body = rating_url = []
 mydict = {}
+command = r'(^/.*)'
+
 
 def get_config( config ):
     ''' set global variable from included config.py - import config directive''' 
@@ -42,6 +43,7 @@ def get_config( config ):
     global proxies
     global logfile
     global use_proxy
+    global filter
     api_id         =  config.api_id
     api_hash       =  config.api_hash
     mybot_token    =  config.mybot_token
@@ -54,6 +56,8 @@ def get_config( config ):
     proxies        =  config.proxies
     logfile        =  config.logfile
     use_proxy      =  config.use_proxy
+    filter         =  config.filter
+    
     
 def db_init( connection, cursor ):
     ''' Initialize database '''
@@ -61,7 +65,8 @@ def db_init( connection, cursor ):
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS Films (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    Id_nnm TEXT,
+    id_msg TEXT,
+    id_nnm TEXT,
     nnm_url TEXT,
     name TEXT,
     id_kpsk TEXT,
@@ -72,17 +77,24 @@ def db_init( connection, cursor ):
     ''')
     connection.commit()
 
-def db_add_film( connection, cursor, id_nnm, nnm_url, name, id_kpsk, id_imdb ):
+def db_add_film( connection, cursor, id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb ):
     ''' Add new Film to database '''
     cur_date=datetime.now()
-    cursor.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, date) VALUES(?, ?, ?, ?, ?, ?)",\
-    (id_nnm, nnm_url, name, id_kpsk, id_imdb, cur_date))
+    cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, date) VALUES(?, ?, ?, ?, ?, ?, ?)",\
+    (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, cur_date))
     connection.commit()
 
 def db_exist_Id( cursor, id_kpsk, id_imdb ):
     ''' Test exist Film in database '''
     cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk,id_imdb))
     return cursor.fetchone()
+
+def db_get_id_nnm( cursor, id_msg ):
+    ''' Get id_nm by id_msg '''
+    cursor.execute("SELECT id_nnm FROM Films WHERE id_msg = ?", (id_msg,))
+    row = cursor.fetchone()
+    return dict(row).get('id_nnm')
+
 
 def db_info( cursor ):
     ''' Get Info database: all records, tagged for download records and tagged early records '''
@@ -148,7 +160,7 @@ async def query_clear_tagged_records( cursor ):
     logging.info(f"Query db for clear download tag ") 
     rows = db_clear_download( cursor, 2 )
     if rows:     
-        message = 'Clear '+rows+'records'      
+        message = 'Clear '+rows+' records'      
     else:
         message = "No records"         
     await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
@@ -165,6 +177,14 @@ async def query_info_db( cursor ):
     rows = db_info( cursor )
     message="All records: "+str(rows[0][0])+"\nTagged records: "+str(rows[1][0])+"\nEarly tagged: "+str(rows[2][0])
     await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+
+async def query_add_button( cursor, event, id_msg ): 
+    ''' Add Button 'Add to DB' in message and set tag download to 1 '''
+    id_nnm=db_get_id_nnm( cursor, id_msg )
+    if id_nnm:
+      bdata='XX'+id_nnm
+      logging.info(f"Get id_nnm={id_nnm} by message id={id_msg}")
+      await event.edit(buttons=[ Button.inline('Add Film to database', bdata),])
   
 
 # main()
@@ -181,15 +201,6 @@ connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 db_init(connection,cursor)
 
-global yet_msg
-global g_msg
-global g_bdata
-yet_msg=0
-g_msg=""
-g_bdata=0
-global mybot
-
-
 # Connect to Telegram
 if use_proxy:
     prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))  
@@ -199,11 +210,7 @@ else:
     proxies = None
     bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)
     client = TelegramClient(session_client, api_id, api_hash, system_version=system_version)
-
-mybot = bot
-
-
-          
+         
 #Get reaction user on Buttons
 @bot.on(events.CallbackQuery())
 async def callback(event):
@@ -228,17 +235,18 @@ async def callback(event):
      elif button_data.find('XX',0,2) != -1:
        # Add to Film to DB and remove Button 'Add to DB'
        data=button_data       
-       datta = data.replace('XX','')
+       data = data.replace('XX','')
+       logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
        await query_tag_record( cursor, event, data )
      else:
        pass
              
       
 #Parse My channel for command 
-@bot.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern='^/.*'))
+@bot.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern="(^/.*)|"+filter))
 async def normal_handler(event):
     #print(event.message)
-    logging.info(f"Get NewMessage event: {event}\nEvent message:{event.message}")
+    logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
     msg=event.message
     if msg.message == '/dblist':
        # Get all database, Use with carefully may be many records
@@ -274,37 +282,22 @@ async def normal_handler(event):
            ]
        ]
        await bot.send_message(PeerChannel(My_channelId),"Work with database", buttons=keyboard)    
+    elif re.search(filter,msg.message):
+       # Add button 'Add Film to database' as inline button for message
+       await query_add_button( cursor, event, msg.id ) 
     else:
        # send help
        logging.info(f"Send help message")
        message="Use command:\n/dblist - list all records (carefully!)\n/dwlist - list films tagget for download\n/dwclear - clear tagget films"
        await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html')
        
-async def helper(bot):
-  #while True:
-    global yet_msg
-    global g_msg
-    global My_channelId
-    global g_bdata
-    print("---------yet_msg="+str(yet_msg))
-    if yet_msg:
-       logging.info(f"Helper {yet_msg}.")
-       await bot.send_message(PeerChannel(My_channelId),g_msg,parse_mode='md', buttons=[ Button.inline('Add Film to database', g_bdata),])
-       yet_msg=0
 
 #Parse channel NNMCLUB for Films 
-@client.on(events.NewMessage(chats = [PeerChannel(channelId)],pattern='(?:.*Фильм.*)|(?:.*Новинки.*)'))
+@client.on(events.NewMessage(chats = [PeerChannel(channelId)],pattern=filter))
 async def normal_handler(event):
     #print(event.message)
-    global my_bot
-    global yet_msg
-    global g_msg
-    global My_channelId
-    global g_bdata
-    global loop
-    logging.info(f"Glogal vars:\n{yet_msg}\n{My_channelId}\n{g_bdata}")
-    
-    logging.info(f"Get new message in NNMCLUB Channel: {event.message}")
+   
+    logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")    
     msg=event.message
 
     #Get URL nnmclub page with Film
@@ -406,20 +399,13 @@ async def normal_handler(event):
 
     msg.message=msg.message+film_add_info
     msg.message=textwrap.shorten(msg.message, width=1019, placeholder="...")
-    logging.info(f"Film not exist in db - add and send, id_nnm:{id_nnm}\n Message:{msg}")
-    db_add_film( connection, cursor, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
-    bdata='XX'+id_nnm
-    yet_msg=1
-    g_bdata=bdata
-    g_msg=msg
-    
+    logging.info(f"Film not exist in db - add and send, id_msg={msg.id}\nid_nnm:{id_nnm}\n Message:{msg}")
+    #bdata='XX'+id_nnm
     #await bot.send_message(PeerChannel(My_channelId),msg,parse_mode='md', buttons=[ Button.inline('Add Film to database', bdata),])
-    #await mybot.send_message(PeerChannel(My_channelId),msg,parse_mode='md')
+    send_msg = await client.send_message(PeerChannel(My_channelId),msg,parse_mode='md')
+    db_add_film( connection, cursor, send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
+    logging.debug(f"Send Message:{send_msg}")
     
-
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(helper(bot))
 
 client.start()    
 bot.start()
