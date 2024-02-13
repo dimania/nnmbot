@@ -28,8 +28,6 @@ Id=["Название:", "Производство:", "Жанр:", "Режисс
 
 url = post_body = rating_url = []
 mydict = {}
-command = r'(^/.*)'
-ICU_extension_lib = "/usr/lib64/sqlite3/libSqliteIcu.so"
 
 def get_config( config ):
     ''' set global variable from included config.py - import config directive''' 
@@ -46,19 +44,26 @@ def get_config( config ):
     global logfile
     global use_proxy
     global filter
-    api_id         =  config.api_id
-    api_hash       =  config.api_hash
-    mybot_token    =  config.mybot_token
-    system_version =  config.system_version
-    session_client =  config.session_client
-    session_bot    =  config.session_bot    
-    channelId      =  config.channelId
-    My_channelId   =  config.My_channelId
-    db_name        =  config.db_name
-    proxies        =  config.proxies
-    logfile        =  config.logfile
-    use_proxy      =  config.use_proxy
-    filter         =  config.filter
+    global ICU_extension_lib 
+    
+    try:
+     api_id         =  config.api_id
+     api_hash       =  config.api_hash
+     mybot_token    =  config.mybot_token
+     system_version =  config.system_version
+     session_client =  config.session_client
+     session_bot    =  config.session_bot    
+     channelId      =  config.channelId
+     My_channelId   =  config.My_channelId
+     db_name        =  config.db_name
+     proxies        =  config.proxies
+     logfile        =  config.logfile
+     use_proxy      =  config.use_proxy
+     filter         =  config.filter
+     ICU_extension_lib = config.ICU_extension_lib
+    except Exception as error:
+     print(f"Error in config not required settings: { error }" ) 
+     exit(-1)
     
     
 def db_init( connection, cursor ):
@@ -161,6 +166,19 @@ async def query_all_records( cursor ):
          message = "No records"
          await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
 
+async def query_search( cursor, str_search ): 
+    ''' Search Films in database '''
+    logging.info(f"Search in database:{str_search}")
+    rows = db_search( cursor, str_search )
+    if rows:
+      for row in rows:
+         #print(dict(row))        
+         message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
+         await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+    else:
+         message = "No records"
+         await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+         
 async def query_tagged_records( cursor, tag ): 
     ''' Get films tagget for download '''
     logging.info(f"Query db records with set download tag ")
@@ -239,6 +257,9 @@ async def create_menu():
            ],
            [
              Button.inline("Get database info ", b"/dbinfo")
+           ],
+           [
+             Button.inline("Search Films in database ", b"/s")
            ]
        ]
        await bot.send_message(PeerChannel(My_channelId),"Work with database", buttons=keyboard)  
@@ -292,6 +313,15 @@ async def callback(event):
      elif button_data == '/m':
        # Menu button pressed - show menu 
        await create_menu()
+     elif button_data == '/s':
+       # search Films 
+       await event.respond("Write and send what you search:")
+       @bot.on(events.NewMessage(chats = [PeerChannel(My_channelId)]))
+       async def search_handler(event_search):
+           logging.info(f"Get search string: {event_search.message.message}")
+           await query_search( cursor, event_search.message.message )
+           await event.respond("...Done...",buttons=[Button.inline("Menu", b"/m")])
+           bot.remove_event_handler(search_handler)
      elif button_data.find('XX',0,2) != -1:
        # Add to Film to DB and remove Button 'Add to DB'
        data = button_data       
