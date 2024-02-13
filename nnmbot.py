@@ -15,6 +15,7 @@ import sqlite3
 import logging
 import textwrap
 import asyncio
+import os.path
 
 #load config file
 import myconfig
@@ -28,7 +29,7 @@ Id=["Название:", "Производство:", "Жанр:", "Режисс
 url = post_body = rating_url = []
 mydict = {}
 command = r'(^/.*)'
-
+ICU_extension_lib = "/usr/lib64/sqlite3/libSqliteIcu.so"
 
 def get_config( config ):
     ''' set global variable from included config.py - import config directive''' 
@@ -62,6 +63,12 @@ def get_config( config ):
     
 def db_init( connection, cursor ):
     ''' Initialize database '''
+    
+    #Load ICU extension in exist for case independet search  in DB
+    if os.path.isfile(ICU_extension_lib):
+      connection.enable_load_extension(True)
+      connection.load_extension(ICU_extension_lib)
+    
     # Создаем таблицу Films
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS Films (
@@ -114,7 +121,7 @@ def db_switch_download( cursor, id_nnm, download):
 def db_list_all( cursor ):
     ''' List all database '''
     cursor.execute('SELECT  * FROM Films')
-    rows = cursor.fetchall()    
+    rows = cursor.fetchall() 
     return rows
 
 def db_list_download( cursor, download ):
@@ -123,6 +130,15 @@ def db_list_download( cursor, download ):
     rows = cursor.fetchall()
     #for row in rows:
     #  print(dict(row))
+    return rows
+
+def db_search( cursor, str_search ):
+    ''' Search in db '''
+    str_search='%'+str_search+'%'
+    cursor.execute("SELECT name,nnm_url FROM Films WHERE name LIKE ? COLLATE NOCASE", (str_search,) )
+    rows = cursor.fetchall()
+    for row in rows:
+      print(dict(row))
     return rows
 
 def db_clear_download( cursor, download ):
@@ -240,6 +256,7 @@ connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 db_init(connection,cursor)
+
 
 # Connect to Telegram
 if use_proxy:
