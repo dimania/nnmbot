@@ -6,6 +6,7 @@
 from telethon import TelegramClient, sync, events
 from telethon.tl.types import PeerChat, PeerChannel, MessageEntityTextUrl 
 from telethon.tl.custom import Button
+from telethon.errors import MessageNotModifiedError
 from datetime import datetime, date, time, timezone
 from bs4 import BeautifulSoup
 import requests
@@ -91,10 +92,12 @@ def db_exist_Id( cursor, id_kpsk, id_imdb ):
 
 def db_get_id_nnm( cursor, id_msg ):
     ''' Get id_nm by id_msg '''
-    cursor.execute("SELECT id_nnm FROM Films WHERE id_msg = ?", (id_msg,))
+    cursor.execute("SELECT id_nnm FROM Films WHERE id_msg = ?", (id_msg,))    
     row = cursor.fetchone()
-    return dict(row).get('id_nnm')
-
+    if row: 
+      return dict(row).get('id_nnm')
+    else: 
+      return None
 
 def db_info( cursor ):
     ''' Get Info database: all records, tagged for download records and tagged early records '''
@@ -165,12 +168,30 @@ async def query_clear_tagged_records( cursor ):
         message = "No records"         
     await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
 
-async def query_tag_record( cursor, event, data  ): 
-    ''' Clear Button 'Add to DB' in message and set tag download to 1 '''
-    logging.info(f"Clear Button 'Add to DB' in message and set tag download to 1 for id_nnm={data}")    
+async def query_tag_record_revert_button( cursor, event, data  ): 
+    ''' Revert Button to 'Remove from DB' in message and set tag download to 1 '''
     db_switch_download( cursor, data, 1)
-    await event.edit(buttons=Button.clear())      
+    #id_nnm=db_get_id_nnm( cursor, event.message_id )
+    logging.info(f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")  
+    try: 
+      #await event.edit(buttons=Button.clear())
+      bdata='RXX'+data
+      await event.edit(buttons=[ Button.inline('Remove from BD', bdata),Button.inline("Menu", b"/m")])
+    except MessageNotModifiedError:
+      pass
 
+async def query_untag_record_revert_button( cursor, event, data  ): 
+    ''' Revert Button to 'Add to DB' in message and set tag download to 2 '''
+    db_switch_download( cursor, data, 2)
+    #id_nnm=db_get_id_nnm( cursor, event.message_id )
+    logging.info(f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")  
+    try: 
+      #await event.edit(buttons=Button.clear())
+      bdata='XX'+data
+      await event.edit(buttons=[ Button.inline('Add Film to BD', bdata),Button.inline("Menu", b"/m")])
+    except MessageNotModifiedError:
+      pass
+    
 async def query_info_db( cursor ): 
     ''' Get info about database records '''
     logging.info(f"Query info database ")
@@ -181,18 +202,37 @@ async def query_info_db( cursor ):
 async def query_add_button( cursor, event, id_msg ): 
     ''' Add Button 'Add to DB' in message and set tag download to 1 '''
     id_nnm=db_get_id_nnm( cursor, id_msg )
+    logging.info(f"Get id_nnm={id_nnm} by message id={id_msg}")
     if id_nnm:
       bdata='XX'+id_nnm
-      logging.info(f"Get id_nnm={id_nnm} by message id={id_msg}")
-      await event.edit(buttons=[ Button.inline('Add Film to database', bdata),])
+      await event.edit(buttons=[ Button.inline('Add Film to BD', bdata),Button.inline("Menu", b"/m")])
   
+async def create_menu():
+       ''' Create menu on channel '''
+       logging.info(f"Create menu buttons")
+       keyboard = [
+           [  
+             #Button.inline("List All DB", b"/dblist"), 
+             Button.inline("List Films tagged", b"/dwlist")
+           ],
+           [
+             Button.inline("List Films tagged early", b"/dwearly")
+           ],
+           [
+             Button.inline("Clear all tagged Films", b"/dwclear")
+           ],
+           [
+             Button.inline("Get database info ", b"/dbinfo")
+           ]
+       ]
+       await bot.send_message(PeerChannel(My_channelId),"Work with database", buttons=keyboard)  
 
 # main()
 print('Start bot.')
-# Enable logging
 # !!! Correct parameter as in import derective above!
 get_config(myconfig)
 
+# Enable logging
 logging.basicConfig(level=logging.INFO, filename=logfile,filemode="a",format="%(asctime)s %(levelname)s %(message)s")
 logging.info(f"Start bot.")
 
@@ -214,7 +254,7 @@ else:
 #Get reaction user on Buttons
 @bot.on(events.CallbackQuery())
 async def callback(event):
-     logging.info(f"Get callback event {event}")
+     logging.debug(f"Get callback event {event}")
      button_data=event.data.decode()
 
      if button_data == '/dblist':
@@ -230,14 +270,23 @@ async def callback(event):
        # Get films tagget early for download
        await query_tagged_records( cursor, 2 ) 
      elif button_data == '/dbinfo':
-       # Get info about DB`
+       # Get info about DB
        await query_info_db( cursor )
+     elif button_data == '/m':
+       # Menu button pressed - show menu 
+       await create_menu()
      elif button_data.find('XX',0,2) != -1:
        # Add to Film to DB and remove Button 'Add to DB'
-       data=button_data       
+       data = button_data       
        data = data.replace('XX','')
        logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
-       await query_tag_record( cursor, event, data )
+       await query_tag_record_revert_button( cursor, event, data )
+     elif button_data.find('RXX',0,3) != -1:
+       # Remove Film from DB and revert Button to 'Add to DB'
+       data = button_data       
+       data = data.replace('RXX','')
+       logging.info(f"Button 'Remove...' pressed data={button_data} write {data}")
+       await query_untag_record_revert_button( cursor, event, data )
      else:
        pass
              
@@ -264,24 +313,8 @@ async def normal_handler(event):
        # Get info about DB
        await query_info_db( cursor )   
     elif msg.message == '/m':
-       # show menu 
-       logging.info(f"Create menu buttons")
-       keyboard = [
-           [  
-             #Button.inline("List All DB", b"/dblist"), 
-             Button.inline("List Films tagged", b"/dwlist")
-           ],
-           [
-             Button.inline("List Films tagged early", b"/dwearly")
-           ],
-           [
-             Button.inline("Clear all tagged Films", b"/dwclear")
-           ],
-           [
-             Button.inline("Get database info ", b"/dbinfo")
-           ]
-       ]
-       await bot.send_message(PeerChannel(My_channelId),"Work with database", buttons=keyboard)    
+       # show menu
+       await create_menu()
     elif re.search(filter,msg.message):
        # Add button 'Add Film to database' as inline button for message
        await query_add_button( cursor, event, msg.id ) 
@@ -291,7 +324,7 @@ async def normal_handler(event):
        message="Use command:\n/dblist - list all records (carefully!)\n/dwlist - list films tagget for download\n/dwclear - clear tagget films"
        await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html')
        
-
+       
 #Parse channel NNMCLUB for Films 
 @client.on(events.NewMessage(chats = [PeerChannel(channelId)],pattern=filter))
 async def normal_handler(event):
@@ -398,12 +431,12 @@ async def normal_handler(event):
                     Id[5]+"\n"+mydict.get(Id[5])  
 
     msg.message=msg.message+film_add_info
-    msg.message=textwrap.shorten(msg.message, width=1019, placeholder="...")
-    logging.info(f"Film not exist in db - add and send, id_msg={msg.id}\nid_nnm:{id_nnm}\n Message:{msg}")
+    msg.message=textwrap.shorten(msg.message, width=1019, placeholder="...")    
     #bdata='XX'+id_nnm
     #await bot.send_message(PeerChannel(My_channelId),msg,parse_mode='md', buttons=[ Button.inline('Add Film to database', bdata),])
     send_msg = await client.send_message(PeerChannel(My_channelId),msg,parse_mode='md')
     db_add_film( connection, cursor, send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
+    logging.info(f"Film not exist in db - add and send, src_id_msg={msg.id} dst_id_msg={send_msg.id} id_nnm:{id_nnm}\n Message:{msg}")
     logging.debug(f"Send Message:{send_msg}")
     
 
