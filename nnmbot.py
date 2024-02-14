@@ -358,8 +358,9 @@ async def normal_handler(event):
     #print(f"Peer={msg.peer_id} User={user}")
     #permissions = await bot.get_permissions(msg.peer_id, user)
     #logging.info(f"Get Permission for user: {user} ->  {permissions.is_admin}")
-    if not permissions.is_admin:
-       return
+    #if not permissions.is_admin:
+    #  return
+    
     if msg.message == '/dblist':
        # Get all database, Use with carefully may be many records
        await query_all_records( cursor )     
