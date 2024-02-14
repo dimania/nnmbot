@@ -3,7 +3,7 @@
 #Telegram Bot for filter films from NNMCLUB channel
 #
 
-from telethon import TelegramClient, sync, events
+from telethon import TelegramClient, events
 from telethon.tl.types import PeerChat, PeerChannel, MessageEntityTextUrl 
 from telethon.tl.custom import Button
 from telethon.errors import MessageNotModifiedError
@@ -62,10 +62,10 @@ def get_config( config ):
      filter         =  config.filter
      ICU_extension_lib = config.ICU_extension_lib
     except Exception as error:
-     print(f"Error in config not required settings: { error }" ) 
+     print(f"Error in config file: { error }" ) 
      exit(-1)
-    
-    
+
+
 def db_init( connection, cursor ):
     ''' Initialize database '''
     
@@ -293,6 +293,15 @@ else:
 @bot.on(events.CallbackQuery())
 async def callback(event):
      logging.debug(f"Get callback event {event}")
+     user=event.query.user_id
+     # Check user rights
+     permissions = await bot.get_permissions(event.query.peer, user)
+     logging.info(f"Get Permission for user: {user} ->  {permissions.is_admin} for chat={event.query.peer}")
+     
+     if not permissions.is_admin:
+       event.respond("Sorry you are not Admin. You can only set Reaction.")
+       return
+     
      button_data=event.data.decode()
 
      if button_data == '/dblist':
@@ -344,6 +353,13 @@ async def normal_handler(event):
     #print(event.message)
     logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
     msg=event.message
+    #user = await event.get_input_sender()
+    # Check user rights
+    #print(f"Peer={msg.peer_id} User={user}")
+    #permissions = await bot.get_permissions(msg.peer_id, user)
+    #logging.info(f"Get Permission for user: {user} ->  {permissions.is_admin}")
+    if not permissions.is_admin:
+       return
     if msg.message == '/dblist':
        # Get all database, Use with carefully may be many records
        await query_all_records( cursor )     
@@ -494,4 +510,3 @@ bot.run_until_disconnected()
 connection.close()
 logging.info(f"End.\n--------------------------")
 print('End.')
-
