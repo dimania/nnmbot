@@ -290,7 +290,7 @@ else:
     client = TelegramClient(session_client, api_id, api_hash, system_version=system_version)
          
 #Get reaction user on Buttons
-@bot.on(events.CallbackQuery())
+@bot.on(events.CallbackQuery(chats = [PeerChannel(My_channelId)]))
 async def callback(event):
      logging.debug(f"Get callback event {event}")
      user=event.query.user_id
@@ -350,7 +350,6 @@ async def callback(event):
 #Parse My channel for command 
 @bot.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern="(^/.*)|"+filter))
 async def normal_handler(event):
-    #print(event.message)
     logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
     msg=event.message
     #user = await event.get_input_sender()
