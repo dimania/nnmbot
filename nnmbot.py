@@ -3,8 +3,8 @@
 #Telegram Bot for filter films from NNMCLUB channel
 #
 
-from telethon import TelegramClient, events
-from telethon.tl.types import PeerChat, PeerChannel, MessageEntityTextUrl 
+from telethon import TelegramClient, events, utils
+from telethon.tl.types import PeerChat, PeerChannel, MessageEntityTextUrl
 from telethon.tl.custom import Button
 from telethon.errors import MessageNotModifiedError
 from datetime import datetime, date, time, timezone
@@ -38,7 +38,9 @@ def get_config( config ):
     global session_client
     global session_bot
     global channelId
-    global My_channelId
+    global My_channelId    
+    global Channel_mon
+    global Channel_my
     global db_name
     global proxies
     global logfile
@@ -55,6 +57,8 @@ def get_config( config ):
      session_bot    =  config.session_bot    
      channelId      =  config.channelId
      My_channelId   =  config.My_channelId
+     Channel_mon    =  config.Channel_mon
+     Channel_my     =  config.Channel_my
      db_name        =  config.db_name
      proxies        =  config.proxies
      logfile        =  config.logfile
@@ -235,6 +239,7 @@ async def query_info_db( cursor ):
 
 async def query_add_button( cursor, event, id_msg ): 
     ''' Add Button 'Add to DB' in message and set tag download to 1 '''
+    await asyncio.sleep(2) # wait while write to DB on previous step
     id_nnm=db_get_id_nnm( cursor, id_msg )
     logging.info(f"Get id_nnm={id_nnm} by message id={id_msg}")
     if id_nnm:
@@ -277,21 +282,36 @@ connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 db_init(connection,cursor)
+     
+def main_bot():
+  ''' Loop for client connection '''
+  global api_id
+  global api_hash
+  global mybot_token
+  global system_version
+  global session_bot
+  global My_channelId
+  global proxies 
+  global use_proxy
+  global filter  
+  #global Channel_mon
+  global Channel_my
 
-
-# Connect to Telegram
-if use_proxy:
+  
+  # Connect to Telegram
+  if use_proxy:
     prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))  
-    bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version, proxy=(prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=mybot_token)
-    client = TelegramClient(session_client, api_id, api_hash, system_version=system_version, proxy=(prx.group(1), prx.group(2), int(prx.group(3))))
-else:
+    bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version, proxy=(prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=mybot_token)    
+  else:
     proxies = None
-    bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)
-    client = TelegramClient(session_client, api_id, api_hash, system_version=system_version)
-         
-#Get reaction user on Buttons
-@bot.on(events.CallbackQuery(chats = [PeerChannel(My_channelId)]))
-async def callback(event):
+    bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)    
+  
+  bot.start()
+  My_cannelId = bot.loop.run_until_complete(bot.get_peer_id(Channel_my))
+  print( My_cannelId )
+  #Get reaction user on Buttons
+  @bot.on(events.CallbackQuery(chats = [PeerChannel(My_channelId)]))
+  async def callback(event):
      logging.debug(f"Get callback event {event}")
      user=event.query.user_id
      # Check user rights
@@ -299,7 +319,8 @@ async def callback(event):
      logging.info(f"Get Permission for user: {user} ->  {permissions.is_admin} for chat={event.query.peer}")
      
      if not permissions.is_admin:
-       event.respond("Sorry you are not Admin. You can only set Reaction.")
+       await event.respond("Sorry you are not Admin. You can only set Reaction.")
+       #await bot.send_message(PeerChannel(My_channelId),msg,parse_mode='md')
        return
      
      button_data=event.data.decode()
@@ -345,11 +366,10 @@ async def callback(event):
        await query_untag_record_revert_button( cursor, event, data )
      else:
        pass
-             
-      
-#Parse My channel for command 
-@bot.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern="(^/.*)|"+filter))
-async def normal_handler(event):
+                   
+  #Parse My channel for command 
+  @bot.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern="(^/.*)|"+filter))
+  async def normal_handler(event):
     logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
     msg=event.message
     #user = await event.get_input_sender()
@@ -386,11 +406,41 @@ async def normal_handler(event):
        logging.info(f"Send help message")
        message="Use command:\n/dblist - list all records (carefully!)\n/dwlist - list films tagget for download\n/dwclear - clear tagget films"
        await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html')
-       
-       
-#Parse channel NNMCLUB for Films 
-@client.on(events.NewMessage(chats = [PeerChannel(channelId)],pattern=filter))
-async def normal_handler(event):
+ 
+   #bot.run_until_disconnected()
+  return bot
+
+def main_client():
+  ''' Loop for bot connection '''
+  global api_id
+  global api_hash
+  global system_version
+  global session_client
+  global channelId
+  global My_channelId
+  global proxies
+  global use_proxy
+  global filter
+  global Channel_mon
+  global Channel_my
+
+  
+  # Connect to Telegram
+  if use_proxy:
+    prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))      
+    client = TelegramClient(session_client, api_id, api_hash, system_version=system_version, proxy=(prx.group(1), prx.group(2), int(prx.group(3))))
+  else:
+    proxies = None
+    client = TelegramClient(session_client, api_id, api_hash, system_version=system_version)
+  
+  
+  client.start()
+  My_cannelId = client.loop.run_until_complete(client.get_peer_id(Channel_my))
+  channelId = client.loop.run_until_complete(client.get_peer_id(Channel_mon))
+
+  #Parse channel NNMCLUB for Films 
+  @client.on(events.NewMessage(chats = [PeerChannel(channelId)],pattern=filter))
+  async def normal_handler(event):
     #print(event.message)
    
     logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")    
@@ -486,7 +536,10 @@ async def normal_handler(event):
        else:
           kpsk_r="-"
           imdb_r="-"
-
+    # Yet once check film in database       
+    if db_exist_Id(cursor,id_kpsk,id_imdb):
+          logging.info(f"Check2 Film {id_nnm} exist in db - end analize.")
+          return
     logging.info(f"Add info to message") 
     film_add_info = "\n_________________________________\n"+\
                     "Рейтинг: КП[ "+kpsk_r+" ] Imdb[ "+imdb_r+" ]\n"+\
@@ -501,12 +554,27 @@ async def normal_handler(event):
     db_add_film( connection, cursor, send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
     logging.info(f"Film not exist in db - add and send, src_id_msg={msg.id} dst_id_msg={send_msg.id} id_nnm:{id_nnm}\n Message:{msg}")
     logging.debug(f"Send Message:{send_msg}")
-    
+  
+  return client
+  #client.run_until_disconnected()  
 
-client.start()    
-bot.start()
+
+
+#asyncio.run(main_bot())
+bot=main_bot()
+client=main_client()
+
+
 client.run_until_disconnected()
-bot.run_until_disconnected()
+
+#loop = asyncio.get_event_loop()
+#tasks = [
+#    loop.create_task(main_bot()),
+#    loop.create_task(main_client()),
+#]
+#loop.run_until_complete(asyncio.wait(tasks))
+#loop.close()
+
 connection.close()
 logging.info(f"End.\n--------------------------")
 print('End.')

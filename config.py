@@ -22,11 +22,11 @@ session_client='nnmbot_session_client'
 #File name for bot connection - any filename
 session_bot='nnmbot_session_bot'
 
-# Id chennel for monitor
-channelId    = <CHANNEL_ID> # channel what monitor by example       -1001776763737
-
+#Channels must be public channel else use ID channel in notation -100ID example: -1002007192033 where 2007192033 ID channel
+# Id channel for monitor
+Channel_mon = 't.me/******' 
 # Id chanell for filter messages 
-My_channelId = <CYANNEL_ID> # channel or chat where send by example -1003333333333
+Channel_my  = 't.me/######' 
 
 # filename database - better use full path
 db_name = 'database.db'  # database name, better set full path
