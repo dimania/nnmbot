@@ -269,20 +269,6 @@ async def create_menu():
        ]
        await bot.send_message(PeerChannel(My_channelId),"Work with database", buttons=keyboard)  
 
-# main()
-print('Start bot.')
-# !!! Correct parameter as in import derective above!
-get_config(myconfig)
-
-# Enable logging
-logging.basicConfig(level=logging.INFO, filename=logfile,filemode="a",format="%(asctime)s %(levelname)s %(message)s")
-logging.info(f"Start bot.")
-
-connection = sqlite3.connect(db_name)
-connection.row_factory = sqlite3.Row
-cursor = connection.cursor()
-db_init(connection,cursor)
-     
 def main_bot():
   ''' Loop for client connection '''
   global api_id
@@ -308,7 +294,6 @@ def main_bot():
   
   bot.start()
   My_cannelId = bot.loop.run_until_complete(bot.get_peer_id(Channel_my))
-  print( My_cannelId )
   #Get reaction user on Buttons
   @bot.on(events.CallbackQuery(chats = [PeerChannel(My_channelId)]))
   async def callback(event):
@@ -558,22 +543,23 @@ def main_client():
   return client
   #client.run_until_disconnected()  
 
+# main()
+print('Start bot.')
+# !!! Correct parameter as in import derective above!
+get_config(myconfig)
 
+# Enable logging
+logging.basicConfig(level=logging.INFO, filename=logfile,filemode="a",format="%(asctime)s %(levelname)s %(message)s")
+logging.info(f"Start bot.")
 
-#asyncio.run(main_bot())
+connection = sqlite3.connect(db_name)
+connection.row_factory = sqlite3.Row
+cursor = connection.cursor()
+db_init(connection,cursor)
+     
 bot=main_bot()
 client=main_client()
-
-
 client.run_until_disconnected()
-
-#loop = asyncio.get_event_loop()
-#tasks = [
-#    loop.create_task(main_bot()),
-#    loop.create_task(main_client()),
-#]
-#loop.run_until_complete(asyncio.wait(tasks))
-#loop.close()
 
 connection.close()
 logging.info(f"End.\n--------------------------")
