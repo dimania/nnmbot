@@ -26,8 +26,7 @@ Id=["Название:", "Производство:", "Жанр:", "Режисс
     "Перевод:","Язык озвучки:", "Субтитры:", "Видео:", "Аудио 1:",
     "Аудио 2:", "Аудио 3:", "Скриншоты:", "Время раздачи:"]
 
-url = post_body = rating_url = []
-mydict = {}
+
 
 def get_config( config ):
     ''' set global variable from included config.py - import config directive''' 
@@ -37,8 +36,6 @@ def get_config( config ):
     global system_version
     global session_client
     global session_bot
-    global channelId
-    global My_channelId    
     global Channel_mon
     global Channel_my
     global db_name
@@ -55,8 +52,6 @@ def get_config( config ):
      system_version =  config.system_version
      session_client =  config.session_client
      session_bot    =  config.session_bot    
-     channelId      =  config.channelId
-     My_channelId   =  config.My_channelId
      Channel_mon    =  config.Channel_mon
      Channel_my     =  config.Channel_my
      db_name        =  config.db_name
@@ -157,7 +152,7 @@ def db_clear_download( cursor, download ):
     return str(cursor.rowcount)
     
 
-async def query_all_records( cursor ): 
+async def query_all_records( cursor, Channel_my_id ): 
     ''' Get all database, Use with carefully may be many records '''
     logging.info(f"Query all db records")
     rows = db_list_all( cursor )
@@ -165,12 +160,12 @@ async def query_all_records( cursor ):
       for row in rows:
          #print(dict(row))        
          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
-         await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+         await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
     else:
          message = "No records"
-         await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+         await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
 
-async def query_search( cursor, str_search ): 
+async def query_search( cursor, str_search, Channel_my_id ): 
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
     rows = db_search( cursor, str_search )
@@ -178,12 +173,12 @@ async def query_search( cursor, str_search ):
       for row in rows:
          #print(dict(row))        
          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
-         await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+         await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
     else:
          message = "No records"
-         await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+         await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
          
-async def query_tagged_records( cursor, tag ): 
+async def query_tagged_records( cursor, tag, Channel_my_id ): 
     ''' Get films tagget for download '''
     logging.info(f"Query db records with set download tag ")
     rows = db_list_download( cursor, tag )
@@ -191,12 +186,12 @@ async def query_tagged_records( cursor, tag ):
       for row in rows:
          #print(dict(row))        
          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
-         await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+         await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
     else:
          message = "No records"
-         await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+         await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
     
-async def query_clear_tagged_records( cursor ): 
+async def query_clear_tagged_records( cursor, Channel_my_id ): 
     ''' Clear all tag for download '''
     logging.info(f"Query db for clear download tag ") 
     rows = db_clear_download( cursor, 2 )
@@ -204,7 +199,7 @@ async def query_clear_tagged_records( cursor ):
         message = 'Clear '+rows+' records'      
     else:
         message = "No records"         
-    await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+    await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
 
 async def query_tag_record_revert_button( cursor, event, data  ): 
     ''' Revert Button to 'Remove from DB' in message and set tag download to 1 '''
@@ -230,12 +225,12 @@ async def query_untag_record_revert_button( cursor, event, data  ):
     except MessageNotModifiedError:
       pass
     
-async def query_info_db( cursor ): 
+async def query_info_db( cursor, Channel_my_id ): 
     ''' Get info about database records '''
     logging.info(f"Query info database ")
     rows = db_info( cursor )
     message="All records: "+str(rows[0][0])+"\nTagged records: "+str(rows[1][0])+"\nEarly tagged: "+str(rows[2][0])
-    await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html',link_preview=0)
+    await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
 
 async def query_add_button( cursor, event, id_msg ): 
     ''' Add Button 'Add to DB' in message and set tag download to 1 '''
@@ -246,7 +241,7 @@ async def query_add_button( cursor, event, id_msg ):
       bdata='XX'+id_nnm
       await event.edit(buttons=[ Button.inline('Add Film to BD', bdata),Button.inline("Menu", b"/m")])
   
-async def create_menu():
+async def create_menu(Channel_my_id):
        ''' Create menu on channel '''
        logging.info(f"Create menu buttons")
        keyboard = [
@@ -267,23 +262,11 @@ async def create_menu():
              Button.inline("Search Films in database ", b"/s")
            ]
        ]
-       await bot.send_message(PeerChannel(My_channelId),"Work with database", buttons=keyboard)  
+       await bot.send_message(PeerChannel(Channel_my_id),"Work with database", buttons=keyboard)  
 
-def main_bot():
+def main_bot( api_id=None, api_hash=None, mybot_token=None, system_version=None, session_bot=None, Channel_mon=None, Channel_my=None, proxies=None, use_proxy=0, filter=filter ):
   ''' Loop for client connection '''
-  global api_id
-  global api_hash
-  global mybot_token
-  global system_version
-  global session_bot
-  global My_channelId
-  global proxies 
-  global use_proxy
-  global filter  
-  #global Channel_mon
-  global Channel_my
-
-  
+ 
   # Connect to Telegram
   if use_proxy:
     prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))  
@@ -293,9 +276,9 @@ def main_bot():
     bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)    
   
   bot.start()
-  My_cannelId = bot.loop.run_until_complete(bot.get_peer_id(Channel_my))
+  Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(Channel_my))
   #Get reaction user on Buttons
-  @bot.on(events.CallbackQuery(chats = [PeerChannel(My_channelId)]))
+  @bot.on(events.CallbackQuery(chats = [PeerChannel(Channel_my_id)]))
   async def callback(event):
      logging.debug(f"Get callback event {event}")
      user=event.query.user_id
@@ -305,36 +288,36 @@ def main_bot():
      
      if not permissions.is_admin:
        await event.respond("Sorry you are not Admin. You can only set Reaction.")
-       #await bot.send_message(PeerChannel(My_channelId),msg,parse_mode='md')
+       #await bot.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md')
        return
      
      button_data=event.data.decode()
 
      if button_data == '/dblist':
        # Get all database, Use with carefully may be many records
-       await query_all_records( cursor )       
+       await query_all_records( cursor, Channel_my_id )       
      elif button_data == '/dwlist':
        # Get films tagget for download
-       await query_tagged_records( cursor, 1 )
+       await query_tagged_records( cursor, 1, Channel_my_id )
      elif button_data == '/dwclear':
        # Clear all tag for download
-       await query_clear_tagged_records( cursor )
+       await query_clear_tagged_records( cursor, Channel_my_id )
      elif button_data == '/dwearly':
        # Get films tagget early for download
-       await query_tagged_records( cursor, 2 ) 
+       await query_tagged_records( cursor, 2, Channel_my_id ) 
      elif button_data == '/dbinfo':
        # Get info about DB
-       await query_info_db( cursor )
+       await query_info_db( cursor, Channel_my_id )
      elif button_data == '/m':
        # Menu button pressed - show menu 
-       await create_menu()
+       await create_menu( Channel_my_id )
      elif button_data == '/s':
        # search Films 
        await event.respond("Write and send what you search:")
-       @bot.on(events.NewMessage(chats = [PeerChannel(My_channelId)]))
+       @bot.on(events.NewMessage(chats = [PeerChannel(Channel_my_id)]))
        async def search_handler(event_search):
            logging.info(f"Get search string: {event_search.message.message}")
-           await query_search( cursor, event_search.message.message )
+           await query_search( cursor, event_search.message.message, Channel_my_id )
            await event.respond("...Done...",buttons=[Button.inline("Menu", b"/m")])
            bot.remove_event_handler(search_handler)
      elif button_data.find('XX',0,2) != -1:
@@ -353,7 +336,7 @@ def main_bot():
        pass
                    
   #Parse My channel for command 
-  @bot.on(events.NewMessage(chats = [PeerChannel(My_channelId)],pattern="(^/.*)|"+filter))
+  @bot.on(events.NewMessage(chats = [PeerChannel(Channel_my_id)],pattern="(^/.*)|"+filter))
   async def normal_handler(event):
     logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
     msg=event.message
@@ -367,22 +350,22 @@ def main_bot():
     
     if msg.message == '/dblist':
        # Get all database, Use with carefully may be many records
-       await query_all_records( cursor )     
+       await query_all_records( cursor, Channel_my_id )     
     elif msg.message == '/dwlist':
        # Get films tagget for download
-       await query_tagged_records( cursor, 1 )
+       await query_tagged_records( cursor, 1, Channel_my_id )
     elif msg.message == '/dwclear':
        # Clear all tag for download
-       await query_clear_tagged_records( cursor )
+       await query_clear_tagged_records( cursor, Channel_my_id )
     elif msg.message == '/dwearly':
        # Get films tagget early for download
-       await query_tagged_records( cursor, 2 )
+       await query_tagged_records( cursor, 2, Channel_my_id )
     elif msg.message == '/dbinfo':
        # Get info about DB
-       await query_info_db( cursor )   
+       await query_info_db( cursor, Channel_my_id )   
     elif msg.message == '/m':
        # show menu
-       await create_menu()
+       await create_menu( Channel_my_id )
     elif re.search(filter,msg.message):
        # Add button 'Add Film to database' as inline button for message
        await query_add_button( cursor, event, msg.id ) 
@@ -390,25 +373,16 @@ def main_bot():
        # send help
        logging.info(f"Send help message")
        message="Use command:\n/dblist - list all records (carefully!)\n/dwlist - list films tagget for download\n/dwclear - clear tagget films"
-       await bot.send_message(PeerChannel(My_channelId),message,parse_mode='html')
+       await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html')
  
    #bot.run_until_disconnected()
   return bot
 
-def main_client():
+def main_client( api_id=None, api_hash=None, mybot_token=None, system_version=None, session_client=None, Channel_mon=None, Channel_my=None, proxies=None, use_proxy=None, filter=None):
   ''' Loop for bot connection '''
-  global api_id
-  global api_hash
-  global system_version
-  global session_client
-  global channelId
-  global My_channelId
-  global proxies
-  global use_proxy
-  global filter
-  global Channel_mon
-  global Channel_my
-
+  
+  url = post_body = rating_url = []
+  mydict = {}
   
   # Connect to Telegram
   if use_proxy:
@@ -420,11 +394,11 @@ def main_client():
   
   
   client.start()
-  My_cannelId = client.loop.run_until_complete(client.get_peer_id(Channel_my))
-  channelId = client.loop.run_until_complete(client.get_peer_id(Channel_mon))
+  Channel_my_id = client.loop.run_until_complete(client.get_peer_id(Channel_my))
+  Channel_mon_id = client.loop.run_until_complete(client.get_peer_id(Channel_mon))
 
   #Parse channel NNMCLUB for Films 
-  @client.on(events.NewMessage(chats = [PeerChannel(channelId)],pattern=filter))
+  @client.on(events.NewMessage(chats = [PeerChannel(Channel_mon_id)],pattern=filter))
   async def normal_handler(event):
     #print(event.message)
    
@@ -521,7 +495,7 @@ def main_client():
        else:
           kpsk_r="-"
           imdb_r="-"
-    # Yet once check film in database       
+    # Yet once check film in database for posiible concurent write/read      
     if db_exist_Id(cursor,id_kpsk,id_imdb):
           logging.info(f"Check2 Film {id_nnm} exist in db - end analize.")
           return
@@ -534,8 +508,8 @@ def main_client():
     msg.message=msg.message+film_add_info
     msg.message=textwrap.shorten(msg.message, width=1019, placeholder="...")    
     #bdata='XX'+id_nnm
-    #await bot.send_message(PeerChannel(My_channelId),msg,parse_mode='md', buttons=[ Button.inline('Add Film to database', bdata),])
-    send_msg = await client.send_message(PeerChannel(My_channelId),msg,parse_mode='md')
+    #await bot.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md', buttons=[ Button.inline('Add Film to database', bdata),])
+    send_msg = await client.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md')
     db_add_film( connection, cursor, send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
     logging.info(f"Film not exist in db - add and send, src_id_msg={msg.id} dst_id_msg={send_msg.id} id_nnm:{id_nnm}\n Message:{msg}")
     logging.debug(f"Send Message:{send_msg}")
@@ -546,6 +520,7 @@ def main_client():
 # main()
 print('Start bot.')
 # !!! Correct parameter as in import derective above!
+
 get_config(myconfig)
 
 # Enable logging
@@ -556,9 +531,29 @@ connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 db_init(connection,cursor)
-     
-bot=main_bot()
-client=main_client()
+
+bot=main_bot( api_id=api_id, 
+              api_hash=api_hash,
+              mybot_token=mybot_token,
+              system_version=system_version,
+              session_bot=session_bot,
+              Channel_mon=Channel_mon,
+              Channel_my=Channel_my,
+              proxies=proxies,
+              use_proxy=use_proxy,
+              filter=filter )
+
+client=main_client( api_id=api_id, 
+                    api_hash=api_hash,
+                    mybot_token=mybot_token,
+                    system_version=system_version,
+                    session_client=session_client,
+                    Channel_mon=Channel_mon,
+                    Channel_my=Channel_my,
+                    proxies=proxies,
+                    use_proxy=use_proxy,
+                    filter=filter )
+
 client.run_until_disconnected()
 
 connection.close()
