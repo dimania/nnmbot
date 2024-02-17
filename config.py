@@ -4,6 +4,10 @@
 # Please check directive - import config in programm
 # 
 
+# import for set logging level in config file
+import logging
+
+
 # Api id getted from telegram from  https://my.telegram.org change to 60328456 by example
 api_id = <API_ID>
 
@@ -26,7 +30,9 @@ session_bot='nnmbot_session_bot'
 # Id channel for monitor
 Channel_mon = 't.me/******' 
 # Id chanell for filter messages 
-Channel_my  = 't.me/######' 
+Channel_my  = 't.me/######'
+# Name of bot - will be to switch on you bot for control database.
+bot_name = 'control_bd_bot'
 
 # filename database - better use full path
 db_name = 'database.db'  # database name, better set full path
@@ -50,3 +56,5 @@ filter=r'(?:.*Фильм.*)|(?:.*Новинки.*)'
 #ICU extension for case independet search  in DB if Not when set in None
 ICU_extension_lib = "/usr/lib64/sqlite3/libSqliteIcu.so"
 
+# Set logging level for bot
+log_level=logging.INFO
