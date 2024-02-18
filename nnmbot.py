@@ -147,8 +147,6 @@ def db_search( cursor, str_search ):
     str_search='%'+str_search+'%'
     cursor.execute("SELECT name,nnm_url FROM Films WHERE name LIKE ? COLLATE NOCASE", (str_search,) )
     rows = cursor.fetchall()
-    for row in rows:
-      print(dict(row))
     return rows
 
 def db_clear_download( cursor, download ):
@@ -177,7 +175,6 @@ async def query_search( cursor, str_search, event ):
     rows = db_search( cursor, str_search )
     if rows:
       for row in rows:
-         #print(dict(row))        
          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
          await event.respond(message,parse_mode='html',link_preview=0)
     else:
@@ -248,31 +245,6 @@ async def query_add_button( cursor, event, id_msg, bot_name ):
       bdata='XX'+id_nnm
       await event.edit(buttons=[ Button.inline('Add Film to BD', bdata),Button.url('Control BD','t.me/'+bot_name+'?start')])
   
-async def create_menu(Channel_my_id):
-       ''' Create menu on channel '''
-       logging.info(f"Create menu buttons")
-       keyboard = [
-           [
-             #Button.inline("List All DB", b"/dblist"),
-             Button.inline("List Films tagged", b"/dwlist")
-           ],
-           [
-             Button.inline("List Films tagged early", b"/dwearly")
-           ],
-           [
-             Button.inline("Clear all tagged Films", b"/dwclear")
-           ],
-           [
-             Button.inline("Get database info ", b"/dbinfo")
-           ],
-           [
-             Button.inline("Search Films in database ", b"/s")
-           ]
-       ]
-       await bot.send_message(PeerChannel(Channel_my_id),"Work with database", buttons=keyboard)
-       #await bot.respond("Work with database", buttons=keyboard)
-
-
 async def create_menu_bot(event):
        ''' Create menu on channel '''
        logging.info(f"Create menu buttons")
@@ -295,9 +267,9 @@ async def create_menu_bot(event):
            ]
        ]
        #await bot.send_message(PeerChannel(Channel_my_id),"Work with database", buttons=keyboard)
-       await event.respond("Work with database", buttons=keyboard)
+       await event.respond("**☣ Work with database:**",parse_mode='md', buttons=keyboard)
 
-def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, system_version=None, session_bot=None, Channel_mon=None, Channel_my=None, proxies=None, use_proxy=0, filter=filter ):
+def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, system_version=None, session_bot=None, Channel_mon=None, Channel_my=None, proxies=None, use_proxy=0, filter=None ):
   ''' Loop for client connection '''
  
   # Connect to Telegram
@@ -314,14 +286,17 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
   #Get reaction user on inline Buttons
   @bot.on(events.CallbackQuery(chats = [PeerChannel(Channel_my_id)]))
   async def callback(event):
-     logging.debug(f"Get callback event {event}")
+     logging.debug(f"Get callback event on channel {Channel_my}: {event}")
      user=event.query.user_id
      # Check user rights
      permissions = await bot.get_permissions(event.query.peer, user)
      logging.info(f"Get Permission for user: {user} ->  {permissions.is_admin} for chat={event.query.peer}")
 
+
      if not permissions.is_admin:
        await event.respond("Sorry you are not Admin. You can only set Reaction.")
+       # Stop handle this event other handlers
+       raise StopPropagation
        return
      
      button_data=event.data.decode()
@@ -338,8 +313,9 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
        data = data.replace('RXX','')
        logging.info(f"Button 'Remove...' pressed data={button_data} write {data}")
        await query_untag_record_revert_button( cursor, event, data, bot_name )
-     else:
-       pass
+
+     # Stop handle this event other handlers
+     raise StopPropagation
 
                    
   #Attach inline button to new film message
@@ -348,7 +324,7 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
     logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
     # Add button 'Add Film to database' as inline button for message
     await query_add_button( cursor, event, event.message.id, bot_name )
-    raise StopPropagation
+    raise StopPropagation # Stop handle this event other handlers
 
   @bot.on(events.NewMessage())
   async def bot_handler(event_bot):
@@ -372,38 +348,43 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
        return
 
      button_data=event_bot.data.decode()
+     await event_bot.delete()
+     send_menu=0
 
      if button_data == '/dblist': # Not Use now
        # Get all database, Use with carefully may be many records
        await query_all_records( cursor, event_bot )
-       await create_menu_bot( event_bot )
+       send_menu=1
      elif button_data == '/dwlist':
        # Get films tagget for download
        await query_tagged_records( cursor, 1, event_bot )
-       await create_menu_bot( event_bot )
+       send_menu=1
      elif button_data == '/dwclear':
        # Clear all tag for download
        await query_clear_tagged_records( cursor, event_bot )
-       await create_menu_bot( event_bot )
+       send_menu=1
      elif button_data == '/dwearly':
        # Get films tagget early for download
        await query_tagged_records( cursor, 2, event_bot )
-       await create_menu_bot( event_bot )
+       send_menu=1
      elif button_data == '/dbinfo':
        # Get info about DB
        await query_info_db( cursor, event_bot )
+       send_menu=1
      elif button_data == '/s':
        # search Films
        await event_bot.respond("Write and send what you search:")
+       send_menu=0
        @bot.on(events.NewMessage())
        async def search_handler(event_search):
            logging.info(f"Get search string: {event_search.message.message}")
            await query_search( cursor, event_search.message.message, event_bot )
            await event_bot.respond("......Done......")
-           await create_menu_bot( event_bot )
            bot.remove_event_handler(search_handler)
-     else:
-       pass
+           await create_menu_bot( event_bot )
+
+     if send_menu:
+       await create_menu_bot( event_bot )
 
 
   return bot
@@ -530,15 +511,13 @@ def main_client( api_id=None, api_hash=None, mybot_token=None, system_version=No
           logging.info(f"Check2 Film {id_nnm} exist in db - end analize.")
           return
     logging.info(f"Add info to message") 
-    film_add_info = "\n_________________________________\n"+\
-                    "Рейтинг: КП[ "+kpsk_r+" ] Imdb[ "+imdb_r+" ]\n"+\
-                    Id[2]+mydict.get(Id[2])+"\n"+\
-                    Id[5]+"\n"+mydict.get(Id[5])  
+    film_add_info = f"\n_________________________________\nРейтинг: КП[{kpsk_r}] Imdb[{imdb_r}]\n{Id[2]} {mydict.get(Id[2])}\n{Id[5]}\n{mydict.get(Id[5])}"
 
     msg.message=msg.message+film_add_info
-    msg.message=textwrap.shorten(msg.message, width=1019, placeholder="...")    
-    #bdata='XX'+id_nnm
-    #await bot.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md', buttons=[ Button.inline('Add Film to database', bdata),])
+
+    if len(msg.message) > 1023:
+       msg.message=msg.message[:1019]+'...'
+
     send_msg = await client.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md')
     db_add_film( connection, cursor, send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
     logging.info(f"Film not exist in db - add and send, src_id_msg={msg.id} dst_id_msg={send_msg.id} id_nnm:{id_nnm}\n Message:{msg}")
