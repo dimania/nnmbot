@@ -75,7 +75,7 @@ def get_config( config ):
      exit(-1)
 
 
-def db_init( connection, cursor ):
+def db_init():
     ''' Initialize database '''
     
     #Load ICU extension in exist for case independet search  in DB
@@ -99,19 +99,19 @@ def db_init( connection, cursor ):
     ''')
     connection.commit()
 
-def db_add_film( connection, cursor, id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb ):
+def db_add_film( id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb ):
     ''' Add new Film to database '''
     cur_date=datetime.now()
     cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, date) VALUES(?, ?, ?, ?, ?, ?, ?)",\
     (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, cur_date))
     connection.commit()
 
-def db_exist_Id( cursor, id_kpsk, id_imdb ):
+def db_exist_Id( id_kpsk, id_imdb ):
     ''' Test exist Film in database '''
     cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk,id_imdb))
     return cursor.fetchone()
 
-def db_get_id_nnm( cursor, id_msg ):
+def db_get_id_nnm( id_msg ):
     ''' Get id_nm by id_msg '''
     cursor.execute("SELECT id_nnm FROM Films WHERE id_msg = ?", (id_msg,))    
     row = cursor.fetchone()
@@ -120,25 +120,25 @@ def db_get_id_nnm( cursor, id_msg ):
     else: 
       return None
 
-def db_info( cursor ):
+def db_info():
     ''' Get Info database: all records, tagged for download records and tagged early records '''
     cursor.execute("SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Films WHERE download = 1 UNION ALL SELECT COUNT(*) FROM Films WHERE download = 2")
     rows = cursor.fetchall()
     return rows 
 
-def db_switch_download( cursor, id_nnm, download):
+def db_switch_download( id_nnm, download):
     ''' Set tag in database for download film late '''
     cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?", (download,id_nnm))
     connection.commit()
     return str(cursor.rowcount)
   
-def db_list_all( cursor ):
+def db_list_all():
     ''' List all database '''
     cursor.execute('SELECT  * FROM Films')
     rows = cursor.fetchall() 
     return rows
 
-def db_list_download( cursor, download ):
+def db_list_download( download ):
     ''' List only records with set tag download '''
     cursor.execute("SELECT name,nnm_url FROM Films WHERE download = ?", (download,) )
     rows = cursor.fetchall()
@@ -146,21 +146,21 @@ def db_list_download( cursor, download ):
     #  print(dict(row))
     return rows
 
-def db_search( cursor, str_search ):
+def db_search( str_search ):
     ''' Search in db '''
     str_search='%'+str_search+'%'
     cursor.execute("SELECT name,nnm_url FROM Films WHERE name LIKE ? COLLATE NOCASE", (str_search,) )
     rows = cursor.fetchall()
     return rows
 
-def db_clear_download( cursor, download ):
+def db_clear_download( download ):
     ''' Set to N records with set tag download to 1 '''
     cursor.execute("UPDATE Films SET download=? WHERE download = 1", (download,))
     connection.commit()
     return str(cursor.rowcount)
     
 
-async def query_all_records( cursor, event ):
+async def query_all_records( event ):
     ''' Get all database, Use with carefully may be many records '''
     logging.info(f"Query all db records")
     rows = db_list_all( cursor )
@@ -173,10 +173,10 @@ async def query_all_records( cursor, event ):
          message = "No records"
          await event.respond(message,parse_mode='html',link_preview=0)
 
-async def query_search( cursor, str_search, event ):
+async def query_search( str_search, event ):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
-    rows = db_search( cursor, str_search )
+    rows = db_search( str_search )
     if rows:
       for row in rows:
          message = '<a href="' + dict(row).get('nnm_url') + '">' + dict(row).get('name') + '</a>'
@@ -185,10 +185,10 @@ async def query_search( cursor, str_search, event ):
          message = "No records"
          await event.respond(message,parse_mode='html',link_preview=0)
          
-async def query_tagged_records( cursor, tag, event ):
+async def query_tagged_records( tag, event ):
     ''' Get films tagget for download '''
     logging.info(f"Query db records with set download tag ")
-    rows = db_list_download( cursor, tag )
+    rows = db_list_download( tag )
     if rows:
       for row in rows:
          #print(dict(row))        
@@ -198,20 +198,20 @@ async def query_tagged_records( cursor, tag, event ):
          message = "No records"
          await event.respond(message,parse_mode='html',link_preview=0)
     
-async def query_clear_tagged_records( cursor, event ):
+async def query_clear_tagged_records( event ):
     ''' Clear all tag for download '''
     logging.info(f"Query db for clear download tag ") 
-    rows = db_clear_download( cursor, 2 )
+    rows = db_clear_download( 2 )
     if rows:     
         message = 'Clear '+rows+' records'      
     else:
         message = "No records"         
     await event.respond(message,parse_mode='html',link_preview=0)
 
-async def query_tag_record_revert_button( cursor, event, data, bot_name  ):
+async def query_tag_record_revert_button( event, data, bot_name ):
     ''' Revert Button to 'Remove from DB' in message and set tag download to 1 '''
-    db_switch_download( cursor, data, 1)
-    #id_nnm=db_get_id_nnm( cursor, event.message_id )
+    db_switch_download( data, 1)
+    #id_nnm=db_get_id_nnm( event.message_id )
     logging.info(f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")  
     try: 
       #await event.edit(buttons=Button.clear())
@@ -220,10 +220,10 @@ async def query_tag_record_revert_button( cursor, event, data, bot_name  ):
     except MessageNotModifiedError:
       pass
 
-async def query_untag_record_revert_button( cursor, event, data, bot_name ):
+async def query_untag_record_revert_button( event, data, bot_name ):
     ''' Revert Button to 'Add to DB' in message and set tag download to 2 '''
-    db_switch_download( cursor, data, 2)
-    #id_nnm=db_get_id_nnm( cursor, event.message_id )
+    db_switch_download( data, 2)
+    #id_nnm=db_get_id_nnm( event.message_id )
     logging.info(f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")  
     try: 
       #await event.edit(buttons=Button.clear())
@@ -232,7 +232,7 @@ async def query_untag_record_revert_button( cursor, event, data, bot_name ):
     except MessageNotModifiedError:
       pass
     
-async def query_info_db( cursor, Channel_my_id ): 
+async def query_info_db( Channel_my_id ): 
     ''' Get info about database records '''
     logging.info(f"Query info database ")
     rows = db_info( cursor )
@@ -240,10 +240,10 @@ async def query_info_db( cursor, Channel_my_id ):
     #await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
     await Channel_my_id.respond(message,parse_mode='html',link_preview=0)
 
-async def query_add_button( cursor, event, id_msg, bot_name ):
+async def query_add_button( event, id_msg, bot_name ):
     ''' Add Button 'Add to DB' in message and set tag download to 1 '''
     await asyncio.sleep(2) # wait while write to DB on previous step
-    id_nnm=db_get_id_nnm( cursor, id_msg )
+    id_nnm=db_get_id_nnm( id_msg )
     logging.info(f"Get id_nnm={id_nnm} by message id={id_msg}")
     if id_nnm:
       bdata='XX'+id_nnm
@@ -273,8 +273,8 @@ async def create_menu_bot(event):
        #await bot.send_message(PeerChannel(Channel_my_id),"Work with database", buttons=keyboard)
        await event.respond("**☣ Work with database:**",parse_mode='md', buttons=keyboard)
 
-def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, system_version=None, session_bot=None, Channel_mon=None, Channel_my=None, proxies=None, use_proxy=0, filter=None ):
-  ''' Loop for client connection '''
+def main_bot():
+  ''' Loop for bot connection '''
  
   # Connect to Telegram
   if use_proxy:
@@ -315,13 +315,13 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
        data = button_data       
        data = data.replace('XX','')
        logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
-       await query_tag_record_revert_button( cursor, event, data, bot_name )
+       await query_tag_record_revert_button( event, data, bot_name )
      elif button_data.find('RXX',0,3) != -1:
        # Remove Film from DB and revert Button to 'Add to DB'
        data = button_data       
        data = data.replace('RXX','')
        logging.info(f"Button 'Remove...' pressed data={button_data} write {data}")
-       await query_untag_record_revert_button( cursor, event, data, bot_name )
+       await query_untag_record_revert_button( event, data, bot_name )
 
      # Stop handle this event other handlers
      raise StopPropagation
@@ -332,7 +332,7 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
   async def normal_handler(event):
     logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
     # Add button 'Add Film to database' as inline button for message
-    await query_add_button( cursor, event, event.message.id, bot_name )
+    await query_add_button( event, event.message.id, bot_name )
     raise StopPropagation # Stop handle this event other handlers
 
   @bot.on(events.NewMessage())
@@ -362,23 +362,23 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
 
      if button_data == '/dblist': # Not Use now
        # Get all database, Use with carefully may be many records
-       await query_all_records( cursor, event_bot )
+       await query_all_records( event_bot )
        send_menu=1
      elif button_data == '/dwlist':
        # Get films tagget for download
-       await query_tagged_records( cursor, 1, event_bot )
+       await query_tagged_records( 1, event_bot )
        send_menu=1
      elif button_data == '/dwclear':
        # Clear all tag for download
-       await query_clear_tagged_records( cursor, event_bot )
+       await query_clear_tagged_records( event_bot )
        send_menu=1
      elif button_data == '/dwearly':
        # Get films tagget early for download
-       await query_tagged_records( cursor, 2, event_bot )
+       await query_tagged_records( 2, event_bot )
        send_menu=1
      elif button_data == '/dbinfo':
        # Get info about DB
-       await query_info_db( cursor, event_bot )
+       await query_info_db( event_bot )
        send_menu=1
      elif button_data == '/s':
        # search Films
@@ -387,7 +387,7 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
        @bot.on(events.NewMessage())
        async def search_handler(event_search):
            logging.info(f"Get search string: {event_search.message.message}")
-           await query_search( cursor, event_search.message.message, event_bot )
+           await query_search( event_search.message.message, event_bot )
            await event_bot.respond("......Done......")
            bot.remove_event_handler(search_handler)
            await create_menu_bot( event_bot )
@@ -398,8 +398,8 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
 
   return bot
 
-def main_client( api_id=None, api_hash=None, mybot_token=None, system_version=None, session_client=None, Channel_mon=None, Channel_my=None, proxies=None, use_proxy=None, filter=None):
-  ''' Loop for bot connection '''
+def main_client():
+  ''' Loop for client connection '''
   
   url = post_body = rating_url = []
   mydict = {}
@@ -492,7 +492,7 @@ def main_client( api_id=None, api_hash=None, mybot_token=None, system_version=No
            
        id_nnm=re.search('viewtopic.php.t=(.+?)$',url).group(1)
        
-       if db_exist_Id(cursor,id_kpsk,id_imdb):
+       if db_exist_Id(id_kpsk,id_imdb):
           logging.info(f"Film {id_nnm} exist in db - end analize.")
           return
               
@@ -521,7 +521,7 @@ def main_client( api_id=None, api_hash=None, mybot_token=None, system_version=No
           kpsk_r="-"
           imdb_r="-"
     # Yet once check film in database for posiible concurent write/read      
-    if db_exist_Id(cursor,id_kpsk,id_imdb):
+    if db_exist_Id(id_kpsk,id_imdb):
           logging.info(f"Check2 Film {id_nnm} exist in db - end analize.")
           return
     logging.info(f"Add info to message") 
@@ -533,7 +533,7 @@ def main_client( api_id=None, api_hash=None, mybot_token=None, system_version=No
        msg.message=msg.message[:1019]+'...'
 
     send_msg = await client.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md')
-    db_add_film( connection, cursor, send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
+    db_add_film( send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
     logging.info(f"Film not exist in db - add and send, src_id_msg={msg.id} dst_id_msg={send_msg.id} id_nnm:{id_nnm}\n Message:{msg}")
     logging.debug(f"Send Message:{send_msg}")
   
@@ -553,30 +553,11 @@ logging.info(f"Start bot.")
 connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
-db_init(connection,cursor)
+db_init()
 
-bot=main_bot( api_id=api_id, 
-              api_hash=api_hash,
-              mybot_token=mybot_token,
-              bot_name=bot_name,
-              system_version=system_version,
-              session_bot=session_bot,
-              Channel_mon=Channel_mon,
-              Channel_my=Channel_my,
-              proxies=proxies,
-              use_proxy=use_proxy,
-              filter=filter )
+bot=main_bot()
 
-client=main_client( api_id=api_id, 
-                    api_hash=api_hash,
-                    mybot_token=mybot_token,
-                    system_version=system_version,
-                    session_client=session_client,
-                    Channel_mon=Channel_mon,
-                    Channel_my=Channel_my,
-                    proxies=proxies,
-                    use_proxy=use_proxy,
-                    filter=filter )
+client=main_client()
 
 client.run_until_disconnected()
 
