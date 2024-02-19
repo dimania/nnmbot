@@ -1,5 +1,5 @@
 # nnmbot                             
-[English description](#description)
+[English](#description)
 ## Описание
 Telegram Bot для фильтрации Телеграм канала [NNMCLUB](t.me/nnmclubtor)  <br> <br>
 Скрипрт на Python прослушивает Телеграм канал [NNMCLUB](t.me/nnmclubtor) и пересылает сообщения содержащие информацию только о фильмах на ваш личный канал. Фильтр настаривается в конфигурационном файле. <br><br>
