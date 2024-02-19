@@ -58,14 +58,18 @@ def get_config( config ):
      bot_name       =  config.bot_name
      Channel_mon    =  config.Channel_mon
      Channel_my     =  config.Channel_my
-     db_name        =  config.db_name
-     proxies        =  config.proxies
+     db_name        =  config.db_name     
      logfile        =  config.logfile
      use_proxy      =  config.use_proxy
      filter         =  config.filter
      log_level      =  config.log_level
      ICU_extension_lib = config.ICU_extension_lib
-
+     
+     if use_proxy:
+         proxies = config.proxies
+     else:
+         proxies = None
+         
     except Exception as error:
      print(f"Error in config file: { error }" ) 
      exit(-1)
@@ -276,12 +280,17 @@ def main_bot( api_id=None, api_hash=None, mybot_token=None, bot_name=None, syste
   if use_proxy:
     prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))  
     bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version, proxy=(prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=mybot_token)    
-  else:
-    proxies = None
+  else:    
     bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)    
   
   bot.start()
-  Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(Channel_my))
+  try:
+    Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(Channel_my))
+  except Exception as BotMethodInvalidError:
+     logging.error("Bot can't access get channel ID  by {Cahnnel_my}.\n Please change Channel_my on digital notation!\n") 
+     logging.error("Original Error is: {BotMethodInvalidError}")
+     print("Bot can't access get channel ID  by {Cahnnel_my}.\n Please change Channel_my on digital notation!\n") 
+     exit(-1)
 
   #Get reaction user on inline Buttons
   @bot.on(events.CallbackQuery(chats = [PeerChannel(Channel_my_id)]))
@@ -400,7 +409,6 @@ def main_client( api_id=None, api_hash=None, mybot_token=None, system_version=No
     prx = re.search('(^.*)://(.*):(.*$)',proxies.get('http'))      
     client = TelegramClient(session_client, api_id, api_hash, system_version=system_version, proxy=(prx.group(1), prx.group(2), int(prx.group(3))))
   else:
-    proxies = None
     client = TelegramClient(session_client, api_id, api_hash, system_version=system_version)
   
   
@@ -426,13 +434,19 @@ def main_client( api_id=None, api_hash=None, mybot_token=None, system_version=No
     
     #if URL exist get additional info for film
     if url:
-       page = requests.get(url,proxies=proxies)
-
-       if page.status_code != 200: 
-         logging.error(f"Can't open url:{url}, status:{page.status}") 
-         return
-
+       try:
+         page = requests.get(url,proxies=proxies)
+         if page.status_code != 200: 
+           logging.error(f"Can't open url:{url}, status:{page.status}") 
+           return
+       except Exception as ConnectionError:
+         logging.error(f"Can't open url:{url}, status:{ConnectionError}") 
+         logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
+         #raise Exception('End client process.')
+         exit(-1) #FIXME Need correctly end program, unknown as
        # Parse data
+       
+       logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}") 
        soup = BeautifulSoup(page.text, 'html.parser')
 
        # Select data where class - postbody
