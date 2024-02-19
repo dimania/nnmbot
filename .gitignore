@@ -1,5 +1,5 @@
 myconfig.py
-my_database.db
+*database*.db
 *.sesssion
 test/*
 *.log

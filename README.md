@@ -11,7 +11,7 @@ Telegram Bot для фильтрации Телеграм канала [NNMCLUB]
 	- List Films tagged early - Вывести список  фильмов у которых снята ранее проставленнная отметка
 	- Clear all tagged Films - очистить все отметки
 	- Get database info - получить информацию о записях в базе данных
-	-Search Films in database - поиск фильма в базе данных
+	- Search Films in database - поиск фильма в базе данных
 
 ## Настройка и запуск
 
