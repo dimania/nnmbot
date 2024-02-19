@@ -290,7 +290,8 @@ def main_bot():
      logging.error("Bot can't access get channel ID  by {Cahnnel_my}.\n Please change Channel_my on digital notation!\n") 
      logging.error("Original Error is: {BotMethodInvalidError}")
      print("Bot can't access get channel ID  by {Cahnnel_my}.\n Please change Channel_my on digital notation!\n") 
-     exit(-1)
+     bot.disconnect()
+     return None
 
   #Get reaction user on inline Buttons
   @bot.on(events.CallbackQuery(chats = [PeerChannel(Channel_my_id)]))
@@ -442,8 +443,9 @@ def main_client():
        except Exception as ConnectionError:
          logging.error(f"Can't open url:{url}, status:{ConnectionError}") 
          logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
-         #raise Exception('End client process.')
-         exit(-1) #FIXME Need correctly end program, unknown as
+         client.disconnect()
+         return
+         #exit(-1) #FIXME Need correctly end program, unknown as
        # Parse data
        
        logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}") 
@@ -556,10 +558,9 @@ cursor = connection.cursor()
 db_init()
 
 bot=main_bot()
-
-client=main_client()
-
-client.run_until_disconnected()
+if bot:
+  client=main_client()
+  client.run_until_disconnected()
 
 connection.close()
 logging.info(f"End.\n--------------------------")
