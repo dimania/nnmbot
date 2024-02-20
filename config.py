@@ -4,10 +4,6 @@
 # Please check directive - import config in programm
 # 
 
-# import for set logging level in config file
-import logging
-
-
 # Api id getted from telegram from  https://my.telegram.org change to 60328456 by example
 api_id = <API_ID>
 
@@ -56,5 +52,7 @@ filter=r'(?:.*Фильм.*)|(?:.*Новинки.*)'
 #ICU extension for case independet search  in DB if Not when set in None
 ICU_extension_lib = "/usr/lib64/sqlite3/libSqliteIcu.so"
 
-# Set logging level for bot
-log_level=logging.INFO
+#Set logging level for bot
+#Possible value: NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL  
+log_level='INFO'
+

@@ -19,7 +19,9 @@ import asyncio
 import os.path
 
 #load config file
-import myconfig
+#!!!!!!!! Replace with you config file here !!!!!!! 
+#replace myconfig with config by example
+import myconfig as cfg
 
 #-------------- addition info vars
 Id=["Название:", "Производство:", "Жанр:", "Режиссер:",
@@ -503,7 +505,7 @@ def main_client():
           rat_url=kpsk_url
           page = requests.get(rat_url,headers={'User-Agent': 'Mozilla/5.0'},proxies=proxies)
           # Parse data
-          soup = BeautifulSoup(page.text, 'html.parser') #BUG me be better use xml.parser ?
+          soup = BeautifulSoup(page.text, 'html.parser') #FIXME me be better use xml.parser ?
           try:
            rating_xml=soup.find('rating')
            kpsk_r=rating_xml.find('kp_rating').get_text('\n', strip='True')
@@ -546,11 +548,14 @@ def main_client():
 print('Start bot.')
 # !!! Correct parameter as in import derective above!
 
-get_config(myconfig)
+get_config(cfg)
+
 
 # Enable logging
 logging.basicConfig(level=log_level, filename=logfile,filemode="a",format="%(asctime)s %(levelname)s %(message)s")
 logging.info(f"Start bot.")
+
+
 
 connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
