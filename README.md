@@ -25,8 +25,9 @@ Bot получает описание фильма с сайта https://nnmclub
 1. Получить на сайте [Telegram](https://my.telegram.org) api_id и api_hash
 2. Зарегистрировать в Telegram через FatherBot нового Bot(a) и получить bot_token, изменить у бота режим /setprivacy на DISABLED
 3. Создать новый канал куда будут пересылаться сообщения. Если хотите в конфигурационном файле указывать этот канал по имени, то сделайте канал публичным (public). 
-4. Внести настройки в конфигурационный файл *config.py*  
-5. Запустить скрипт.
+4. Внести настройки в конфигурационный файл *config.py*
+5. Изменить имя подгружаемого конфигурационного файла в файле *nnmbot.py*   
+6. Запустить скрипт.
 
 
 ## Description
@@ -53,4 +54,5 @@ For the Bot to work you need:
 2. Register a new Bot(a) in Telegram via FatherBot and get a bot_token, change the bot’s /setprivacy mode to DISABLED
 3. Create a new channel where messages will be sent. If you want to specify this channel by name in the configuration file, then make the channel public.
 4. Make settings in the configuration file *config.py*
-5. Run the script.
+5. Change name configuration file in file *nnmbot.py*
+6. Run the script.
