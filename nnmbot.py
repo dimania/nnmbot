@@ -2,6 +2,12 @@
 #
 #Telegram Bot for filter films from NNMCLUB channel
 #
+#load config file
+#!!!!!!!! Replace with you config file here !!!!!!! 
+#replace myconfig with config by example
+#--------------------------------
+import myconfig as cfg
+#--------------------------------
 
 from telethon import TelegramClient, events, utils
 from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl
@@ -17,18 +23,6 @@ import logging
 import textwrap
 import asyncio
 import os.path
-
-#load config file
-#!!!!!!!! Replace with you config file here !!!!!!! 
-#replace myconfig with config by example
-import myconfig as cfg
-
-#-------------- addition info vars
-Id=["Название:", "Производство:", "Жанр:", "Режиссер:",
-    "Актеры:", "Описание:", "Продолжительность:", "Качество видео:",
-    "Перевод:","Язык озвучки:", "Субтитры:", "Видео:", "Аудио 1:",
-    "Аудио 2:", "Аудио 3:", "Скриншоты:", "Время раздачи:"]
-
 
 
 def get_config( config ):
@@ -75,7 +69,6 @@ def get_config( config ):
     except Exception as error:
      print(f"Error in config file: { error }" ) 
      exit(-1)
-
 
 def db_init():
     ''' Initialize database '''
@@ -165,7 +158,7 @@ def db_clear_download( download ):
 async def query_all_records( event ):
     ''' Get all database, Use with carefully may be many records '''
     logging.info(f"Query all db records")
-    rows = db_list_all( cursor )
+    rows = db_list_all()
     if rows:
       for row in rows:
          #print(dict(row))        
@@ -237,7 +230,7 @@ async def query_untag_record_revert_button( event, data, bot_name ):
 async def query_info_db( Channel_my_id ): 
     ''' Get info about database records '''
     logging.info(f"Query info database ")
-    rows = db_info( cursor )
+    rows = db_info()
     message="All records: "+str(rows[0][0])+"\nTagged records: "+str(rows[1][0])+"\nEarly tagged: "+str(rows[2][0])
     #await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
     await Channel_my_id.respond(message,parse_mode='html',link_preview=0)
@@ -404,6 +397,12 @@ def main_bot():
 def main_client():
   ''' Loop for client connection '''
   
+  #-------------- addition info vars
+  Id=["Название:", "Производство:", "Жанр:", "Режиссер:",
+    "Актеры:", "Описание:", "Продолжительность:", "Качество видео:",
+    "Перевод:","Язык озвучки:", "Субтитры:", "Видео:", "Аудио 1:",
+    "Аудио 2:", "Аудио 3:", "Скриншоты:", "Время раздачи:"]
+  
   url = post_body = rating_url = []
   mydict = {}
   
@@ -546,10 +545,8 @@ def main_client():
 
 # main()
 print('Start bot.')
-# !!! Correct parameter as in import derective above!
 
 get_config(cfg)
-
 
 # Enable logging
 logging.basicConfig(level=log_level, filename=logfile,filemode="a",format="%(asctime)s %(levelname)s %(message)s")
