@@ -530,12 +530,18 @@ def main_client():
     if len(msg.message) > 1023:
        msg.message=msg.message[:1019]+'...'
        
-    #BUG Here may be Race Condition, when recieve 2 identical message simultaneously
-    #I yet unknown as resolve it
-    send_msg = await client.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md')    
-    db_add_film( send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
-    logging.info(f"Film not exist in db - add and send, id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
-    logging.debug(f"Send Message:{send_msg}")
+    try:
+      async with db_lock:
+        if db_exist_Id(id_kpsk,id_imdb):
+          logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
+        else:
+          send_msg = await client.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md')    
+          db_add_film( send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
+          logging.info(f"Film not exist in db - add and send, id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
+          logging.debug(f"Send Message:{send_msg}")
+    except errors.BadRequestError as error:
+      logging.error(f'Error db_lock: {error}')
+  
   return client
 
 
@@ -543,6 +549,7 @@ def main_client():
 print('Start bot.')
 
 get_config(cfg)
+db_lock = asyncio.Lock()
 
 # Enable logging
 logging.basicConfig(level=log_level, filename=logfile,filemode="a",format="%(asctime)s %(levelname)s %(message)s")
