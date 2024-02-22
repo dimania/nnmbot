@@ -249,7 +249,7 @@ async def create_menu_bot(event):
        logging.info(f"Create menu buttons")
        keyboard = [
            [
-             #Button.inline("List All DB", b"/dblist"),
+             Button.inline("List All DB", b"/dblist"),
              Button.inline("List Films tagged", b"/dwlist")
            ],
            [
@@ -396,7 +396,7 @@ def main_bot():
 
 def main_client():
   ''' Loop for client connection '''
-  
+
   #-------------- addition info vars
   Id=["Название:", "Производство:", "Жанр:", "Режиссер:",
     "Актеры:", "Описание:", "Продолжительность:", "Качество видео:",
@@ -417,21 +417,20 @@ def main_client():
   client.start()
   Channel_my_id = client.loop.run_until_complete(client.get_peer_id(Channel_my))
   Channel_mon_id = client.loop.run_until_complete(client.get_peer_id(Channel_mon))
-
+  
+  
   #Parse channel NNMCLUB for Films 
   @client.on(events.NewMessage(chats = [PeerChannel(Channel_mon_id)],pattern=filter))
   async def normal_handler(event):
-    #print(event.message)
-   
+  
     logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")    
     msg=event.message
-
+    
     #Get URL nnmclub page with Film
     for url_entity, inner_text in msg.get_entities_text(MessageEntityTextUrl):
         if re.search(r'viewtopic.php\?t', url_entity.url):
            url = url_entity.url
-           #print(url)
-           
+        
     logging.info(f"Get URL nnmclub page with Film: {url}") 
     
     #if URL exist get additional info for film
@@ -446,8 +445,7 @@ def main_client():
          logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
          client.disconnect()
          return
-         #exit(-1) #FIXME Need correctly end program, unknown as
-       # Parse data
+        
        
        logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}") 
        soup = BeautifulSoup(page.text, 'html.parser')
@@ -498,7 +496,7 @@ def main_client():
        if db_exist_Id(id_kpsk,id_imdb):
           logging.info(f"Film {id_nnm} exist in db - end analize.")
           return
-              
+       
        # Get rating film from kinopoisk if not then from imdb site
        if kpsk_url:
           rat_url=kpsk_url
@@ -523,10 +521,7 @@ def main_client():
        else:
           kpsk_r="-"
           imdb_r="-"
-    # Yet once check film in database for posiible concurent write/read      
-    if db_exist_Id(id_kpsk,id_imdb):
-          logging.info(f"Check2 Film {id_nnm} exist in db - end analize.")
-          return
+    
     logging.info(f"Add info to message") 
     film_add_info = f"\n_________________________________\nРейтинг: КП[{kpsk_r}] Imdb[{imdb_r}]\n{Id[2]} {mydict.get(Id[2])}\n{Id[5]}\n{mydict.get(Id[5])}"
 
@@ -534,14 +529,15 @@ def main_client():
 
     if len(msg.message) > 1023:
        msg.message=msg.message[:1019]+'...'
-
-    send_msg = await client.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md')
+       
+    #BUG Here may be Race Condition, when recieve 2 identical message simultaneously
+    #I yet unknown as resolve it
+    send_msg = await client.send_message(PeerChannel(Channel_my_id),msg,parse_mode='md')    
     db_add_film( send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb )
-    logging.info(f"Film not exist in db - add and send, src_id_msg={msg.id} dst_id_msg={send_msg.id} id_nnm:{id_nnm}\n Message:{msg}")
+    logging.info(f"Film not exist in db - add and send, id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
     logging.debug(f"Send Message:{send_msg}")
-  
   return client
-  #client.run_until_disconnected()  
+
 
 # main()
 print('Start bot.')
@@ -554,7 +550,7 @@ logging.info(f"Start bot.")
 
 
 
-connection = sqlite3.connect(db_name)
+connection = sqlite3.connect(db_name,isolation_level='EXCLUSIVE',autocommit=sqlite3.LEGACY_TRANSACTION_CONTROL)
 connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 db_init()
