@@ -57,7 +57,7 @@ def get_config( config ):
      db_name        =  config.db_name     
      logfile        =  config.logfile
      use_proxy      =  config.use_proxy
-     filter         =  config.filter
+     filter         =  re.compile(config.filter)
      log_level      =  config.log_level
      ICU_extension_lib = config.ICU_extension_lib
      
@@ -426,9 +426,10 @@ def main_client():
     logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")    
     msg=event.message
     
+    url_tmpl=re.compile(r'viewtopic.php\?t')    
     #Get URL nnmclub page with Film
     for url_entity, inner_text in msg.get_entities_text(MessageEntityTextUrl):
-        if re.search(r'viewtopic.php\?t', url_entity.url):
+        if url_tmpl.search(url_entity.url):
            url = url_entity.url
         
     logging.info(f"Get URL nnmclub page with Film: {url}") 
@@ -454,21 +455,23 @@ def main_client():
        post_body=soup.find(class_='postbody')
        text=post_body.get_text('\n', strip='True')
 
+       kpr_tmpl=re.compile('www.kinopoisk.ru/rating')
        # Get url picture with rating Film on Kinopoisk site 
        for a_hr in post_body.find_all(class_='postImg'):
            rat=a_hr.get('title')
-           if re.search('www.kinopoisk.ru/rating',rat):
+           if kpr_tmpl.search(rat):
               rating_url=rat
 
        k=Id[0]
        v=""
-
+       
+       desc_tmpl=re.compile(':$')
        # Create Dict for data about Film 
        for line in text.split("\n"):
         if not line.strip():     
           continue    
         else: 
-          if re.search(':$',line):
+          if desc_tmpl.search(line):
             k=line
             v=""
           elif k != "":
@@ -479,15 +482,17 @@ def main_client():
        kpsk_url = imdb_url = rat_url = ""
        id_kpsk = id_imdb = id_nnm = 0
 
-       #Get rating urls and id film on kinopoisk and iddb  
+       #Get rating urls and id film on kinopoisk and iddb
+       f_tmpl=re.compile('film/(.+?)/')
+       t_tmpl=re.compile('title/(.+?)/')
        for a_hr in post_body.find_all('a'):
            rat=a_hr.get('href')
            if rat.find('https://www.kinopoisk.ru/film/') != -1:
-              id_kpsk=re.search("film/(.+?)/", rat).group(1)
+              id_kpsk=f_tmpl.search(rat).group(1)
               kpsk_url='https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
               logging.info(f"Create url rating from kinopoisk: {kpsk_url}")
            elif rat.find('https://www.imdb.com/title/') != -1:
-              id_imdb=re.search('title/(.+?)/', rat).group(1)
+              id_imdb=t_tmpl.search(rat).group(1)
               imdb_url=rat.replace('?ref_=plg_rt_1','ratings/?ref_=tt_ov_rt')
               logging.info(f"Create url rating from imdb: {imdb_url}")
            
@@ -557,7 +562,7 @@ logging.info(f"Start bot.")
 
 
 
-connection = sqlite3.connect(db_name,isolation_level='EXCLUSIVE',autocommit=sqlite3.LEGACY_TRANSACTION_CONTROL)
+connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 db_init()
