@@ -1,3 +1,4 @@
+
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS Films (
@@ -73,8 +74,9 @@ SELECT * FROM Users;
 
 DELETE FROM Users WHERE id_user = '12345';
 
+first_name='Дмитрий
 
 
-
+SELECT active,rights,name_user FROM Users WHERE id_user = 1033339697;
 
 
