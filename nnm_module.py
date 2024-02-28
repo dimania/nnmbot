@@ -1,3 +1,124 @@
+#
+#
+# Database function
+#
+#
+import os.path
+    
+def db_init():
+    ''' Initialize database '''
+    # Load ICU extension in exist for case independet search  in DB
+    if os.path.isfile(ICU_extension_lib):
+        connection.enable_load_extension(True)
+        connection.load_extension(ICU_extension_lib)
+
+    cursor.execute('''PRAGMA foreign_keys = ON''')
+
+    # Create basic table Films
+    cursor.execute('''
+      CREATE TABLE IF NOT EXISTS Films (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_msg TEXT,
+      id_nnm TEXT,
+      nnm_url TEXT,
+      name TEXT,
+      id_kpsk TEXT,
+      id_imdb TEXT,
+      date TEXT,
+      download INT DEFAULT 0
+      )
+      ''')
+    # Ctreate table Users
+    cursor.execute('''
+      CREATE TABLE IF NOT EXISTS Users (
+      id_user TEXT NOT NULL PRIMARY KEY,
+      name_user TEXT NOT NULL,
+      date TEXT NOT NULL,
+      active INTEGER DEFAULT 0,
+      rights INTEGER DEFAULT 0
+      )
+      ''')
+    # Create table Ufilms - films tagged users
+    cursor.execute('''
+      CREATE TABLE IF NOT EXISTS Ufilms (
+      ufilms_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_user TEXT NOT NULL,
+      id_FILMS  TEXT NOT NULL,
+      date  TEXT NOT NULL,
+      download INTEGER DEFAULT 0,
+      FOREIGN KEY (id_user)
+      REFERENCES Users (id_user)
+        ON DELETE CASCADE
+       )
+      ''')
+
+    connection.commit()
+
+def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb):
+    ''' Add new Film to database '''
+    cur_date = datetime.now()
+    cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, date) VALUES(?, ?, ?, ?, ?, ?, ?)",
+                   (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, cur_date))
+    connection.commit()
+
+def db_exist_Id(id_kpsk, id_imdb):
+    ''' Test exist Film in database '''
+    cursor.execute(
+        "SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk, id_imdb))
+    return cursor.fetchone()
+
+def db_get_id_nnm(id_msg):
+    ''' Get id_nm by id_msg '''
+    cursor.execute("SELECT id_nnm FROM Films WHERE id_msg = ?", (id_msg,))
+    row = cursor.fetchone()
+    if row:
+        return dict(row).get('id_nnm')
+    else:
+        return None
+
+def db_info():
+    ''' Get Info database: all records, tagged for download records and tagged early records '''
+    cursor.execute(
+        "SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Films WHERE download = 1 UNION ALL SELECT COUNT(*) FROM Films WHERE download = 2")
+    rows = cursor.fetchall()
+    return rows
+
+def db_switch_download(id_nnm, download):
+    ''' Set tag in database for download film late '''
+    cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?",
+                   (download, id_nnm))
+    connection.commit()
+    return str(cursor.rowcount)
+
+def db_list_all():
+    ''' List all database '''
+    cursor.execute('SELECT  * FROM Films')
+    rows = cursor.fetchall()
+    return rows
+
+def db_list_download(download):
+    ''' List only records with set tag download '''
+    cursor.execute(
+        "SELECT name,nnm_url FROM Films WHERE download = ?", (download,))
+    rows = cursor.fetchall()
+    # for row in rows:
+    #  print(dict(row))
+    return rows
+
+def db_search(str_search):
+    ''' Search in db '''
+    str_search = '%'+str_search+'%'
+    cursor.execute(
+        "SELECT name,nnm_url FROM Films WHERE name LIKE ? COLLATE NOCASE", (str_search,))
+    rows = cursor.fetchall()
+    return rows
+
+def db_clear_download(download):
+    ''' Set to N records with set tag download to 1 '''
+    cursor.execute(
+        "UPDATE Films SET download=? WHERE download = 1", (download,))
+    connection.commit()
+    return str(cursor.rowcount)
 
 def db_add_user( id_user, name_user ):
     ''' Add new user to database '''
@@ -15,7 +136,7 @@ def db_add_user( id_user, name_user ):
 
 def db_del_user( id_user ):
     '''Delete user from database and user tagged films'''
-    cursor.execute("DELETE FROM Users WHERE id_user = ?", (id_user.))
+    cursor.execute("DELETE FROM Users WHERE id_user = ?", (id_user,))
     rows = cursor.fetchall()
     return rows
 
@@ -47,7 +168,7 @@ def db_list_users( id_user=None, active=None, rights=None ):
         cursor.execute("SELECT active,rights,name_user FROM Users WHERE active = ?", (active,))
     elif rights:
         cursor.execute("SELECT active,rights,name_user FROM Users WHERE rights = ?", (rights,))
-    else            
+    else:            
         cursor.execute("SELECT active,rights,name_user FROM Users")
              
     rows = cursor.fetchall()
@@ -59,13 +180,7 @@ def db_list_tagged_films( id_user=None, tag=1 ):
     rows = cursor.fetchall()
     return rows
 
-def db_clear_download( download ): #FIXME Not use in future
-    ''' Set to N records with set tag download to 1 '''
-    cursor.execute("UPDATE Films SET download=? WHERE download = 1", (download,))
-    connection.commit()
-    return str(cursor.rowcount)
-
-def db_add_tag( id_nnm, tag, id_user )
+def db_add_tag( id_nnm, tag, id_user ):
     ''' User first Tag film in database '''
     cur_date=datetime.now()
     cursor.execute("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,(SELECT id FROM Films WHERE id_nnm=?),?,?)",

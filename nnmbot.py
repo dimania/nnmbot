@@ -24,6 +24,7 @@ import textwrap
 import asyncio
 import os.path
 
+#import nnm_module as db
 
 def get_config(config):
     ''' set global variable from included config.py - import config directive'''
@@ -70,10 +71,8 @@ def get_config(config):
         print(f"Error in config file: {error}")
         exit(-1)
 
-
 def db_init():
     ''' Initialize database '''
-
     # Load ICU extension in exist for case independet search  in DB
     if os.path.isfile(ICU_extension_lib):
         connection.enable_load_extension(True)
@@ -121,7 +120,6 @@ def db_init():
 
     connection.commit()
 
-
 def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb):
     ''' Add new Film to database '''
     cur_date = datetime.now()
@@ -129,20 +127,11 @@ def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb):
                    (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, cur_date))
     connection.commit()
 
-
 def db_exist_Id(id_kpsk, id_imdb):
     ''' Test exist Film in database '''
     cursor.execute(
         "SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk, id_imdb))
     return cursor.fetchone()
-
-
-def db_exist_user(id_user):
-    ''' Test exist User in database '''
-    cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ?", (id_user,))
-    rows = cursor.fetchall()
-    return rows
-
 
 def db_get_id_nnm(id_msg):
     ''' Get id_nm by id_msg '''
@@ -153,14 +142,12 @@ def db_get_id_nnm(id_msg):
     else:
         return None
 
-
 def db_info():
     ''' Get Info database: all records, tagged for download records and tagged early records '''
     cursor.execute(
         "SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Films WHERE download = 1 UNION ALL SELECT COUNT(*) FROM Films WHERE download = 2")
     rows = cursor.fetchall()
     return rows
-
 
 def db_switch_download(id_nnm, download):
     ''' Set tag in database for download film late '''
@@ -169,13 +156,11 @@ def db_switch_download(id_nnm, download):
     connection.commit()
     return str(cursor.rowcount)
 
-
 def db_list_all():
     ''' List all database '''
     cursor.execute('SELECT  * FROM Films')
     rows = cursor.fetchall()
     return rows
-
 
 def db_list_download(download):
     ''' List only records with set tag download '''
@@ -186,7 +171,6 @@ def db_list_download(download):
     #  print(dict(row))
     return rows
 
-
 def db_search(str_search):
     ''' Search in db '''
     str_search = '%'+str_search+'%'
@@ -195,7 +179,6 @@ def db_search(str_search):
     rows = cursor.fetchall()
     return rows
 
-
 def db_clear_download(download):
     ''' Set to N records with set tag download to 1 '''
     cursor.execute(
@@ -203,29 +186,87 @@ def db_clear_download(download):
     connection.commit()
     return str(cursor.rowcount)
 
-
-def db_add_user(id_user, name_user):
+def db_add_user( id_user, name_user ):
     ''' Add new user to database '''
-    cur_date = datetime.now()
+    cur_date=datetime.now()
     try:
-        cursor.execute("INSERT INTO Users (id_user, name_user, date) VALUES(?, ?, ?)",
-                       (id_user, name_user, cur_date,))
-        connection.commit()
+      cursor.execute("INSERT INTO Users (id_user, name_user, date) VALUES(?, ?, ?)",\
+      (id_user, name_user, cur_date,))
+      connection.commit()
     except Exception as IntegrityError:
-        logging.error(f"User already exist in BD\n")
-        logging.error(f"Original Error is: {IntegrityError}")
-        return 1
-
+      logging.error(f"User already exist in BD\n") 
+      logging.error(f"Original Error is: {IntegrityError}")           
+      return 1
+   
     return 0
 
+def db_del_user( id_user ):
+    '''Delete user from database and user tagged films'''
+    cursor.execute("DELETE FROM Users WHERE id_user = ?", (id_user,))
+    rows = cursor.fetchall()
+    return rows
 
-def db_ch_rights_user(id_user, active, rights):
-    ''' Set rights and status (active or blocked) for user '''
-    cursor.execute(
-        "UPDATE Users SET (active=?,rights=?) WHERE id_user = ?", (active, rights, id_user,))
+def db_exist_user( id_user ):
+    ''' Test exist User in database '''
+    cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ?", (id_user,))
+    rows = cursor.fetchall()
+    return rows
+
+def db_ch_rights_user( id_user, active, rights ):
+    ''' Change rights and status (active or blocked) for user '''
+    cursor.execute("UPDATE Users SET (active=?,rights=?) WHERE id_user = ?", (active,rights,id_user,))
+    connection.commit()
+    return str(cursor.rowcount)  
+
+def db_list_users( id_user=None, active=None, rights=None ):
+    '''List users in database '''
+    if id_user and active and rights:
+        cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ? AND active = ? AND rights = ?", (id_user, active, rights,))
+    elif id_user and active:
+        cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ? AND active = ?", (id_user, active,))
+    elif id_user and rights:
+        cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ? AND rights = ?", (id_user, rights,))    
+    elif active and rights:
+        cursor.execute("SELECT active,rights,name_user FROM Users WHERE active = ? AND rights = ?", (active, rights,))        
+    elif id_user:
+        cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ?", (id_user,))
+    elif active:
+        cursor.execute("SELECT active,rights,name_user FROM Users WHERE active = ?", (active,))
+    elif rights:
+        cursor.execute("SELECT active,rights,name_user FROM Users WHERE rights = ?", (rights,))
+    else:            
+        cursor.execute("SELECT active,rights,name_user FROM Users")
+             
+    rows = cursor.fetchall()
+    return rows
+
+def db_list_tagged_films( id_user=None, tag=1 ):
+    ''' List only records with set tag '''
+    cursor.execute("SELECT name,nnm_url FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
+    rows = cursor.fetchall()
+    return rows
+
+def db_add_tag( id_nnm, tag, id_user ):
+    ''' User first Tag film in database '''
+    cur_date=datetime.now()
+    cursor.execute("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,(SELECT id FROM Films WHERE id_nnm=?),?,?)",
+                  (id_user,id_nnm,cur_date,tag))
+    
     connection.commit()
     return str(cursor.rowcount)
 
+def db_switch_tag( id_nnm, tag, id_user ):
+    ''' Update tag in database for control film '''
+    cursor.execute("UPDATE Ufilms SET tag=? WHERE id_user = ? AND id_Films = (SELECT id FROM Films WHERE id_nnm=?)",
+                  (tag,id_user,id_nnm))
+    connection.commit()
+    return str(cursor.rowcount)
+    
+def db_get_tag( id_nnm, id_user ):
+    ''' Get if exist current tag for user '''
+    cursor.execute("SELECT tag FROM Ufilms WHERE id_Films = (SELECT id FROM Films WHERE id_nnm=?) AND id_user=?", (id_nnm, id_user,))
+    rows = cursor.fetchall()
+    return rows
 
 async def query_all_records(event):
     ''' Get all database, Use with carefully may be many records '''
@@ -373,8 +414,8 @@ async def create_menu_bot(level, event):
     ]
 
     if level == 2:
-        # Add items for SuperUser
-        keyboard.append(Button.inline("List user requests for add", b"/lur"))
+       # Add items for SuperUser
+       keyboard.append([Button.inline("List user requests for add", b"/lur")])
 
     await event.respond("**☣ Work with database:**", parse_mode='md', buttons=keyboard)
 
@@ -393,28 +434,29 @@ async def create_yes_no_bot(question, event):
 
 
 async def check_user(Channel_my_id, user, event):
-    #permissions = await bot.get_permissions(Channel_my_id, user)
+    permissions = await bot.get_permissions(Channel_my_id, user)
     logging.debug(f"Try get permissions for channe={Channel_my_id} user={user}")
     user_db = db_exist_user(user)
     #logging.debug(f"User={user} exist in db. Result={user_db}")
     ret = 0
     if not user_db:
-      logging.info(f"User {user} is not in db")
-      await event.respond("Sorry you are not registered user. You can only set Reaction.")
+      logging.debug(f"User {user} is not in db")
+      #await event.respond("Sorry you are not registered user. You can only set Reaction.")
       ret = 0
     elif dict(user_db[0]).get('active') == 0:
-      logging.info(f"User {user} is blocked in db")
-      await event.respond("Sorry you are blocked. You can only set Reaction.")
+      logging.debug(f"User {user} is blocked in db")
+      #await event.respond("Sorry you are blocked. You can only set Reaction.")
       ret = 1
     elif dict(user_db[0]).get('rights') == 0:
-      logging.info(f"User {user} can only view in db")
+      logging.debug(f"User {user} can only view in db")
       ret = 2
     elif dict(user_db[0]).get('rights') == 1:
-      logging.info(f"User {user} admin in your db")
+      logging.debug(f"User {user} admin in your db")
       ret = 3
-    #if permissions.is_admin:
-    #    await event.respond("Warning you are Admin")
-    #    ret = 4  # Admin
+    
+    if permissions.is_admin:
+        #await event.respond("Warning you are Admin")
+        ret = 4  # Admin
     return ret
 
 
@@ -444,35 +486,25 @@ def main_bot():
     @bot.on(events.CallbackQuery(chats=[PeerChannel(Channel_my_id)]))
     async def callback(event):
         logging.debug(f"Get callback event on channel {Channel_my}: {event}")
-        user = event.query.user_id
         # Check user rights
-        permissions = await bot.get_permissions(event.query.peer, user)
-        logging.info(f"Get Permission for user: {
-                     user} ->  {permissions.is_admin} for chat={event.query.peer}")
-
-        ret = await check_user(Channel_my_id, user, event)
+        ret = await check_user(event.query.peer, event.query.user_id, event)
+        if not ret: await event.answer('Sorry you are not registered user. You can only set Reaction.', alert=True)
         # Stop handle this event other handlers
         raise StopPropagation
-
-        if not ret:
-            return
-
         button_data = event.data.decode()
-
         if button_data.find('XX', 0, 2) != -1:
             # Add to Film to DB and remove Button 'Add to DB'
             data = button_data
             data = data.replace('XX', '')
-            logging.info(f"Button 'Add...' pressed data={
-                         button_data} write {data}")
+            logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
             await query_tag_record_revert_button(event, data, bot_name)
-        elif button_data.find('RXX', 0, 3) != -1:
-            # Remove Film from DB and revert Button to 'Add to DB'
-            data = button_data
-            data = data.replace('RXX', '')
-            logging.info(f"Button 'Remove...' pressed data={
-                         button_data} write {data}")
-            await query_untag_record_revert_button(event, data, bot_name)
+        #elif button_data.find('RXX', 0, 3) != -1:
+        #    # Remove Film from DB and revert Button to 'Add to DB'
+        #    data = button_data
+        #    data = data.replace('RXX', '')
+        #    logging.info(f"Button 'Remove...' pressed data={
+        #                 button_data} write {data}")
+        #    await query_untag_record_revert_button(event, data, bot_name)
 
         # Stop handle this event other handlers
         # raise StopPropagation
@@ -489,12 +521,9 @@ def main_bot():
     @bot.on(events.NewMessage())
     async def bot_handler(event_bot):
         logging.debug(f"Get NewMessage event_bot: {event_bot}")
-        menu_levelu_level = 0
-        user = event_bot.message.peer_id.user_id
-        ret = await check_user(Channel_my_id, user, event_bot)
-        # Stop handle this event other handlers
-        #raise StopPropagation
-        logging.debug(f"Check permissoin user {user}: result={ret}")
+        menu_level = 0
+        #user = event_bot.message.peer_id.user_id
+        ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
        
         if ret == 0:     # New user
             await create_yes_no_bot('**Y realy want tag/untag films**', event_bot)
@@ -522,7 +551,7 @@ def main_bot():
         button_data = event_bot.data.decode()
         await event_bot.delete()
         send_menu = 0
-        ret = await check_user(Channel_my_id, user, event_bot)
+        ret = await check_user(PeerChannel(Channel_my_id), user, event_bot)
         # Stop handle this event other handlers
         #raise StopPropagation
         if ret == 0:     # New user
@@ -544,11 +573,9 @@ def main_bot():
             # a_name_user = await event_bot_yn.get_input_sender()
             user_ent = await bot.get_entity(id_user)
             name_user = user_ent.username
-            if name_user == None:
-                name_user = user_ent.first_name
+            if name_user == None: name_user = user_ent.first_name
             logging.debug(f"Get username for id {id_user}: {name_user}")
             await query_add_user(id_user, name_user, event_bot)
-            #await event_bot.respond('')
             send_menu = 0
             return
         elif button_data == '/no':
@@ -556,9 +583,6 @@ def main_bot():
             await event_bot.respond('Goodbye! See you later...')
             send_menu = 0
             return
-          
-        
-        
         
         if button_data == '/dblist':  # Not Use now
             # Get all database, Use with carefully may be many records
@@ -590,12 +614,12 @@ def main_bot():
                 logging.info(f"Get search string: {
                              event_search.message.message}")
                 await query_search(event_search.message.message, event_bot)
-                await event_bot.respond("......Done......")
+                await event_bot.respond("🏁............Done............🏁")
                 bot.remove_event_handler(search_handler)
                 await create_menu_bot(menu_level, event_bot)
 
         if send_menu:
-            await event_bot.respond("......Done......")
+            await event_bot.respond("🏁............Done............🏁")
             await create_menu_bot(menu_level, event_bot)
 
     return bot
@@ -787,8 +811,8 @@ logging.info(f"Start bot.")
 connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
-db_init()
 
+db_init()
 
 
 bot = main_bot()
