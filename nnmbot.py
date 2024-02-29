@@ -26,6 +26,25 @@ import os.path
 
 #import nnm_module as db
 
+#-----------------
+# CONSTANT
+#
+DEFTAG = 0
+SETTAG = 1
+UNSETTAG = 2
+USER_ACTIVE = 1
+USER_BLOCKED = 0
+USER_UNBLOCKED = 1
+USER_SUPERADMIN = 4
+USER_READ_WRITE = 3
+USER_READ = 2
+USER_NEW = 1
+USER_NO_RIGHTS=0
+MENU_USER_READ = 0
+MENU_USER_READ_WRITE = 1
+MENU_SUPERADMIN = 2
+#-----------------
+
 def get_config(config):
     ''' set global variable from included config.py - import config directive'''
     global api_id
@@ -109,7 +128,7 @@ def db_init():
       CREATE TABLE IF NOT EXISTS Ufilms (
       ufilms_id INTEGER PRIMARY KEY AUTOINCREMENT,
       id_user TEXT NOT NULL,
-      id_FILMS  TEXT NOT NULL,
+      id_Films  TEXT NOT NULL,
       date  TEXT NOT NULL,
       download INTEGER DEFAULT 0,
       FOREIGN KEY (id_user)
@@ -149,7 +168,7 @@ def db_info():
     rows = cursor.fetchall()
     return rows
 
-def db_switch_download(id_nnm, download):
+def db_switch_download(id_nnm, download): #FIXME Not used
     ''' Set tag in database for download film late '''
     cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?",
                    (download, id_nnm))
@@ -162,7 +181,7 @@ def db_list_all():
     rows = cursor.fetchall()
     return rows
 
-def db_list_download(download):
+def db_list_download(download): #FIXME Not used
     ''' List only records with set tag download '''
     cursor.execute(
         "SELECT name,nnm_url FROM Films WHERE download = ?", (download,))
@@ -179,7 +198,7 @@ def db_search(str_search):
     rows = cursor.fetchall()
     return rows
 
-def db_clear_download(download):
+def db_clear_download(download): #FIXME Not used
     ''' Set to N records with set tag download to 1 '''
     cursor.execute(
         "UPDATE Films SET download=? WHERE download = 1", (download,))
@@ -214,33 +233,37 @@ def db_exist_user( id_user ):
 
 def db_ch_rights_user( id_user, active, rights ):
     ''' Change rights and status (active or blocked) for user '''
-    cursor.execute("UPDATE Users SET (active=?,rights=?) WHERE id_user = ?", (active,rights,id_user,))
+    cursor.execute("UPDATE Users SET active=?, rights=? WHERE id_user = ?", (active,rights,id_user))
     connection.commit()
+    logging.info(f"SQL UPDATE: id_user={id_user} active={active}, rights={rights} result={str(cursor.rowcount)}" )
     return str(cursor.rowcount)  
 
 def db_list_users( id_user=None, active=None, rights=None ):
     '''List users in database '''
-    if id_user and active and rights:
-        cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ? AND active = ? AND rights = ?", (id_user, active, rights,))
-    elif id_user and active:
-        cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ? AND active = ?", (id_user, active,))
-    elif id_user and rights:
-        cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ? AND rights = ?", (id_user, rights,))    
-    elif active and rights:
-        cursor.execute("SELECT active,rights,name_user FROM Users WHERE active = ? AND rights = ?", (active, rights,))        
-    elif id_user:
-        cursor.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ?", (id_user,))
-    elif active:
-        cursor.execute("SELECT active,rights,name_user FROM Users WHERE active = ?", (active,))
-    elif rights:
-        cursor.execute("SELECT active,rights,name_user FROM Users WHERE rights = ?", (rights,))
+    
+    if id_user is not None and active is not None and rights is not None:
+        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE id_user = ? AND active = ? AND rights = ?", (id_user, active, rights,))
+    elif id_user is not None and active is not None:
+        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE id_user = ? AND active = ?", (id_user, active,))
+    elif id_user is not None and rights is not None:
+        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE id_user = ? AND rights = ?", (id_user, rights,))    
+    elif active is not None and rights is not None:
+        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE active = ? AND rights = ?", (active, rights,))        
+    elif id_user is not None:
+        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE id_user = ?", (id_user,))
+    elif active is not None:
+        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE active = ?", (active,))
+    elif rights is not None:
+        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE rights = ?", (rights,))
     else:            
-        cursor.execute("SELECT active,rights,name_user FROM Users")
+        cursor.execute("SELECT active,rights,name_user,id_user FROM Users")
              
     rows = cursor.fetchall()
+    
+    logging.info(f"SELECT USERS: id_user={id_user} active={active}, rights={rights} result={rows}" )
     return rows
 
-def db_list_tagged_films( id_user=None, tag=1 ):
+def db_list_tagged_films( id_user=None, tag=SETTAG ):
     ''' List only records with set tag '''
     cursor.execute("SELECT name,nnm_url FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
     rows = cursor.fetchall()
@@ -255,12 +278,26 @@ def db_add_tag( id_nnm, tag, id_user ):
     connection.commit()
     return str(cursor.rowcount)
 
-def db_switch_tag( id_nnm, tag, id_user ):
+def db_switch_tag( id_nnm, tag, id_user ): #FIXME Not used
     ''' Update tag in database for control film '''
     cursor.execute("UPDATE Ufilms SET tag=? WHERE id_user = ? AND id_Films = (SELECT id FROM Films WHERE id_nnm=?)",
                   (tag,id_user,id_nnm))
     connection.commit()
     return str(cursor.rowcount)
+
+def db_switch_film_tag( id_nnm, tag, id_user ):
+    ''' Update user tagging in database for films  '''
+    cursor.execute("UPDATE Ufilms SET tag=? WHERE id_user = ? AND id_Films = (SELECT id FROM Films WHERE id_nnm=?)",
+                  (tag,id_user,id_nnm))
+    connection.commit()
+    return str(cursor.rowcount)
+
+def db_switch_user_tag( id_user, tag ):
+    ''' Update tag in database for user '''
+    cursor.execute("UPDATE Ufilms SET tag=? WHERE id_user = ?",
+                  (tag,id_user))
+    connection.commit()
+    return str(cursor.rowcount)    
     
 def db_get_tag( id_nnm, id_user ):
     ''' Get if exist current tag for user '''
@@ -280,9 +317,8 @@ async def query_all_records(event):
                 dict(row).get('name') + '</a>'
             await event.respond(message, parse_mode='html', link_preview=0)
     else:
-        message = "No records"
+        message = ".....No records....."
         await event.respond(message, parse_mode='html', link_preview=0)
-
 
 async def query_search(str_search, event):
     ''' Search Films in database '''
@@ -298,11 +334,10 @@ async def query_search(str_search, event):
         message = "No records"
         await event.respond(message, parse_mode='html', link_preview=0)
 
-
-async def query_tagged_records(tag, event):
-    ''' Get films tagget for download '''
+async def query_tagged_records(id_user, tag, event):
+    ''' Get films tagget for user '''
     logging.info(f"Query db records with set download tag ")
-    rows = db_list_download(tag)
+    rows = db_list_tagged_films( id_user=id_user, tag=tag )
     if rows:
         for row in rows:
             # print(dict(row))
@@ -314,24 +349,21 @@ async def query_tagged_records(tag, event):
         message = "No records"
         await event.respond(message, parse_mode='html', link_preview=0)
 
-
-async def query_clear_tagged_records(event):
-    ''' Clear all tag for download '''
-    logging.info(f"Query db for clear download tag ")
-    rows = db_clear_download(2)
+async def query_clear_tagged_records(id_user, event):
+    ''' Clear all tag for user '''
+    logging.info(f"Query db for clear tag ")
+    rows = db_switch_user_tag( UNSETTAG, id_user )
     if rows:
         message = 'Clear '+rows+' records'
     else:
         message = "No records"
     await event.respond(message, parse_mode='html', link_preview=0)
 
-
-async def query_tag_record_revert_button(event, data, bot_name):
+async def query_tag_record_revert_button(event, id_nnm, bot_name, id_user): #FIXME Not used in future?
     ''' Revert Button to 'Remove from DB' in message and set tag download to 1 '''
-    db_switch_download(data, 1)
-    # id_nnm=db_get_id_nnm( event.message_id )
-    logging.info(
-        f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")
+    db_switch_film_tag( id_nnm, SETTAG, id_user )
+    #db_switch_download(data, 1)
+    logging.info(f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")
     try:
         # await event.edit(buttons=Button.clear())
         bdata = 'RXX'+data
@@ -339,20 +371,17 @@ async def query_tag_record_revert_button(event, data, bot_name):
     except MessageNotModifiedError:
         pass
 
-
-async def query_untag_record_revert_button(event, data, bot_name):
+async def query_untag_record_revert_button(event, data, bot_name): #FIXME Not used in future?
     ''' Revert Button to 'Add to DB' in message and set tag download to 2 '''
-    db_switch_download(data, 2)
+    db_switch_film_tag( id_nnm, UNSETTAG, id_user )
     # id_nnm=db_get_id_nnm( event.message_id )
-    logging.info(
-        f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")
+    logging.info(f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")
     try:
         # await event.edit(buttons=Button.clear())
         bdata = 'XX'+data
         await event.edit(buttons=[Button.inline('Add Film to BD', bdata), Button.url('Control BD', 't.me/'+bot_name+'?start')])
     except MessageNotModifiedError:
         pass
-
 
 async def query_info_db(Channel_my_id):
     ''' Get info about database records '''
@@ -361,23 +390,20 @@ async def query_info_db(Channel_my_id):
     message = "All records: " + \
         str(rows[0][0])+"\nTagged records: " + \
         str(rows[1][0])+"\nEarly tagged: "+str(rows[2][0])
-    # await bot.send_message(PeerChannel(Channel_my_id),message,parse_mode='html',link_preview=0)
     await Channel_my_id.respond(message, parse_mode='html', link_preview=0)
 
-
 async def query_add_button(event, id_msg, bot_name):
-    ''' Add Button 'Add to DB' in message and set tag download to 1 '''
+    ''' Add Button 'Add to DB' and 'Control DB' in message '''
     await asyncio.sleep(2)  # wait while write to DB on previous step
     id_nnm = db_get_id_nnm(id_msg)
     logging.info(f"Get id_nnm={id_nnm} by message id={id_msg} bot_name={bot_name}")
     if id_nnm:
         bdata = 'XX'+id_nnm
         buttons_film = [
-                Button.inline('Add Film to BD', bdata),
-                Button.url('Control BD', 't.me/'+bot_name+'?start')
+                Button.inline('Add Film to DB', bdata),
+                Button.url('Control DB', 't.me/'+bot_name+'?start')
                 ]
         await event.edit(buttons=buttons_film)
-
 
 async def query_add_user(id_user, name_user, event):
     ''' Add user to database '''
@@ -389,7 +415,6 @@ async def query_add_user(id_user, name_user, event):
         message = "You request send to Admins, and will be reviewed soon."
         await event.respond(message)
         #TODO Send message Admins if need
-
 
 async def create_menu_bot(level, event):
     ''' Create menu on channel '''
@@ -413,16 +438,15 @@ async def create_menu_bot(level, event):
         ]
     ]
 
-    if level == 2:
+    if level == MENU_SUPERADMIN:
        # Add items for SuperUser
        keyboard.append([Button.inline("List user requests for add", b"/lur")])
 
     await event.respond("**☣ Work with database:**", parse_mode='md', buttons=keyboard)
 
-
 async def create_yes_no_bot(question, event):
     ''' Create yes or no buttons with text '''
-    logging.info(f"Create yes or no buttons")
+    logging.debug(f"Create yes or no buttons")
     keyboard = [
         [
             Button.inline("Yes", b"/yes"),
@@ -432,34 +456,73 @@ async def create_yes_no_bot(question, event):
     # await bot.send_message(PeerChannel(Channel_my_id),"Work with database", buttons=keyboard)
     await event.respond(question, parse_mode='md', buttons=keyboard)
 
-
-async def check_user(Channel_my_id, user, event):
-    permissions = await bot.get_permissions(Channel_my_id, user)
-    logging.debug(f"Try get permissions for channe={Channel_my_id} user={user}")
+async def check_user(channel, user, event):
+    ''' Check right of User '''
+    permissions = await bot.get_permissions(channel, user)
+    logging.debug(f"Get permissions for channe={channel} user={user}")
     user_db = db_exist_user(user)
-    #logging.debug(f"User={user} exist in db. Result={user_db}")
-    ret = 0
+    ret = -1
     if not user_db:
-      logging.debug(f"User {user} is not in db")
-      #await event.respond("Sorry you are not registered user. You can only set Reaction.")
-      ret = 0
-    elif dict(user_db[0]).get('active') == 0:
+      logging.debug(f"User {user} is not in db - new user")
+      ret = USER_NEW
+      return ret
+    elif dict(user_db[0]).get('active') == USER_BLOCKED:
       logging.debug(f"User {user} is blocked in db")
-      #await event.respond("Sorry you are blocked. You can only set Reaction.")
-      ret = 1
-    elif dict(user_db[0]).get('rights') == 0:
+      ret = USER_BLOCKED
+    elif dict(user_db[0]).get('rights') == USER_READ:
       logging.debug(f"User {user} can only view in db")
-      ret = 2
-    elif dict(user_db[0]).get('rights') == 1:
+      ret = USER_READ
+    elif dict(user_db[0]).get('rights') == USER_READ_WRITE:
       logging.debug(f"User {user} admin in your db")
-      ret = 3
-    
+      ret = USER_READ_WRITE
+     
     if permissions.is_admin:
-        #await event.respond("Warning you are Admin")
-        ret = 4  # Admin
+        ret = USER_SUPERADMIN  # Admin
     return ret
 
+async def query_wait_users(event):
+    ''' Get list users who submitted applications '''     
+    rows = db_list_users( id_user=None, active=USER_BLOCKED, rights=USER_NO_RIGHTS )
+    logging.debug(f"Get users waiting approve")
+    button=[]
+    if rows:
+        #await event.respond('List awaiting users:')
+        for row in rows:
+            id_user = dict(row).get('id_user')
+            message = dict(row).get('name_user')
+            bdata='ENABLE'+id_user
+            button.append([ Button.inline('☑ '+message, bdata)])
+        await event.respond('List awaiting users:', buttons=button)    
+    else:
+        message = ".....No records....."
+        await event.respond(message)
 
+async def query_all_users(event):
+    ''' Get list all users '''     
+    rows = db_list_users()
+    logging.gebug(f"Get users waiting approve")
+    if rows:
+        await event.respond('List awaiting users:')
+        for row in rows:
+            #id_user = "dict(row).get('id_user')"
+            message = dict(row).get('name_user')
+            await event.respond(message, buttons=button)
+    else:
+        message = ".....No records....."
+        await event.respond(message)
+
+async def query_user_tag_film(event, id_nnm, id_user):
+    ''' User tag film '''
+    res=db_get_tag( id_nnm, id_user )
+    if res:
+       await event.answer('Film already in database!', alert=True) #FIXME Me be remove alert=True need test
+       logging.info(f"User tag film but already in database id_nnm={data} with result={res}")
+       return
+    res=db_add_tag( id_nnm, SETTAG, id_user )
+    logging.info(f"User tag film id_nnm={data} with result={res}")
+    bdata = 'TAG'+data
+    await event.answer('Film add to database', alert=True) #FIXME Me be remove alert=True need test
+    
 def main_bot():
     ''' Loop for bot connection '''
 
@@ -469,8 +532,7 @@ def main_bot():
         bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version, proxy=(
             prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=mybot_token)
     else:
-        bot = TelegramClient(session_bot, api_id, api_hash,
-                             system_version=system_version).start(bot_token=mybot_token)
+        bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)
 
     bot.start()
     try:
@@ -488,26 +550,17 @@ def main_bot():
         logging.debug(f"Get callback event on channel {Channel_my}: {event}")
         # Check user rights
         ret = await check_user(event.query.peer, event.query.user_id, event)
-        if not ret: await event.answer('Sorry you are not registered user. You can only set Reaction.', alert=True)
+        if ret == USER_NEW: await event.answer('Sorry you are not registered user. You can only set Reaction.', alert=True)
         # Stop handle this event other handlers
         raise StopPropagation
         button_data = event.data.decode()
         if button_data.find('XX', 0, 2) != -1:
-            # Add to Film to DB and remove Button 'Add to DB'
-            data = button_data
-            data = data.replace('XX', '')
-            logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
-            await query_tag_record_revert_button(event, data, bot_name)
-        #elif button_data.find('RXX', 0, 3) != -1:
-        #    # Remove Film from DB and revert Button to 'Add to DB'
-        #    data = button_data
-        #    data = data.replace('RXX', '')
-        #    logging.info(f"Button 'Remove...' pressed data={
-        #                 button_data} write {data}")
-        #    await query_untag_record_revert_button(event, data, bot_name)
-
-        # Stop handle this event other handlers
-        # raise StopPropagation
+           # Add to Film to DB and remove Button 'Add to DB'
+           data = button_data
+           data = data.replace('XX', '')
+           logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
+           await query_user_tag_film(event, data, event.query.user_id)
+           raise StopPropagation
 
     # Attach inline button to new film message
     @bot.on(events.NewMessage(chats=[PeerChannel(Channel_my_id)], pattern=filter))
@@ -525,52 +578,42 @@ def main_bot():
         #user = event_bot.message.peer_id.user_id
         ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
        
-        if ret == 0:     # New user
-            await create_yes_no_bot('**Y realy want tag/untag films**', event_bot)
-            return
-        elif ret == 1:   # Blocked
-            return
-        elif ret == 2:   # Only View
-            menu_level = 0
-            pass  # FIXME no think
-        elif ret == 3:   # Admin
-            menu_level = 1
-        elif ret == 4:   # SuperUser
-            menu_level = 2
-
+        if ret == USER_NEW:     # New user
+             await create_yes_no_bot('**Y realy want tag/untag films**', event_bot)
+             return
+        elif ret == USER_BLOCKED:   # Blocked
+             await evant_bot.answer('Sorry You are Blocked!\n Send message to Admin Channel.', Alert=True)
+             return
+        elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View
+        elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
+        elif ret == USER_SUPERADMIN: menu_level = MENU_SUPERADMIN # SuperUser
+       
         if event_bot.message.message == '/start':
-            # show admin menu
-            await create_menu_bot(menu_level, event_bot)
+          # show admin menu
+          await create_menu_bot(menu_level, event_bot)
 
     # Handle basic Menu
     @bot.on(events.CallbackQuery())
     async def callback_bot(event_bot):
         logging.debug(f"Get callback event_bot {event_bot}")
-        user = event_bot.query.user_id
+        id_user = event_bot.query.user_id
 
         button_data = event_bot.data.decode()
         await event_bot.delete()
         send_menu = 0
-        ret = await check_user(PeerChannel(Channel_my_id), user, event_bot)
-        # Stop handle this event other handlers
+        ret = await check_user(PeerChannel(Channel_my_id), id_user, event_bot)
+        #Stop handle this event other handlers
         #raise StopPropagation
-        if ret == 0:     # New user
-            pass
-        elif ret == 1:   # Blocked
-            return
-        elif ret == 2:   # Only View
-            menu_level = 0
-            pass  # FIXME no think
-        elif ret == 3:   # Admin
-            menu_level = 1
-        elif ret == 4:   # SuperUser
-            menu_level = 2
-            
-        if button_data == '/yes':
+       
+        if ret == USER_BLOCKED:   # Blocked
+          await event_bot.answer('Sorry You are Blocked!\n Send message to Admin Channel.', Alert=True)
+          return
+        elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View
+        elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
+        elif ret == USER_SUPERADMIN: menu_level = MENU_SUPERADMIN # SuperUser
+        
+        if ret == USER_NEW and button_data == '/yes':
             # Add new user to db and set min rights and block
-            id_user = event_bot.query.user_id
-            # name_user=event_bot_yn.query.user_id #FIXME Need get username
-            # a_name_user = await event_bot_yn.get_input_sender()
             user_ent = await bot.get_entity(id_user)
             name_user = user_ent.username
             if name_user == None: name_user = user_ent.first_name
@@ -583,22 +626,32 @@ def main_bot():
             await event_bot.respond('Goodbye! See you later...')
             send_menu = 0
             return
-        
+        if button_data == '/lur':
+            #Approve waiting users
+            await query_wait_users(event_bot)
+            send_menu = 1
+        if  button_data.find('ENABLE', 0, 6) != -1:
+            data = button_data
+            id_user_approve = data.replace('ENABLE', '')
+            #Approve waiting users
+            logging.info(f"Approve waiting users: user={id_user_approve}")
+            db_ch_rights_user(id_user_approve, USER_UNBLOCKED, USER_READ_WRITE)
+            send_menu = 1
         if button_data == '/dblist':  # Not Use now
             # Get all database, Use with carefully may be many records
             await query_all_records(event_bot)
             send_menu = 1
         elif button_data == '/dwlist':
             # Get films tagget for download
-            await query_tagged_records(1, event_bot)
+            await query_tagged_records(id_user, SETTAG, event_bot)
             send_menu = 1
         elif button_data == '/dwclear':
             # Clear all tag for download
-            await query_clear_tagged_records(event_bot)
+            await db_switch_user_tag( id_user, UNSETTAG )
             send_menu = 1
         elif button_data == '/dwearly':
             # Get films tagget early for download
-            await query_tagged_records(2, event_bot)
+            await query_tagged_records(id_user, UNSETTAG, event_bot)
             send_menu = 1
         elif button_data == '/dbinfo':
             # Get info about DB
@@ -813,7 +866,6 @@ connection.row_factory = sqlite3.Row
 cursor = connection.cursor()
 
 db_init()
-
 
 bot = main_bot()
 if bot:

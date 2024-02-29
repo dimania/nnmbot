@@ -96,4 +96,4 @@ INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (1213141516,4,'26.02.20
 --SELECT id FROM Films WHERE id_nnm = 'a5';
 
 SELECT tag FROM Ufilms WHERE id_Films = (SELECT id FROM Films WHERE id_nnm='as5') AND id_user=12345;
-
+SELECT active,rights,name_user,id_user FROM Users WHERE active = 0;

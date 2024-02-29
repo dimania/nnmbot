@@ -174,7 +174,7 @@ def db_list_users( id_user=None, active=None, rights=None ):
     rows = cursor.fetchall()
     return rows
 
-def db_list_tagged_films( id_user=None, tag=1 ):
+def db_list_tagged_films( id_user=None, tag=SETTAG ):
     ''' List only records with set tag '''
     cursor.execute("SELECT name,nnm_url FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
     rows = cursor.fetchall()
@@ -189,13 +189,20 @@ def db_add_tag( id_nnm, tag, id_user ):
     connection.commit()
     return str(cursor.rowcount)
 
-def db_switch_tag( id_nnm, tag, id_user ):
-    ''' Update tag in database for control film '''
+def db_switch_film_tag( id_nnm, tag, id_user ):
+    ''' Update user tagging in database for films  '''
     cursor.execute("UPDATE Ufilms SET tag=? WHERE id_user = ? AND id_Films = (SELECT id FROM Films WHERE id_nnm=?)",
                   (tag,id_user,id_nnm))
     connection.commit()
     return str(cursor.rowcount)
-    
+
+def db_switch_user_tag( id_user, tag ):
+    ''' Update tag in database for user '''
+    cursor.execute("UPDATE Ufilms SET tag=? WHERE id_user = ?",
+                  (tag,id_user))
+    connection.commit()
+    return str(cursor.rowcount)    
+
 def db_get_tag( id_nnm, id_user ):
     ''' Get if exist current tag for user '''
     cursor.execute("SELECT tag FROM Ufilms WHERE id_Films = (SELECT id FROM Films WHERE id_nnm=?) AND id_user=?", (id_nnm, id_user,))
