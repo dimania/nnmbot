@@ -46,6 +46,7 @@ MENU_SUPERADMIN = 2
 
 BASIC_MENU = 1
 CUSER_MENU = 2
+CURIGHTS_MENU = 3
 NO_MENU = 0
 
 #-----------------
@@ -59,6 +60,7 @@ def get_config(config):
     global session_client
     global session_bot
     global bot_name
+    global admin_name
     global Channel_mon
     global Channel_my
     global db_name
@@ -437,7 +439,7 @@ async def query_del_user(event):
         message = ".....No records....."
         await event.respond(message)
         
-async def create_menu_bot(level, event):
+async def create_basic_menu(level, event):
     ''' Create basic menu control database '''
     logging.info(f"Create menu buttons")
     keyboard = [
@@ -494,7 +496,24 @@ async def create_control_user_menu(level, event):
 
     await event.respond("**☣ Work with users:**", parse_mode='md', buttons=keyboard)
 
-async def create_yes_no_bot(question, event):
+async def create_rights_user_menu(level, event):
+    ''' Create menu for change rights users '''
+    logging.info(f"Create menu for change rights users menu buttons")
+    keyboard = [
+        [
+            Button.inline("Set Read only", b"/cr_ro")
+        ],
+        [
+            Button.inline("Set Read Write", b"/cr_rw")
+        ],
+        [
+            Button.inline("Back to users menu", b"/cr_bum")
+        ]
+    ]
+    #await event.respond("Select user for change rights")
+    await event.respond("**☣ Select user for change rights:**", parse_mode='md', buttons=keyboard)
+
+async def create_yes_no_dialog(question, event):
     ''' Create yes or no buttons with text '''
     logging.debug(f"Create yes or no buttons")
     keyboard = [
@@ -632,7 +651,7 @@ def main_bot():
         ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
        
         if ret == USER_NEW:     # New user
-             await create_yes_no_bot('**Y realy want tag/untag films**', event_bot)
+             await create_yes_no_dialog('**Y realy want tag/untag films**', event_bot)
              return
         elif ret == USER_BLOCKED:   # Blocked
              await evant_bot.answer('Sorry You are Blocked!\n Send message to Admin this channel', Alert=True)
@@ -643,7 +662,7 @@ def main_bot():
        
         if event_bot.message.message == '/start':
           # show admin menu
-          await create_menu_bot(menu_level, event_bot)
+          await create_basic_menu(menu_level, event_bot)
 
     # Handle basic Menu
     @bot.on(events.CallbackQuery())
@@ -652,8 +671,8 @@ def main_bot():
         id_user = event_bot.query.user_id
 
         button_data = event_bot.data.decode()
-        await event_bot.delete()
-        send_menu = 0
+        await event_bot.delete()               #Delete previous message
+        send_menu = MENU_USER_READ
         ret = await check_user(PeerChannel(Channel_my_id), id_user, event_bot)
         #Stop handle this event other handlers
         #raise StopPropagation
@@ -713,7 +732,7 @@ def main_bot():
                 await query_search(event_search.message.message, event_bot)
                 await event_bot.respond("🏁............Done............🏁")
                 bot.remove_event_handler(search_handler)
-                await create_menu_bot(menu_level, event_bot)
+                await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_cum':
             # Go to control users menu 
             send_menu = CUSER_MENU
@@ -747,11 +766,37 @@ def main_bot():
             db_del_user(id_user_delete)
             send_menu = CUSER_MENU   
             # Get search string and search 
+        elif button_data == '/cu_cur':
+            # Change rights user
+            await query_all_users(event_bot)
+            #await event_cur.respond("Change righst for user:"+id_user)
+            raise StopPropagation
+            @bot.on(events.CallbackQuery())
+            async def callback_bot(event_cur):
+              logging.debug(f"Get callback event_cur {event_cur}")
+              button_data_cur = event_bot.data.decode() 
+              id_user = button_data_cur
+              await event_cur.respond("Change righst for user:"+id_user)
+              await create_rights_user_menu(menu_level, event_cur)
+              if button_data_cur == '/cr_ro':
+                  #Change to RO
+                  send_menu = CUSER_MENU
+                  pass
+              elif button_data_cur == '/cr_rw':
+                  #Change to RW
+                  send_menu = CUSER_MENU
+                  pass
+              elif button_data_cur == '/cr_bum':
+                  #Back to user menu 
+                  send_menu = CUSER_MENU
             
-
+            raise StopPropagation
+            #???send_menu = CURIGHTS_MENU
+            
+            
         if send_menu == BASIC_MENU:
             await event_bot.respond("🏁............Done............🏁")
-            await create_menu_bot(menu_level, event_bot)
+            await create_basic_menu(menu_level, event_bot)
         elif send_menu == CUSER_MENU:
             await event_bot.respond("🏁............Done............🏁")
             await create_control_user_menu(menu_level, event_bot)
