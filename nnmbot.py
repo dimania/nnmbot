@@ -32,14 +32,18 @@ import os.path
 DEFTAG = 0
 SETTAG = 1
 UNSETTAG = 2
+
 USER_ACTIVE = 1
 USER_BLOCKED = 0
 USER_UNBLOCKED = 1
 USER_SUPERADMIN = 4
+
 USER_READ_WRITE = 3
 USER_READ = 2
-USER_NEW = 1
 USER_NO_RIGHTS=0
+
+USER_NEW = 1
+
 MENU_USER_READ = 0
 MENU_USER_READ_WRITE = 1
 MENU_SUPERADMIN = 2
@@ -248,25 +252,25 @@ def db_list_users( id_user=None, active=None, rights=None ):
     '''List users in database '''
     
     if id_user is not None and active is not None and rights is not None:
-        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE id_user = ? AND active = ? AND rights = ?", (id_user, active, rights,))
+        cursor.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE id_user = ? AND active = ? AND rights = ?", (id_user, active, rights,))
     elif id_user is not None and active is not None:
-        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE id_user = ? AND active = ?", (id_user, active,))
+        cursor.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE id_user = ? AND active = ?", (id_user, active,))
     elif id_user is not None and rights is not None:
-        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE id_user = ? AND rights = ?", (id_user, rights,))    
+        cursor.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE id_user = ? AND rights = ?", (id_user, rights,))
     elif active is not None and rights is not None:
-        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE active = ? AND rights = ?", (active, rights,))        
+        cursor.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE active = ? AND rights = ?", (active, rights,))
     elif id_user is not None:
-        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE id_user = ?", (id_user,))
+        cursor.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE id_user = ?", (id_user,))
     elif active is not None:
-        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE active = ?", (active,))
+        cursor.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE active = ?", (active,))
     elif rights is not None:
-        cursor.execute("SELECT active,rights,name_user,id_user FROM Users WHERE rights = ?", (rights,))
+        cursor.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE rights = ?", (rights,))
     else:            
-        cursor.execute("SELECT active,rights,name_user,id_user FROM Users")
+        cursor.execute("SELECT active,rights,name_user,id_user,date FROM Users")
              
     rows = cursor.fetchall()
     
-    logging.info(f"SELECT USERS: id_user={id_user} active={active}, rights={rights} result={len(rows)}" )
+    logging.debug(f"SELECT USERS: id_user={id_user} active={active}, rights={rights} result={len(rows)}" )
     return rows
 
 def db_list_tagged_films( id_user=None, tag=SETTAG ):
@@ -421,7 +425,7 @@ async def query_add_user(id_user, name_user, event):
         await event.respond(message)
         #TODO Send message Admins if need
 
-async def query_del_user(event):
+async def query_del_user(event):#FIXME No need
     ''' List and Delete user  '''
     rows = db_list_users()
     logging.debug(f"Get all users for select 4 delete ")
@@ -496,22 +500,23 @@ async def create_control_user_menu(level, event):
 
     await event.respond("**☣ Work with users:**", parse_mode='md', buttons=keyboard)
 
-async def create_rights_user_menu(level, event):
+async def create_rights_user_menu(level, event, id_user):
     ''' Create menu for change rights users '''
     logging.info(f"Create menu for change rights users menu buttons")
+
     keyboard = [
         [
-            Button.inline("Set Read only", b"/cr_ro")
+            Button.inline("Set Read only", b"/cr_ro"+str.encode(id_user))
         ],
         [
-            Button.inline("Set Read Write", b"/cr_rw")
+            Button.inline("Set Read Write", b"/cr_rw"+str.encode(id_user))
         ],
         [
             Button.inline("Back to users menu", b"/cr_bum")
         ]
     ]
     #await event.respond("Select user for change rights")
-    await event.respond("**☣ Select user for change rights:**", parse_mode='md', buttons=keyboard)
+    await event.respond("**☣     Select rights:    **", parse_mode='md', buttons=keyboard)
 
 async def create_yes_no_dialog(question, event):
     ''' Create yes or no buttons with text '''
@@ -566,18 +571,34 @@ async def query_wait_users(event):
         message = ".....No records....."
         await event.respond(message)
 
-async def query_all_users(event):
+async def query_all_users(event, bdata_id, message):
     ''' Get list all users '''     
     rows = db_list_users()
     logging.debug(f"Get all users result={len(rows)}")
     button=[]
+    status = ""
     if rows:
         for row in rows:
             id_user = dict(row).get('id_user')
-            message = dict(row).get('name_user')
-            bdata='INFO'+id_user
-            button.append([ Button.inline('   '+message+'   ', bdata)])
-        await event.respond('List current users:', buttons=button) 
+            user_name = dict(row).get('name_user')
+            active = dict(row).get('active')
+            rights = dict(row).get('rights')
+            date = dict(row).get('date')
+            if active == USER_ACTIVE:
+               status = status+'🇦 '
+            if active == USER_BLOCKED:
+               status = status+'🇧 '
+            if rights == USER_READ_WRITE:
+               status = status+'🇷 🇼 '
+            if rights == USER_READ:
+               status = status+'🇷 '
+            #2024-03-03 11:46:05.488155
+            dt = datetime.strptime(date,'%Y-%m-%d %H:%M:%S.%f')
+            date = dt.strftime('%d-%m-%y %H:%M')
+            logging.info(f"Get user username={user_name} status={status} date={date}",)
+            bdata=bdata_id+id_user
+            button.append([ Button.inline(user_name+' '+status+' '+date , bdata)])
+        await event.respond(message, buttons=button)
     else:
         message = ".....No records....."
         await event.respond(message)
@@ -656,7 +677,7 @@ def main_bot():
         elif ret == USER_BLOCKED:   # Blocked
              await evant_bot.answer('Sorry You are Blocked!\n Send message to Admin this channel', Alert=True)
              return
-        elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View
+        elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View?
         elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
         elif ret == USER_SUPERADMIN: menu_level = MENU_SUPERADMIN # SuperUser
        
@@ -752,54 +773,75 @@ def main_bot():
             send_menu = CUSER_MENU
         elif button_data == '/cu_lar':
             # Approve waiting users
-            await query_all_users(event_bot)
+            await query_all_users(event_bot,'INFO','List current users:')
             send_menu = CUSER_MENU
         elif button_data == '/cu_du':
-            # Delete user
-            await query_del_user(event_bot)
+            # List user for select 4 delete
+            await query_all_users(event_bot,'DELETE','Select user for delete:')
             send_menu = CUSER_MENU   
         elif button_data.find('DELETE', 0, 6) != -1:
+            # Get user for delete
             data = button_data
             id_user_delete = data.replace('DELETE', '')
-            # Approve waiting users
             logging.info(f"Delete users: user={id_user_delete}")
             db_del_user(id_user_delete)
             send_menu = CUSER_MENU   
-            # Get search string and search 
         elif button_data == '/cu_cur':
             # Change rights user
-            await query_all_users(event_bot)
+            await query_all_users(event_bot,'RIGHTS','Select user for change rights:')
+            send_menu = NO_MENU
             #await event_cur.respond("Change righst for user:"+id_user)
-            raise StopPropagation
-            @bot.on(events.CallbackQuery())
-            async def callback_bot(event_cur):
-              logging.debug(f"Get callback event_cur {event_cur}")
-              button_data_cur = event_bot.data.decode() 
-              id_user = button_data_cur
-              await event_cur.respond("Change righst for user:"+id_user)
-              await create_rights_user_menu(menu_level, event_cur)
-              if button_data_cur == '/cr_ro':
-                  #Change to RO
-                  send_menu = CUSER_MENU
-                  pass
-              elif button_data_cur == '/cr_rw':
-                  #Change to RW
-                  send_menu = CUSER_MENU
-                  pass
-              elif button_data_cur == '/cr_bum':
-                  #Back to user menu 
-                  send_menu = CUSER_MENU
-            
-            raise StopPropagation
-            #???send_menu = CURIGHTS_MENU
-            
-            
+        elif button_data.find('RIGHTS', 0, 6) != -1:
+            data = button_data
+            id_user = data.replace('RIGHTS', '')
+            logging.info(f"Change rights for user={id_user}")
+            user_db=db_exist_user(id_user)
+            user_name=dict(user_db[0]).get('name_user')
+            await event_bot.respond("Change righst for user: "+user_name)
+            send_menu = CURIGHTS_MENU
+        elif button_data.find('/cr_ro', 0, 7) != -1:
+            #Change to RO
+            data = button_data
+            id_user = data.replace('/cr_ro', '')
+            db_ch_rights_user( id_user, USER_ACTIVE, USER_READ )
+            logging.info(f"Change rights RO for user={id_user}")
+            send_menu = CUSER_MENU
+        elif button_data.find('/cr_rw', 0, 7) != -1:
+            #Change to RW
+            data = button_data
+            id_user = data.replace('/cr_rw', '')
+            db_ch_rights_user( id_user, USER_ACTIVE, USER_READ_WRITE )
+            logging.info(f"Change rights RW for user={id_user}")
+            send_menu = CUSER_MENU
+        elif button_data == '/cu_buu':
+            # Block/Unblock user
+            await query_all_users(event_bot,'BLOCK_UNBLOCK','Select user for block/unblock:')
+            send_menu = NO_MENU
+        elif button_data.find('BLOCK_UNBLOCK', 0,13 ) != -1:
+            data = button_data
+            id_user = data.replace('BLOCK_UNBLOCK', '')
+            user_db=db_exist_user(id_user)
+            user_name=dict(user_db[0]).get('name_user')
+            active=dict(user_db[0]).get('active')
+            if active == USER_BLOCKED:
+              logging.info(f"Unblock user={id_user}")
+              db_ch_rights_user( id_user, USER_ACTIVE, USER_READ_WRITE )
+            else:
+              logging.info(f"Block user={id_user}")
+              db_ch_rights_user( id_user, USER_BLOCKED, USER_READ_WRITE )
+            send_menu = CUSER_MENU
+            #Back to user menu
+
         if send_menu == BASIC_MENU:
-            await event_bot.respond("🏁............Done............🏁")
+            #await event_bot.respond("🏁............Done............🏁")
             await create_basic_menu(menu_level, event_bot)
         elif send_menu == CUSER_MENU:
-            await event_bot.respond("🏁............Done............🏁")
+            #await event_bot.respond("🏁............Done............🏁")
             await create_control_user_menu(menu_level, event_bot)
+        elif send_menu == CURIGHTS_MENU:
+            #await event_bot.respond("🏁............Done............🏁")
+            await create_rights_user_menu(menu_level, event_bot, id_user_rights)
+
 
     return bot
 
@@ -850,19 +892,15 @@ def main_client():
             try:
                 page = requests.get(url, proxies=proxies)
                 if page.status_code != 200:
-                    logging.error(f"Can't open url:{
-                                  url}, status:{page.status}")
+                    logging.error(f"Can't open url:{url}, status:{page.status}")
                     return
             except Exception as ConnectionError:
-                logging.error(f"Can't open url:{
-                              url}, status:{ConnectionError}")
-                logging.error(
-                    f"May be you need use proxy? For it set use_proxy=1 in config file.")
+                logging.error(f"Can't open url:{url}, status:{ConnectionError}")
+                logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
                 client.disconnect()
                 return
 
-            logging.debug(f"Getted URL nnmclub page with status code: {
-                          page.status_code}")
+            logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}")
             soup = BeautifulSoup(page.text, 'html.parser')
 
             # Select data where class - postbody
@@ -949,8 +987,7 @@ def main_client():
                 imdb_r = "-"
 
         logging.info(f"Add info to message")
-        film_add_info = f"\n_________________________________\nРейтинг: КП[{kpsk_r}] Imdb[{
-            imdb_r}]\n{Id[2]} {mydict.get(Id[2])}\n{Id[5]}\n{mydict.get(Id[5])}"
+        film_add_info = f"\n_________________________________\nРейтинг: КП[{kpsk_r}] Imdb[{imdb_r}]\n{Id[2]} {mydict.get(Id[2])}\n{Id[5]}\n{mydict.get(Id[5])}"
 
         msg.message = msg.message+film_add_info
 
@@ -960,14 +997,11 @@ def main_client():
         try:
             async with db_lock:
                 if db_exist_Id(id_kpsk, id_imdb):
-                    logging.info(f"Check for resolve race condition: Film {
-                                 id_nnm} exist in db - end analize.")
+                    logging.info(f"Check for resolve race condition: Film {d_nnm} exist in db - end analize.")
                 else:
                     send_msg = await client.send_message(PeerChannel(Channel_my_id), msg, parse_mode='md')
-                    db_add_film(send_msg.id, id_nnm, url,
-                                mydict[Id[0]], id_kpsk, id_imdb)
-                    logging.info(f"Film not exist in db - add and send, id_kpsk={
-                                 id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
+                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
+                    logging.info(f"Film not exist in db - add and send, id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except errors.BadRequestError as error:
             logging.error(f'Error db_lock: {error}')
