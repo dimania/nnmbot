@@ -23,6 +23,7 @@ import logging
 import textwrap
 import asyncio
 import os.path
+import gettext
 
 #import nnm_module as db
 
@@ -1013,6 +1014,12 @@ def main_client():
 print('Start bot.')
 
 get_config(cfg)
+
+localedir = os.path.join(os.path.abspath('/home/dima/src/nnmbot/'), 'locales')
+translate = gettext.translation('nnmbot', localedir, ['en'])
+_ = translate.gettext
+
+
 db_lock = asyncio.Lock()
 
 # Enable logging
