@@ -59,3 +59,5 @@ ICU_extension_lib = "/usr/lib64/sqlite3/libSqliteIcu.so"
 #Possible value: NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL  
 log_level='INFO'
 
+# Set lang for dialogs. Possible values ru,en 
+Lang='en'

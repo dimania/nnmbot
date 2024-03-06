@@ -23,6 +23,7 @@ import logging
 import textwrap
 import asyncio
 import os.path
+import sys
 import gettext
 
 #import nnm_module as db
@@ -73,6 +74,7 @@ def get_config(config):
     global filter
     global ICU_extension_lib
     global log_level
+    global Lang
 
     try:
         api_id = config.api_id
@@ -90,6 +92,7 @@ def get_config(config):
         use_proxy = config.use_proxy
         filter = re.compile(config.filter)
         log_level = config.log_level
+        Lang = config.Lang
         ICU_extension_lib = config.ICU_extension_lib
 
         if use_proxy:
@@ -375,57 +378,57 @@ async def create_basic_menu(level, event):
     logging.info(f"Create menu buttons")
     keyboard = [
         [
-            Button.inline("List Films tagged", b"/bm_dwlist")
+            Button.inline(_("List Films tagged"), b"/bm_dwlist")
         ],
         [
-            Button.inline("List Films tagged early", b"/bm_dwearly")
+            Button.inline(_("List Films tagged early"), b"/bm_dwearly")
         ],
         [
-            Button.inline("Clear all tagged Films", b"/bm_dwclear")
+            Button.inline(_("Clear all tagged Films"), b"/bm_dwclear")
         ],
         [
-            Button.inline("Get database info ", b"/bm_dbinfo")
+            Button.inline(_("Get database info "), b"/bm_dbinfo")
         ],
         [
-            Button.inline("Search Films in database ", b"/bm_search")
+            Button.inline(_("Search Films in database "), b"/bm_search")
         ]
     ]
 
     if level == MENU_SUPERADMIN:
        # Add items for SuperUser
-       keyboard.append([Button.inline("List All Films in DB", b"/bm_dblist")])
-       keyboard.append([Button.inline("Go to control users menu", b"/bm_cum")])
+       keyboard.append([Button.inline(_("List All Films in DB"), b"/bm_dblist")])
+       keyboard.append([Button.inline(_("Go to control users menu"), b"/bm_cum")])
        
 
-    await event.respond("**☣ Work with database:**", parse_mode='md', buttons=keyboard)
+    await event.respond(_("**☣ Work with database:**"), parse_mode='md', buttons=keyboard)
 
 async def create_control_user_menu(level, event):
     ''' Create menu of control users '''
     logging.info(f"Create control user menu buttons")
     keyboard = [
         [
-            # Button.inline("List All DB", b"/dblist"),
-            Button.inline("List user requests", b"/cu_lur")
+            # Button.inline(_("List All DB"), b"/dblist"),
+            Button.inline(_("List user requests"), b"/cu_lur")
         ],
         [
-            Button.inline("List all users", b"/cu_lar")
+            Button.inline(_("List all users"), b"/cu_lar")
         ],
         [
-            Button.inline("Block/Unblock user", b"/cu_buu")
+            Button.inline(_("Block/Unblock user"), b"/cu_buu")
         ],
         [
-            Button.inline("Change rights user", b"/cu_cur")
+            Button.inline(_("Change rights user"), b"/cu_cur")
         ],
         [
-            Button.inline("Delete user", b"/cu_du")
+            Button.inline(_("Delete user"), b"/cu_du")
         ]
         ,
         [
-            Button.inline("Back to basic menu", b"/cu_bbm")
+            Button.inline(_("Back to basic menu"), b"/cu_bbm")
         ]
     ]
 
-    await event.respond("**☣ Work with users:**", parse_mode='md', buttons=keyboard)
+    await event.respond(_("**☣ Work with users:**"), parse_mode='md', buttons=keyboard)
 
 async def create_rights_user_menu(level, event, id_user):
     ''' Create menu for change rights users '''
@@ -433,28 +436,28 @@ async def create_rights_user_menu(level, event, id_user):
 
     keyboard = [
         [
-            Button.inline("Set Read only", b"/cr_ro"+str.encode(id_user))
+            Button.inline(_("Set Read only"), b"/cr_ro"+str.encode(id_user))
         ],
         [
-            Button.inline("Set Read Write", b"/cr_rw"+str.encode(id_user))
+            Button.inline(_("Set Read Write"), b"/cr_rw"+str.encode(id_user))
         ],
         [
-            Button.inline("Back to users menu", b"/cr_bum")
+            Button.inline(_("Back to users menu"), b"/cr_bum")
         ]
     ]
-    #await event.respond("Select user for change rights")
-    await event.respond("**☣     Select rights:    **", parse_mode='md', buttons=keyboard)
+    #await event.respond(_("Select user for change rights"))
+    await event.respond(_("**☣     Select rights:    **"), parse_mode='md', buttons=keyboard)
 
 async def create_yes_no_dialog(question, event):
     ''' Create yes or no buttons with text '''
     logging.debug(f"Create yes or no buttons")
     keyboard = [
         [
-            Button.inline("Yes", b"/yes"),
-            Button.inline("No", b"/no")
+            Button.inline(_("Yes"), b"/yes"),
+            Button.inline(_("No"), b"/no")
         ]
     ]
-    # await bot.send_message(PeerChannel(Channel_my_id),"Work with database", buttons=keyboard)
+    # await bot.send_message(PeerChannel(Channel_my_id),_("Work with database"), buttons=keyboard)
     await event.respond(question, parse_mode='md', buttons=keyboard)
 
 async def check_user(channel, user, event):
@@ -527,20 +530,20 @@ async def query_all_users(event, bdata_id, message):
             button.append([ Button.inline(user_name+' '+status+' '+date , bdata)])
         await event.respond(message, buttons=button)
     else:
-        message = ".....No records....."
+        message = _(".....No records.....")
         await event.respond(message)
 
 async def query_user_tag_film(event, id_nnm, id_user):
     ''' User tag film '''
     res=db_get_tag( id_nnm, id_user )
     if res:
-       await event.answer('Film already in database!', alert=True) 
+       await event.answer(_('Film already in database!'), alert=True) 
        logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
        return
     res=db_add_tag( id_nnm, SETTAG, id_user )
     logging.info(f"User {id_user} tag film id_nnm={id_nnm} with result={res}")
     #bdata = 'TAG'+id_nnm
-    await event.answer('Film added to database', alert=True) 
+    await event.answer(_('Film added to database'), alert=True) 
     
 def main_bot():
     ''' Loop for bot connection '''
@@ -570,7 +573,7 @@ def main_bot():
         # Check user rights
         ret = await check_user(event.query.peer, event.query.user_id, event)
         if ret == USER_NEW: 
-            await event.answer('Sorry you are not registered user.\nYou can only set Reaction.\nYou can register, press Control DB button.', alert=True)
+            await event.answer(_('Sorry you are not registered user.\nYou can only set Reaction.\nYou can register, press Control DB button.'), alert=True)
             # Stop handle this event other handlers
             raise StopPropagation
         button_data = event.data.decode()
@@ -599,10 +602,10 @@ def main_bot():
         ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
        
         if ret == USER_NEW:     # New user
-             await create_yes_no_dialog('**Y realy want tag/untag films**', event_bot)
+             await create_yes_no_dialog(_('**Y realy want tag/untag films**'), event_bot)
              return
         elif ret == USER_BLOCKED:   # Blocked
-             await evant_bot.answer('Sorry You are Blocked!\n Send message to Admin this channel', Alert=True)
+             await evant_bot.answer(_('Sorry You are Blocked!\n Send message to Admin this channel'), Alert=True)
              return
         elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View?
         elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
@@ -626,7 +629,7 @@ def main_bot():
         #raise StopPropagation
        
         if ret == USER_BLOCKED:   # Blocked
-          await event_bot.answer('Sorry You are Blocked!\nSend message to Admin this channel.', Alert=True)
+          await event_bot.answer(_('Sorry You are Blocked!\nSend message to Admin this channel.'), Alert=True)
           return
         elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View
         elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
@@ -640,12 +643,12 @@ def main_bot():
             logging.debug(f"Get username for id {id_user}: {name_user}")
             await query_add_user(id_user, name_user, event_bot)
             user_ent = await bot.get_input_entity(admin_name)
-            await bot.send_message(user_ent,"New user **"+name_user+"** request approve.",parse_mode='md')
+            await bot.send_message(user_ent,_("New user **")+name_user+_("** request approve."),parse_mode='md')
             send_menu = NO_MENU
             return
         elif button_data == '/no':
             # Say goodbye
-            await event_bot.respond('Goodbye! See you later...')
+            await event_bot.respond(_('Goodbye! See you later...'))
             send_menu = NO_MENU
             return
         
@@ -660,7 +663,7 @@ def main_bot():
         elif button_data == '/bm_dwclear':
             # Clear all tag for download
             res=db_switch_user_tag( id_user, UNSETTAG )
-            await event_bot.respond("  Clear "+res+" records  ")
+            await event_bot.respond(_("  Clear ")+res+_(" records  "))
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early for download
@@ -672,13 +675,13 @@ def main_bot():
             send_menu =BASIC_MENU
         elif button_data == '/bm_search':
             # Search Films
-            await event_bot.respond("Write and send what you search:")
+            await event_bot.respond(_("Write and send what you search:"))
             send_menu = NO_MENU
             @bot.on(events.NewMessage()) 
             async def search_handler(event_search):
                 logging.info(f"Get search string: {event_search.message.message}")
                 await query_search(event_search.message.message, event_bot)
-                await event_bot.respond("🏁............Done............🏁")
+                await event_bot.respond(_("🏁............Done............🏁"))
                 bot.remove_event_handler(search_handler)
                 await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_cum':
@@ -700,11 +703,11 @@ def main_bot():
             send_menu = CUSER_MENU
         elif button_data == '/cu_lar':
             # Approve waiting users
-            await query_all_users(event_bot,'INFO','List current users:')
+            await query_all_users(event_bot,'INFO',_('List current users:'))
             send_menu = CUSER_MENU
         elif button_data == '/cu_du':
             # List user for select 4 delete
-            await query_all_users(event_bot,'DELETE','Select user for delete:')
+            await query_all_users(event_bot,'DELETE',_('Select user for delete:'))
             send_menu = CUSER_MENU   
         elif button_data.find('DELETE', 0, 6) != -1:
             # Get user for delete
@@ -715,7 +718,7 @@ def main_bot():
             send_menu = CUSER_MENU   
         elif button_data == '/cu_cur':
             # Change rights user
-            await query_all_users(event_bot,'RIGHTS','Select user for change rights:')
+            await query_all_users(event_bot,'RIGHTS',_('Select user for change rights:'))
             send_menu = NO_MENU
         elif button_data.find('RIGHTS', 0, 6) != -1:
             data = button_data
@@ -723,7 +726,7 @@ def main_bot():
             logging.info(f"Change rights for user={id_user}")
             user_db=db_exist_user(id_user)
             user_name=dict(user_db[0]).get('name_user')
-            await event_bot.respond("Change righst for user: "+user_name)
+            await event_bot.respond(_("Change righst for user: ")+user_name)
             send_menu = CURIGHTS_MENU
         elif button_data.find('/cr_ro', 0, 7) != -1:
             #Change to RO
@@ -741,7 +744,7 @@ def main_bot():
             send_menu = CUSER_MENU
         elif button_data == '/cu_buu':
             # Block/Unblock user
-            await query_all_users(event_bot,'BLOCK_UNBLOCK','Select user for block/unblock:')
+            await query_all_users(event_bot,'BLOCK_UNBLOCK',_('Select user for block/unblock:'))
             send_menu = NO_MENU
         elif button_data.find('BLOCK_UNBLOCK', 0,13 ) != -1:
             data = button_data
@@ -759,13 +762,13 @@ def main_bot():
             #Back to user menu
 
         if send_menu == BASIC_MENU:
-            #await event_bot.respond("🏁............Done............🏁")
+            #await event_bot.respond(_("🏁............Done............🏁"))
             await create_basic_menu(menu_level, event_bot)
         elif send_menu == CUSER_MENU:
-            #await event_bot.respond("🏁............Done............🏁")
+            #await event_bot.respond(_("🏁............Done............🏁"))
             await create_control_user_menu(menu_level, event_bot)
         elif send_menu == CURIGHTS_MENU:
-            #await event_bot.respond("🏁............Done............🏁")
+            #await event_bot.respond(_("🏁............Done............🏁"))
             await create_rights_user_menu(menu_level, event_bot, id_user)
 
 
@@ -940,11 +943,16 @@ print('Start bot.')
 
 get_config(cfg)
 
-#localedir = os.path.join(os.path.abspath('/home/dima/src/nnmbot/'), 'locales')
-#translate = gettext.translation('nnmbot', localedir, ['en'])
-#_ = translate.gettext
+localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
-
+if os.path.isdir(localedir):
+  translate = gettext.translation('nnmbot', localedir, ['en'])
+  _ = translate.gettext
+else: 
+ logging.info(f"No locale dir for support langs: {localedir}")
+ print(f"No locale dir for support langs: {localedir}")
+ exit(1)
+ 
 db_lock = asyncio.Lock()
 
 # Enable logging
