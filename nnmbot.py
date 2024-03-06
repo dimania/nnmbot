@@ -36,13 +36,11 @@ UNSETTAG = 2
 
 USER_ACTIVE = 1
 USER_BLOCKED = 0
-USER_UNBLOCKED = 1
 USER_SUPERADMIN = 4
 
 USER_READ_WRITE = 3
 USER_READ = 2
 USER_NO_RIGHTS=0
-
 USER_NEW = 1
 
 MENU_USER_READ = 0
@@ -179,26 +177,10 @@ def db_info( id_user ):
     rows = cursor.fetchall()
     return rows
 
-def db_switch_download(id_nnm, download): #FIXME Not used
-    ''' Set tag in database for download film late '''
-    cursor.execute("UPDATE Films SET download=? WHERE id_nnm=?",
-                   (download, id_nnm))
-    connection.commit()
-    return str(cursor.rowcount)
-
 def db_list_all():
     ''' List all database '''
     cursor.execute('SELECT  * FROM Films')
     rows = cursor.fetchall()
-    return rows
-
-def db_list_download(download): #FIXME Not used
-    ''' List only records with set tag download '''
-    cursor.execute(
-        "SELECT name,nnm_url FROM Films WHERE download = ?", (download,))
-    rows = cursor.fetchall()
-    # for row in rows:
-    #  print(dict(row))
     return rows
 
 def db_search(str_search):
@@ -208,13 +190,6 @@ def db_search(str_search):
         "SELECT name,nnm_url FROM Films WHERE name LIKE ? COLLATE NOCASE", (str_search,))
     rows = cursor.fetchall()
     return rows
-
-def db_clear_download(download): #FIXME Not used
-    ''' Set to N records with set tag download to 1 '''
-    cursor.execute(
-        "UPDATE Films SET download=? WHERE download = 1", (download,))
-    connection.commit()
-    return str(cursor.rowcount)
 
 def db_add_user( id_user, name_user ):
     ''' Add new user to database '''
@@ -286,13 +261,6 @@ def db_add_tag( id_nnm, tag, id_user ):
     cursor.execute("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,(SELECT id FROM Films WHERE id_nnm=?),?,?)",
                   (id_user,id_nnm,cur_date,tag))
     
-    connection.commit()
-    return str(cursor.rowcount)
-
-def db_switch_tag( id_nnm, tag, id_user ): #FIXME Not used
-    ''' Update tag in database for control film '''
-    cursor.execute("UPDATE Ufilms SET tag=? WHERE id_user = ? AND id_Films = (SELECT id FROM Films WHERE id_nnm=?)",
-                  (tag,id_user,id_nnm))
     connection.commit()
     return str(cursor.rowcount)
 
@@ -369,30 +337,6 @@ async def query_clear_tagged_records(id_user, event):
         message = "No records"
     await event.respond(message, parse_mode='html', link_preview=0)
 
-async def query_tag_record_revert_button(event, id_nnm, bot_name, id_user): #FIXME Not used in future?
-    ''' Revert Button to 'Remove from DB' in message and set tag download to 1 '''
-    db_switch_film_tag( id_nnm, SETTAG, id_user )
-    #db_switch_download(data, 1)
-    logging.info(f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")
-    try:
-        # await event.edit(buttons=Button.clear())
-        bdata = 'RXX'+data
-        await event.edit(buttons=[Button.inline('Remove from BD', bdata), Button.url('Control BD', 't.me/'+bot_name+'?start')])
-    except MessageNotModifiedError:
-        pass
-
-async def query_untag_record_revert_button(event, data, bot_name): #FIXME Not used in future?
-    ''' Revert Button to 'Add to DB' in message and set tag download to 2 '''
-    db_switch_film_tag( id_nnm, UNSETTAG, id_user )
-    # id_nnm=db_get_id_nnm( event.message_id )
-    logging.info(f"Revert Button 'Add to DB' to 'Remove from DB' in message and set tag download to 1 for id_nnm={data}")
-    try:
-        # await event.edit(buttons=Button.clear())
-        bdata = 'XX'+data
-        await event.edit(buttons=[Button.inline('Add Film to BD', bdata), Button.url('Control BD', 't.me/'+bot_name+'?start')])
-    except MessageNotModifiedError:
-        pass
-
 async def query_db_info(event, id_user):
     ''' Get info about database records '''
     logging.info(f"Query info database for user {id_user}")
@@ -426,24 +370,6 @@ async def query_add_user(id_user, name_user, event):
         await event.respond(message)
         #TODO Send message Admins if need
 
-async def query_del_user(event):#FIXME No need
-    ''' List and Delete user  '''
-    rows = db_list_users()
-    logging.debug(f"Get all users for select 4 delete ")
-    button=[]
-    if rows:
-        #await event.respond('List awaiting users:')
-        for row in rows:
-            id_user = dict(row).get('id_user')
-            message = dict(row).get('name_user')
-            bdata='DELETE'+id_user
-            #del❎♻
-            button.append([ Button.inline('♻   '+message+'   ', bdata)])
-        await event.respond('List awaiting users:', buttons=button)    
-    else:
-        message = ".....No records....."
-        await event.respond(message)
-        
 async def create_basic_menu(level, event):
     ''' Create basic menu control database '''
     logging.info(f"Create menu buttons")
@@ -577,9 +503,9 @@ async def query_all_users(event, bdata_id, message):
     rows = db_list_users()
     logging.debug(f"Get all users result={len(rows)}")
     button=[]
-    status = ""
     if rows:
         for row in rows:
+            status = "" 
             id_user = dict(row).get('id_user')
             user_name = dict(row).get('name_user')
             active = dict(row).get('active')
@@ -608,13 +534,13 @@ async def query_user_tag_film(event, id_nnm, id_user):
     ''' User tag film '''
     res=db_get_tag( id_nnm, id_user )
     if res:
-       await event.answer('Film already in database!', alert=True) #FIXME Me be remove alert=True need test
+       await event.answer('Film already in database!', alert=True) 
        logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
        return
     res=db_add_tag( id_nnm, SETTAG, id_user )
     logging.info(f"User {id_user} tag film id_nnm={id_nnm} with result={res}")
     #bdata = 'TAG'+id_nnm
-    await event.answer('Film added to database', alert=True) #FIXME Me be remove alert=True need test
+    await event.answer('Film added to database', alert=True) 
     
 def main_bot():
     ''' Loop for bot connection '''
@@ -693,7 +619,7 @@ def main_bot():
         id_user = event_bot.query.user_id
 
         button_data = event_bot.data.decode()
-        await event_bot.delete()               #Delete previous message
+        await event_bot.delete()               #Delete previous message (prev menu)
         send_menu = MENU_USER_READ
         ret = await check_user(PeerChannel(Channel_my_id), id_user, event_bot)
         #Stop handle this event other handlers
@@ -770,7 +696,7 @@ def main_bot():
             id_user_approve = data.replace('ENABLE', '')
             # Approve waiting users
             logging.info(f"Approve waiting users: user={id_user_approve}")
-            db_ch_rights_user(id_user_approve, USER_UNBLOCKED, USER_READ_WRITE)
+            db_ch_rights_user(id_user_approve, USER_ACTIVE, USER_READ_WRITE)
             send_menu = CUSER_MENU
         elif button_data == '/cu_lar':
             # Approve waiting users
@@ -791,7 +717,6 @@ def main_bot():
             # Change rights user
             await query_all_users(event_bot,'RIGHTS','Select user for change rights:')
             send_menu = NO_MENU
-            #await event_cur.respond("Change righst for user:"+id_user)
         elif button_data.find('RIGHTS', 0, 6) != -1:
             data = button_data
             id_user = data.replace('RIGHTS', '')
@@ -841,7 +766,7 @@ def main_bot():
             await create_control_user_menu(menu_level, event_bot)
         elif send_menu == CURIGHTS_MENU:
             #await event_bot.respond("🏁............Done............🏁")
-            await create_rights_user_menu(menu_level, event_bot, id_user_rights)
+            await create_rights_user_menu(menu_level, event_bot, id_user)
 
 
     return bot
@@ -1015,9 +940,9 @@ print('Start bot.')
 
 get_config(cfg)
 
-localedir = os.path.join(os.path.abspath('/home/dima/src/nnmbot/'), 'locales')
-translate = gettext.translation('nnmbot', localedir, ['en'])
-_ = translate.gettext
+#localedir = os.path.join(os.path.abspath('/home/dima/src/nnmbot/'), 'locales')
+#translate = gettext.translation('nnmbot', localedir, ['en'])
+#_ = translate.gettext
 
 
 db_lock = asyncio.Lock()
