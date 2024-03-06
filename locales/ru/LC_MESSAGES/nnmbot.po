@@ -7,17 +7,56 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-03-06 23:37+0300\n"
-"PO-Revision-Date: 2024-03-06 23:34+0300\n"
+"POT-Creation-Date: 2024-03-06 23:54+0300\n"
+"PO-Revision-Date: 2024-03-07 00:02+0300\n"
 "Last-Translator: \n"
-"Language: ru\n"
 "Language-Team: ru <LL@li.org>\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "Generated-By: Babel 2.14.0\n"
+"X-Generator: Poedit 3.4.2\n"
+
+#: nnmbot.py:347
+msgid "All records: "
+msgstr "Всего фильмов в БД: "
+
+#: nnmbot.py:348
+msgid ""
+"\n"
+"Tagged records: "
+msgstr ""
+"\n"
+"Отмечено фильмов: "
+
+#: nnmbot.py:349
+msgid ""
+"\n"
+"Early tagged: "
+msgstr ""
+"\n"
+"Ранее отмечено фильмов: "
+
+#: nnmbot.py:360
+msgid "Add Film to DB"
+msgstr "Добавить в БД"
+
+#: nnmbot.py:361
+msgid "Control DB"
+msgstr "Управлять БД"
+
+#: nnmbot.py:370
+msgid "Yoy already power user!"
+msgstr "Вы уже СуперЮзверь!"
+
+#: nnmbot.py:372
+msgid "You request send to Admins, and will be reviewed soon."
+msgstr ""
+"Ваш запрос направлен Администратору.\n"
+" Ожидайте решения."
 
 #: nnmbot.py:381
 msgid "List Films tagged"
@@ -33,11 +72,11 @@ msgstr "Снять отметку со всех фильмов"
 
 #: nnmbot.py:390
 msgid "Get database info "
-msgstr "Информация о базе данных"
+msgstr "Информация о базе данных "
 
 #: nnmbot.py:393
 msgid "Search Films in database "
-msgstr "Поиск фильмов в базе данных"
+msgstr "Поиск фильмов в базе данных "
 
 #: nnmbot.py:399
 msgid "List All Films in DB"
@@ -135,7 +174,7 @@ msgid ""
 " Send message to Admin this channel"
 msgstr ""
 "Извините, Вы заблокированы.\n"
-"Можете обратиться к администратору данного канала."
+"Можете обратиться к администратору данного канала"
 
 #: nnmbot.py:632
 msgid ""
@@ -151,7 +190,7 @@ msgstr "Новый пользователь**"
 
 #: nnmbot.py:646
 msgid "** request approve."
-msgstr "** одобрить запрос"
+msgstr "** одобрить запрос."
 
 #: nnmbot.py:651
 msgid "Goodbye! See you later..."
@@ -159,11 +198,11 @@ msgstr "Пока! Увидимся...."
 
 #: nnmbot.py:666
 msgid "  Clear "
-msgstr "Очищено"
+msgstr " Очищено "
 
 #: nnmbot.py:666
 msgid " records  "
-msgstr "записей"
+msgstr " записей "
 
 #: nnmbot.py:678
 msgid "Write and send what you search:"
@@ -187,9 +226,8 @@ msgstr "Выберете пользователя для смены прав:"
 
 #: nnmbot.py:729
 msgid "Change righst for user: "
-msgstr "Смена прав для пользователя:"
+msgstr "Смена прав для пользователя: "
 
 #: nnmbot.py:747
 msgid "Select user for block/unblock:"
 msgstr "Выберете пользователя для блок./разблок.:"
-

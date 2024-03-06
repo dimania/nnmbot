@@ -344,9 +344,9 @@ async def query_db_info(event, id_user):
     ''' Get info about database records '''
     logging.info(f"Query info database for user {id_user}")
     rows = db_info(id_user)
-    message = "All records: " + \
-        str(rows[0][0])+"\nTagged records: " + \
-        str(rows[1][0])+"\nEarly tagged: "+str(rows[2][0])
+    message = _("All records: ") + \
+        str(rows[0][0])+_("\nTagged records: ") + \
+        str(rows[1][0])+_("\nEarly tagged: ")+str(rows[2][0])
     await event.respond(message, parse_mode='html', link_preview=0)
 
 async def query_add_button(event, id_msg, bot_name):
@@ -357,8 +357,8 @@ async def query_add_button(event, id_msg, bot_name):
     if id_nnm:
         bdata = 'XX'+id_nnm
         buttons_film = [
-                Button.inline('Add Film to DB', bdata),
-                Button.url('Control DB', 't.me/'+bot_name+'?start')
+                Button.inline(_("Add Film to DB"), bdata),
+                Button.url(_("Control DB"), 't.me/'+bot_name+'?start')
                 ]
         await event.edit(buttons=buttons_film)
 
@@ -367,9 +367,9 @@ async def query_add_user(id_user, name_user, event):
     logging.info(f"Add user to database ")
     res = db_add_user(id_user, name_user)
     if res:
-        await event.respond('Yoy already power user!')
+        await event.respond(_("Yoy already power user!"))
     else:
-        message = "You request send to Admins, and will be reviewed soon."
+        message = _("You request send to Admins, and will be reviewed soon.")
         await event.respond(message)
         #TODO Send message Admins if need
 
