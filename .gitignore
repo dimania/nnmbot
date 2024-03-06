@@ -6,6 +6,5 @@ test*
 *.backup
 *.log
 __pycache__/*
-locales*
 *swp
 *.old

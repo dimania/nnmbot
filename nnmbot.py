@@ -946,7 +946,7 @@ get_config(cfg)
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
 if os.path.isdir(localedir):
-  translate = gettext.translation('nnmbot', localedir, ['en'])
+  translate = gettext.translation('nnmbot', localedir, [Lang])
   _ = translate.gettext
 else: 
  logging.info(f"No locale dir for support langs: {localedir}")

@@ -1,3 +1,4 @@
+#from babel import frontend as babel
 from babel.messages import frontend as babel
 from distutils.core import setup
 

@@ -1,0 +1,195 @@
+# Russian translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-03-06 23:37+0300\n"
+"PO-Revision-Date: 2024-03-06 23:34+0300\n"
+"Last-Translator: \n"
+"Language: ru\n"
+"Language-Team: ru <LL@li.org>\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.14.0\n"
+
+#: nnmbot.py:381
+msgid "List Films tagged"
+msgstr "Список отмеченных фильмов"
+
+#: nnmbot.py:384
+msgid "List Films tagged early"
+msgstr "Список ранее отмеченных фильмов"
+
+#: nnmbot.py:387
+msgid "Clear all tagged Films"
+msgstr "Снять отметку со всех фильмов"
+
+#: nnmbot.py:390
+msgid "Get database info "
+msgstr "Информация о базе данных"
+
+#: nnmbot.py:393
+msgid "Search Films in database "
+msgstr "Поиск фильмов в базе данных"
+
+#: nnmbot.py:399
+msgid "List All Films in DB"
+msgstr "Список всех фильмов"
+
+#: nnmbot.py:400
+msgid "Go to control users menu"
+msgstr "Перейти в меню управления пользователями"
+
+#: nnmbot.py:403
+msgid "**☣ Work with database:**"
+msgstr "**☣ Работа с базой данных:**"
+
+#: nnmbot.py:411
+msgid "List user requests"
+msgstr "Список запросов на подключение"
+
+#: nnmbot.py:414
+msgid "List all users"
+msgstr "Список всех пользователей"
+
+#: nnmbot.py:417
+msgid "Block/Unblock user"
+msgstr "Заблокировать/Разблокировать пользователя"
+
+#: nnmbot.py:420
+msgid "Change rights user"
+msgstr "Сменить права пользователя"
+
+#: nnmbot.py:423
+msgid "Delete user"
+msgstr "Удалить пользователя"
+
+#: nnmbot.py:427
+msgid "Back to basic menu"
+msgstr "Вернуться в основное меню"
+
+#: nnmbot.py:431
+msgid "**☣ Work with users:**"
+msgstr "**☣ Работа с пользователями **"
+
+#: nnmbot.py:439
+msgid "Set Read only"
+msgstr "Только чтение"
+
+#: nnmbot.py:442
+msgid "Set Read Write"
+msgstr "Чтение-запись"
+
+#: nnmbot.py:445
+msgid "Back to users menu"
+msgstr "Вернуться в меню пользователей"
+
+#: nnmbot.py:449
+msgid "**☣     Select rights:    **"
+msgstr "**☣     Выберете права:    **"
+
+#: nnmbot.py:456
+msgid "Yes"
+msgstr "Да"
+
+#: nnmbot.py:457
+msgid "No"
+msgstr "Нет"
+
+#: nnmbot.py:533
+msgid ".....No records....."
+msgstr ".....Нет данных....."
+
+#: nnmbot.py:540
+msgid "Film already in database!"
+msgstr "Фильм уже в базе данных!"
+
+#: nnmbot.py:546
+msgid "Film added to database"
+msgstr "Фильм добавлен в базу данных"
+
+#: nnmbot.py:576
+msgid ""
+"Sorry you are not registered user.\n"
+"You can only set Reaction.\n"
+"You can register, press Control DB button."
+msgstr ""
+"Извините вы не зарегестрированы.\n"
+"Вы можете только оставлять реакции.\n"
+"Вы можете подать заявку на регистрацию, нажмите [ Управление БД ] ."
+
+#: nnmbot.py:605
+msgid "**Y realy want tag/untag films**"
+msgstr "**Вы действительно хотите подключиться?**"
+
+#: nnmbot.py:608
+msgid ""
+"Sorry You are Blocked!\n"
+" Send message to Admin this channel"
+msgstr ""
+"Извините, Вы заблокированы.\n"
+"Можете обратиться к администратору данного канала."
+
+#: nnmbot.py:632
+msgid ""
+"Sorry You are Blocked!\n"
+"Send message to Admin this channel."
+msgstr ""
+"Извините, Вы заблокированы.\n"
+"Можете обратиться к администратору данного канала."
+
+#: nnmbot.py:646
+msgid "New user **"
+msgstr "Новый пользователь**"
+
+#: nnmbot.py:646
+msgid "** request approve."
+msgstr "** одобрить запрос"
+
+#: nnmbot.py:651
+msgid "Goodbye! See you later..."
+msgstr "Пока! Увидимся...."
+
+#: nnmbot.py:666
+msgid "  Clear "
+msgstr "Очищено"
+
+#: nnmbot.py:666
+msgid " records  "
+msgstr "записей"
+
+#: nnmbot.py:678
+msgid "Write and send what you search:"
+msgstr "Введите что ищите и отправьте:"
+
+#: nnmbot.py:684
+msgid "🏁............Done............🏁"
+msgstr "🏁............Готово............🏁"
+
+#: nnmbot.py:706
+msgid "List current users:"
+msgstr "Список текущих пользователей:"
+
+#: nnmbot.py:710
+msgid "Select user for delete:"
+msgstr "Выберете пользователя для удаления:"
+
+#: nnmbot.py:721
+msgid "Select user for change rights:"
+msgstr "Выберете пользователя для смены прав:"
+
+#: nnmbot.py:729
+msgid "Change righst for user: "
+msgstr "Смена прав для пользователя:"
+
+#: nnmbot.py:747
+msgid "Select user for block/unblock:"
+msgstr "Выберете пользователя для блок./разблок.:"
+

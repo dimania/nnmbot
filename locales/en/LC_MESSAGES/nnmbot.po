@@ -1,0 +1,187 @@
+# English translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-03-06 23:37+0300\n"
+"PO-Revision-Date: 2024-03-06 23:11+0300\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.14.0\n"
+
+#: nnmbot.py:381
+msgid "List Films tagged"
+msgstr ""
+
+#: nnmbot.py:384
+msgid "List Films tagged early"
+msgstr ""
+
+#: nnmbot.py:387
+msgid "Clear all tagged Films"
+msgstr ""
+
+#: nnmbot.py:390
+msgid "Get database info "
+msgstr ""
+
+#: nnmbot.py:393
+msgid "Search Films in database "
+msgstr ""
+
+#: nnmbot.py:399
+msgid "List All Films in DB"
+msgstr ""
+
+#: nnmbot.py:400
+msgid "Go to control users menu"
+msgstr ""
+
+#: nnmbot.py:403
+msgid "**☣ Work with database:**"
+msgstr ""
+
+#: nnmbot.py:411
+msgid "List user requests"
+msgstr ""
+
+#: nnmbot.py:414
+msgid "List all users"
+msgstr ""
+
+#: nnmbot.py:417
+msgid "Block/Unblock user"
+msgstr ""
+
+#: nnmbot.py:420
+msgid "Change rights user"
+msgstr ""
+
+#: nnmbot.py:423
+msgid "Delete user"
+msgstr ""
+
+#: nnmbot.py:427
+msgid "Back to basic menu"
+msgstr ""
+
+#: nnmbot.py:431
+msgid "**☣ Work with users:**"
+msgstr ""
+
+#: nnmbot.py:439
+msgid "Set Read only"
+msgstr ""
+
+#: nnmbot.py:442
+msgid "Set Read Write"
+msgstr ""
+
+#: nnmbot.py:445
+msgid "Back to users menu"
+msgstr ""
+
+#: nnmbot.py:449
+msgid "**☣     Select rights:    **"
+msgstr ""
+
+#: nnmbot.py:456
+msgid "Yes"
+msgstr ""
+
+#: nnmbot.py:457
+msgid "No"
+msgstr ""
+
+#: nnmbot.py:533
+msgid ".....No records....."
+msgstr ""
+
+#: nnmbot.py:540
+msgid "Film already in database!"
+msgstr ""
+
+#: nnmbot.py:546
+msgid "Film added to database"
+msgstr ""
+
+#: nnmbot.py:576
+msgid ""
+"Sorry you are not registered user.\n"
+"You can only set Reaction.\n"
+"You can register, press Control DB button."
+msgstr ""
+
+#: nnmbot.py:605
+msgid "**Y realy want tag/untag films**"
+msgstr ""
+
+#: nnmbot.py:608
+msgid ""
+"Sorry You are Blocked!\n"
+" Send message to Admin this channel"
+msgstr ""
+
+#: nnmbot.py:632
+msgid ""
+"Sorry You are Blocked!\n"
+"Send message to Admin this channel."
+msgstr ""
+
+#: nnmbot.py:646
+msgid "New user **"
+msgstr ""
+
+#: nnmbot.py:646
+msgid "** request approve."
+msgstr ""
+
+#: nnmbot.py:651
+msgid "Goodbye! See you later..."
+msgstr ""
+
+#: nnmbot.py:666
+msgid "  Clear "
+msgstr ""
+
+#: nnmbot.py:666
+msgid " records  "
+msgstr ""
+
+#: nnmbot.py:678
+msgid "Write and send what you search:"
+msgstr ""
+
+#: nnmbot.py:684
+msgid "🏁............Done............🏁"
+msgstr ""
+
+#: nnmbot.py:706
+msgid "List current users:"
+msgstr ""
+
+#: nnmbot.py:710
+msgid "Select user for delete:"
+msgstr ""
+
+#: nnmbot.py:721
+msgid "Select user for change rights:"
+msgstr ""
+
+#: nnmbot.py:729
+msgid "Change righst for user: "
+msgstr ""
+
+#: nnmbot.py:747
+msgid "Select user for block/unblock:"
+msgstr ""
+

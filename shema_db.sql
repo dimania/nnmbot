@@ -97,3 +97,9 @@ INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (1213141516,4,'26.02.20
 
 SELECT tag FROM Ufilms WHERE id_Films = (SELECT id FROM Films WHERE id_nnm='as5') AND id_user=12345;
 SELECT active,rights,name_user,id_user FROM Users WHERE active = 0;
+
+SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Ufilms WHERE tag=1 AND id_user = 1 UNION ALL SELECT COUNT(*) FROM Ufilms WHERE tag = 2
+
+SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Ufilms WHERE tag = 1 AND id_user = 1033339697 UNION ALL SELECT COUNT(*) FROM Ufilms WHERE tag = 2 AND id_user = 1033339697;
+
+
