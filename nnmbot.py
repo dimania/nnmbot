@@ -799,8 +799,7 @@ def main_client():
           "Перевод:", "Язык озвучки:", "Субтитры:", "Видео:", "Аудио 1:",
           "Аудио 2:", "Аудио 3:", "Скриншоты:", "Время раздачи:"]
 
-    url = post_body = rating_url = []
-    mydict = {}
+    
 
     # Connect to Telegram
     if use_proxy:
@@ -819,7 +818,8 @@ def main_client():
 
     @client.on(events.NewMessage(chats=[PeerChannel(Channel_mon_id)], pattern=filter))
     async def normal_handler(event):
-
+        url = post_body = rating_url = []
+        mydict = {}
         logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")
         msg = event.message
 
@@ -945,7 +945,7 @@ def main_client():
                 else:
                     send_msg = await client.send_message(PeerChannel(Channel_my_id), msg, parse_mode='md')
                     db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
-                    logging.info(f"Film not exist in db - add and send, id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
+                    logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except errors.BadRequestError as error:
             logging.error(f'Error db_lock: {error}')
@@ -964,7 +964,7 @@ if os.path.isdir(localedir):
   translate = gettext.translation('nnmbot', localedir, [Lang])
   _ = translate.gettext
 else: 
-  logging.info(f"No locale dir for support langs: {localedir} \n Use default Engilsh lang")
+  logging.info(f"No locale dir for support langs: {localedir} \n Use default lang: Engilsh")
   def _(message): return message
  
 db_lock = asyncio.Lock()
