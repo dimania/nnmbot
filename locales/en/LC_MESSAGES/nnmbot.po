@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-03-06 23:54+0300\n"
+"POT-Creation-Date: 2024-03-07 15:34+0300\n"
 "PO-Revision-Date: 2024-03-06 23:11+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -17,6 +17,14 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.14.0\n"
+
+#: nnmbot.py:301 nnmbot.py:500 nnmbot.py:532
+msgid ".....No records....."
+msgstr ""
+
+#: nnmbot.py:315 nnmbot.py:330 nnmbot.py:340
+msgid "No records"
+msgstr ""
 
 #: nnmbot.py:347
 msgid "All records: "
@@ -82,67 +90,67 @@ msgstr ""
 msgid "**☣ Work with database:**"
 msgstr ""
 
-#: nnmbot.py:411
+#: nnmbot.py:410
 msgid "List user requests"
 msgstr ""
 
-#: nnmbot.py:414
+#: nnmbot.py:413
 msgid "List all users"
 msgstr ""
 
-#: nnmbot.py:417
+#: nnmbot.py:416
 msgid "Block/Unblock user"
 msgstr ""
 
-#: nnmbot.py:420
+#: nnmbot.py:419
 msgid "Change rights user"
 msgstr ""
 
-#: nnmbot.py:423
+#: nnmbot.py:422
 msgid "Delete user"
 msgstr ""
 
-#: nnmbot.py:427
+#: nnmbot.py:426
 msgid "Back to basic menu"
 msgstr ""
 
-#: nnmbot.py:431
+#: nnmbot.py:430
 msgid "**☣ Work with users:**"
 msgstr ""
 
-#: nnmbot.py:439
+#: nnmbot.py:438
 msgid "Set Read only"
 msgstr ""
 
-#: nnmbot.py:442
+#: nnmbot.py:441
 msgid "Set Read Write"
 msgstr ""
 
-#: nnmbot.py:445
+#: nnmbot.py:444
 msgid "Back to users menu"
 msgstr ""
 
-#: nnmbot.py:449
+#: nnmbot.py:448
 msgid "**☣     Select rights:    **"
 msgstr ""
 
-#: nnmbot.py:456
+#: nnmbot.py:455
 msgid "Yes"
 msgstr ""
 
-#: nnmbot.py:457
+#: nnmbot.py:456
 msgid "No"
 msgstr ""
 
-#: nnmbot.py:533
-msgid ".....No records....."
+#: nnmbot.py:498
+msgid "List awaiting users:"
 msgstr ""
 
-#: nnmbot.py:540
+#: nnmbot.py:539
 msgid "Film already in database!"
 msgstr ""
 
-#: nnmbot.py:546
+#: nnmbot.py:545
 msgid "Film added to database"
 msgstr ""
 
@@ -153,67 +161,92 @@ msgid ""
 "You can register, press Control DB button."
 msgstr ""
 
-#: nnmbot.py:605
-msgid "**Y realy want tag/untag films**"
-msgstr ""
-
-#: nnmbot.py:608
+#: nnmbot.py:580 nnmbot.py:612
 msgid ""
 "Sorry You are Blocked!\n"
 " Send message to Admin this channel"
 msgstr ""
 
-#: nnmbot.py:632
-msgid ""
-"Sorry You are Blocked!\n"
-"Send message to Admin this channel."
+#: nnmbot.py:609
+msgid "**Y realy want tag/untag films**"
 msgstr ""
 
-#: nnmbot.py:646
+#: nnmbot.py:650
 msgid "New user **"
 msgstr ""
 
-#: nnmbot.py:646
+#: nnmbot.py:650
 msgid "** request approve."
 msgstr ""
 
-#: nnmbot.py:651
+#: nnmbot.py:655
 msgid "Goodbye! See you later..."
 msgstr ""
 
-#: nnmbot.py:666
+#: nnmbot.py:670
 msgid "  Clear "
 msgstr ""
 
-#: nnmbot.py:666
+#: nnmbot.py:670
 msgid " records  "
 msgstr ""
 
-#: nnmbot.py:678
+#: nnmbot.py:682
 msgid "Write and send what you search:"
 msgstr ""
 
-#: nnmbot.py:684
+#: nnmbot.py:688
 msgid "🏁............Done............🏁"
 msgstr ""
 
-#: nnmbot.py:706
+#: nnmbot.py:709 nnmbot.py:729 nnmbot.py:771 nnmbot.py:775
+msgid "User: "
+msgstr ""
+
+#: nnmbot.py:709
+msgid " add to DB"
+msgstr ""
+
+#: nnmbot.py:711
+msgid ""
+"You request approved\n"
+"Now Yoy can work with films."
+msgstr ""
+
+#: nnmbot.py:715
 msgid "List current users:"
 msgstr ""
 
-#: nnmbot.py:710
+#: nnmbot.py:719
 msgid "Select user for delete:"
 msgstr ""
 
-#: nnmbot.py:721
+#: nnmbot.py:729
+msgid " deleted from DB"
+msgstr ""
+
+#: nnmbot.py:733
 msgid "Select user for change rights:"
 msgstr ""
 
-#: nnmbot.py:729
+#: nnmbot.py:741
 msgid "Change righst for user: "
 msgstr ""
 
-#: nnmbot.py:747
+#: nnmbot.py:759
 msgid "Select user for block/unblock:"
 msgstr ""
+
+#: nnmbot.py:771
+msgid " Unblocked"
+msgstr ""
+
+#: nnmbot.py:775
+msgid " Blocked"
+msgstr ""
+
+#~ msgid ""
+#~ "Sorry You are Blocked!\n"
+#~ "Send message to Admin this channel."
+#~ msgstr ""
 

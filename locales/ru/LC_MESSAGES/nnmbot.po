@@ -5,20 +5,28 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PROJECT VERSION\n"
+"Project-Id-Version: NNMBOT  0.3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-03-06 23:54+0300\n"
-"PO-Revision-Date: 2024-03-07 00:02+0300\n"
+"POT-Creation-Date: 2024-03-07 15:34+0300\n"
+"PO-Revision-Date: 2024-03-07 15:40+0300\n"
 "Last-Translator: \n"
-"Language-Team: ru <LL@li.org>\n"
+"Language-Team: ru <dimard@gmail.com>\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "Generated-By: Babel 2.14.0\n"
 "X-Generator: Poedit 3.4.2\n"
+
+#: nnmbot.py:301 nnmbot.py:500 nnmbot.py:532
+msgid ".....No records....."
+msgstr ".....Нет данных....."
+
+#: nnmbot.py:315 nnmbot.py:330 nnmbot.py:340
+msgid "No records"
+msgstr "Нет данных"
 
 #: nnmbot.py:347
 msgid "All records: "
@@ -42,11 +50,11 @@ msgstr ""
 
 #: nnmbot.py:360
 msgid "Add Film to DB"
-msgstr "Добавить в БД"
+msgstr "Добавить"
 
 #: nnmbot.py:361
 msgid "Control DB"
-msgstr "Управлять БД"
+msgstr "Управлять"
 
 #: nnmbot.py:370
 msgid "Yoy already power user!"
@@ -56,7 +64,9 @@ msgstr "Вы уже СуперЮзверь!"
 msgid "You request send to Admins, and will be reviewed soon."
 msgstr ""
 "Ваш запрос направлен Администратору.\n"
-" Ожидайте решения."
+"Ожидайте решения.\n"
+"Когда администратор одобрит ваш запрос\n"
+"Вы получите уведомление."
 
 #: nnmbot.py:381
 msgid "List Films tagged"
@@ -84,73 +94,73 @@ msgstr "Список всех фильмов"
 
 #: nnmbot.py:400
 msgid "Go to control users menu"
-msgstr "Перейти в меню управления пользователями"
+msgstr "Перейти в меню пользователей"
 
 #: nnmbot.py:403
 msgid "**☣ Work with database:**"
 msgstr "**☣ Работа с базой данных:**"
 
-#: nnmbot.py:411
+#: nnmbot.py:410
 msgid "List user requests"
 msgstr "Список запросов на подключение"
 
-#: nnmbot.py:414
+#: nnmbot.py:413
 msgid "List all users"
 msgstr "Список всех пользователей"
 
-#: nnmbot.py:417
+#: nnmbot.py:416
 msgid "Block/Unblock user"
-msgstr "Заблокировать/Разблокировать пользователя"
+msgstr "Блок./Разблок. пользователя"
 
-#: nnmbot.py:420
+#: nnmbot.py:419
 msgid "Change rights user"
 msgstr "Сменить права пользователя"
 
-#: nnmbot.py:423
+#: nnmbot.py:422
 msgid "Delete user"
 msgstr "Удалить пользователя"
 
-#: nnmbot.py:427
+#: nnmbot.py:426
 msgid "Back to basic menu"
 msgstr "Вернуться в основное меню"
 
-#: nnmbot.py:431
+#: nnmbot.py:430
 msgid "**☣ Work with users:**"
 msgstr "**☣ Работа с пользователями **"
 
-#: nnmbot.py:439
+#: nnmbot.py:438
 msgid "Set Read only"
 msgstr "Только чтение"
 
-#: nnmbot.py:442
+#: nnmbot.py:441
 msgid "Set Read Write"
 msgstr "Чтение-запись"
 
-#: nnmbot.py:445
+#: nnmbot.py:444
 msgid "Back to users menu"
 msgstr "Вернуться в меню пользователей"
 
-#: nnmbot.py:449
+#: nnmbot.py:448
 msgid "**☣     Select rights:    **"
 msgstr "**☣     Выберете права:    **"
 
-#: nnmbot.py:456
+#: nnmbot.py:455
 msgid "Yes"
 msgstr "Да"
 
-#: nnmbot.py:457
+#: nnmbot.py:456
 msgid "No"
 msgstr "Нет"
 
-#: nnmbot.py:533
-msgid ".....No records....."
-msgstr ".....Нет данных....."
+#: nnmbot.py:498
+msgid "List awaiting users:"
+msgstr "Список ожидающих пользователей:"
 
-#: nnmbot.py:540
+#: nnmbot.py:539
 msgid "Film already in database!"
 msgstr "Фильм уже в базе данных!"
 
-#: nnmbot.py:546
+#: nnmbot.py:545
 msgid "Film added to database"
 msgstr "Фильм добавлен в базу данных"
 
@@ -164,11 +174,7 @@ msgstr ""
 "Вы можете только оставлять реакции.\n"
 "Вы можете подать заявку на регистрацию, нажмите [ Управление БД ] ."
 
-#: nnmbot.py:605
-msgid "**Y realy want tag/untag films**"
-msgstr "**Вы действительно хотите подключиться?**"
-
-#: nnmbot.py:608
+#: nnmbot.py:580 nnmbot.py:612
 msgid ""
 "Sorry You are Blocked!\n"
 " Send message to Admin this channel"
@@ -176,58 +182,89 @@ msgstr ""
 "Извините, Вы заблокированы.\n"
 "Можете обратиться к администратору данного канала"
 
-#: nnmbot.py:632
-msgid ""
-"Sorry You are Blocked!\n"
-"Send message to Admin this channel."
-msgstr ""
-"Извините, Вы заблокированы.\n"
-"Можете обратиться к администратору данного канала."
+#: nnmbot.py:609
+msgid "**Y realy want tag/untag films**"
+msgstr "**Вы действительно хотите подключиться?**"
 
-#: nnmbot.py:646
+#: nnmbot.py:650
 msgid "New user **"
-msgstr "Новый пользователь**"
+msgstr "Новый пользователь **"
 
-#: nnmbot.py:646
+#: nnmbot.py:650
 msgid "** request approve."
-msgstr "** одобрить запрос."
+msgstr "** ожидает одобрения."
 
-#: nnmbot.py:651
+#: nnmbot.py:655
 msgid "Goodbye! See you later..."
 msgstr "Пока! Увидимся...."
 
-#: nnmbot.py:666
+#: nnmbot.py:670
 msgid "  Clear "
 msgstr " Очищено "
 
-#: nnmbot.py:666
+#: nnmbot.py:670
 msgid " records  "
 msgstr " записей "
 
-#: nnmbot.py:678
+#: nnmbot.py:682
 msgid "Write and send what you search:"
 msgstr "Введите что ищите и отправьте:"
 
-#: nnmbot.py:684
+#: nnmbot.py:688
 msgid "🏁............Done............🏁"
 msgstr "🏁............Готово............🏁"
 
-#: nnmbot.py:706
+#: nnmbot.py:709 nnmbot.py:729 nnmbot.py:771 nnmbot.py:775
+msgid "User: "
+msgstr "Пользователь: "
+
+#: nnmbot.py:709
+msgid " add to DB"
+msgstr " добавлен в БД"
+
+#: nnmbot.py:711
+msgid ""
+"You request approved\n"
+"Now Yoy can work with films."
+msgstr ""
+"Ваш запрос одобрен. \n"
+"Теперь вы можете работать с фильмами."
+
+#: nnmbot.py:715
 msgid "List current users:"
 msgstr "Список текущих пользователей:"
 
-#: nnmbot.py:710
+#: nnmbot.py:719
 msgid "Select user for delete:"
 msgstr "Выберете пользователя для удаления:"
 
-#: nnmbot.py:721
+#: nnmbot.py:729
+msgid " deleted from DB"
+msgstr " Удален из БД"
+
+#: nnmbot.py:733
 msgid "Select user for change rights:"
 msgstr "Выберете пользователя для смены прав:"
 
-#: nnmbot.py:729
+#: nnmbot.py:741
 msgid "Change righst for user: "
 msgstr "Смена прав для пользователя: "
 
-#: nnmbot.py:747
+#: nnmbot.py:759
 msgid "Select user for block/unblock:"
 msgstr "Выберете пользователя для блок./разблок.:"
+
+#: nnmbot.py:771
+msgid " Unblocked"
+msgstr " Разблокирован"
+
+#: nnmbot.py:775
+msgid " Blocked"
+msgstr " Заблокирован"
+
+#~ msgid ""
+#~ "Sorry You are Blocked!\n"
+#~ "Send message to Admin this channel."
+#~ msgstr ""
+#~ "Извините, Вы заблокированы.\n"
+#~ "Можете обратиться к администратору данного канала."

@@ -298,7 +298,7 @@ async def query_all_records(event):
                 dict(row).get('name') + '</a>'
             await event.respond(message, parse_mode='html', link_preview=0)
     else:
-        message = ".....No records....."
+        message = _(".....No records.....")
         await event.respond(message, parse_mode='html', link_preview=0)
 
 async def query_search(str_search, event):
@@ -312,7 +312,7 @@ async def query_search(str_search, event):
                 dict(row).get('name') + '</a>'
             await event.respond(message, parse_mode='html', link_preview=0)
     else:
-        message = "No records"
+        message = _("No records")
         await event.respond(message, parse_mode='html', link_preview=0)
 
 async def query_tagged_records(id_user, tag, event):
@@ -327,7 +327,7 @@ async def query_tagged_records(id_user, tag, event):
                 dict(row).get('name') + '</a>'
             await event.respond(message, parse_mode='html', link_preview=0)
     else:
-        message = "No records"
+        message = _("No records")
         await event.respond(message, parse_mode='html', link_preview=0)
 
 async def query_clear_tagged_records(id_user, event):
@@ -337,7 +337,7 @@ async def query_clear_tagged_records(id_user, event):
     if rows:
         message = 'Clear '+rows+' records'
     else:
-        message = "No records"
+        message = _("No records")
     await event.respond(message, parse_mode='html', link_preview=0)
 
 async def query_db_info(event, id_user):
@@ -407,7 +407,6 @@ async def create_control_user_menu(level, event):
     logging.info(f"Create control user menu buttons")
     keyboard = [
         [
-            # Button.inline(_("List All DB"), b"/dblist"),
             Button.inline(_("List user requests"), b"/cu_lur")
         ],
         [
@@ -496,9 +495,9 @@ async def query_wait_users(event):
             message = dict(row).get('name_user')
             bdata='ENABLE'+id_user
             button.append([ Button.inline('☑ '+message, bdata)])
-        await event.respond('List awaiting users:', buttons=button)    
+        await event.respond(_("List awaiting users:"), buttons=button)    
     else:
-        message = ".....No records....."
+        message = _(".....No records.....")
         await event.respond(message)
 
 async def query_all_users(event, bdata_id, message):
@@ -572,8 +571,13 @@ def main_bot():
         logging.debug(f"Get callback event on channel {Channel_my}: {event}")
         # Check user rights
         ret = await check_user(event.query.peer, event.query.user_id, event)
+        
         if ret == USER_NEW: 
             await event.answer(_('Sorry you are not registered user.\nYou can only set Reaction.\nYou can register, press Control DB button.'), alert=True)
+            # Stop handle this event other handlers
+            raise StopPropagation
+        elif ret == USER_BLOCKED:   # Blocked
+            await event.answer(_('Sorry You are Blocked!\n Send message to Admin this channel'), alert=True)
             # Stop handle this event other handlers
             raise StopPropagation
         button_data = event.data.decode()
@@ -605,7 +609,7 @@ def main_bot():
              await create_yes_no_dialog(_('**Y realy want tag/untag films**'), event_bot)
              return
         elif ret == USER_BLOCKED:   # Blocked
-             await evant_bot.answer(_('Sorry You are Blocked!\n Send message to Admin this channel'), Alert=True)
+             await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
              return
         elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View?
         elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
@@ -629,7 +633,7 @@ def main_bot():
         #raise StopPropagation
        
         if ret == USER_BLOCKED:   # Blocked
-          await event_bot.answer(_('Sorry You are Blocked!\nSend message to Admin this channel.'), Alert=True)
+          #await event_bot.respond(_('Sorry You are Blocked!\nSend message to Admin this channel.'))
           return
         elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View
         elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
@@ -696,10 +700,15 @@ def main_bot():
             send_menu = CUSER_MENU
         elif button_data.find('ENABLE', 0, 6) != -1:
             data = button_data
-            id_user_approve = data.replace('ENABLE', '')
+            id_user_approve = data.replace('ENABLE', '') #FIXME change id_user_approve id_user
             # Approve waiting users
             logging.info(f"Approve waiting users: user={id_user_approve}")
             db_ch_rights_user(id_user_approve, USER_ACTIVE, USER_READ_WRITE)
+            user_db=db_exist_user(id_user_approve)
+            user_name=dict(user_db[0]).get('name_user')
+            await event_bot.respond(_("User: ")+user_name+_(" add to DB"))
+            #Send message to user
+            await bot.send_message(PeerUser(int(id_user_approve)),_("You request approved\nNow Yoy can work with films."))
             send_menu = CUSER_MENU
         elif button_data == '/cu_lar':
             # Approve waiting users
@@ -712,9 +721,12 @@ def main_bot():
         elif button_data.find('DELETE', 0, 6) != -1:
             # Get user for delete
             data = button_data
-            id_user_delete = data.replace('DELETE', '')
+            id_user_delete = data.replace('DELETE', '') #FIXME change id_user_delete id_user
+            user_db=db_exist_user(id_user_delete)
+            user_name=dict(user_db[0]).get('name_user')
             logging.info(f"Delete users: user={id_user_delete}")
             db_del_user(id_user_delete)
+            await event_bot.respond(_("User: ")+user_name+_(" deleted from DB"))
             send_menu = CUSER_MENU   
         elif button_data == '/cu_cur':
             # Change rights user
@@ -755,9 +767,12 @@ def main_bot():
             if active == USER_BLOCKED:
               logging.info(f"Unblock user={id_user}")
               db_ch_rights_user( id_user, USER_ACTIVE, USER_READ_WRITE )
+              user_db=db_exist_user(id_user_approve)
+              await event_bot.respond(_("User: ")+user_name+_(" Unblocked"))
             else:
               logging.info(f"Block user={id_user}")
               db_ch_rights_user( id_user, USER_BLOCKED, USER_READ_WRITE )
+              await event_bot.respond(_("User: ")+user_name+_(" Blocked"))
             send_menu = CUSER_MENU
             #Back to user menu
 
@@ -949,9 +964,8 @@ if os.path.isdir(localedir):
   translate = gettext.translation('nnmbot', localedir, [Lang])
   _ = translate.gettext
 else: 
- logging.info(f"No locale dir for support langs: {localedir}")
- print(f"No locale dir for support langs: {localedir}")
- exit(1)
+  logging.info(f"No locale dir for support langs: {localedir} \n Use default Engilsh lang")
+  def _(message): return message
  
 db_lock = asyncio.Lock()
 
