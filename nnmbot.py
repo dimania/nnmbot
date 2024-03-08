@@ -350,15 +350,15 @@ async def query_db_info(event, id_user):
     await event.respond(message, parse_mode='html', link_preview=0)
 
 async def query_add_button(event, id_msg, bot_name):
-    ''' Add Button 'Add to DB' and 'Control DB' in message '''
-    await asyncio.sleep(2)  # wait while write to DB on previous step
+    ''' Add Button 'Add Film' and 'Control' in message '''
+    await asyncio.sleep(1)  # wait while write to DB on previous step
     id_nnm = db_get_id_nnm(id_msg)
     logging.info(f"Get id_nnm={id_nnm} by message id={id_msg} bot_name={bot_name}")
     if id_nnm:
         bdata = 'XX'+id_nnm
         buttons_film = [
-                Button.inline(_("Add Film to DB"), bdata),
-                Button.url(_("Control DB"), 't.me/'+bot_name+'?start')
+                Button.inline(_("Add Film"), bdata),
+                Button.url(_("Control"), 't.me/'+bot_name+'?start')
                 ]
         await event.edit(buttons=buttons_film)
 
@@ -573,7 +573,7 @@ def main_bot():
         ret = await check_user(event.query.peer, event.query.user_id, event)
         
         if ret == USER_NEW: 
-            await event.answer(_('Sorry you are not registered user.\nYou can only set Reaction.\nYou can register, press Control DB button.'), alert=True)
+            await event.answer(_('Sorry you are not registered user.\nYou can only set Reaction.\nYou can register, press [Control] button.'), alert=True)
             # Stop handle this event other handlers
             raise StopPropagation
         elif ret == USER_BLOCKED:   # Blocked

@@ -23,11 +23,11 @@ msgid ""
 msgstr ""
 
 #: nnmbot.py:360
-msgid "Add Film to DB"
+msgid "Add Film"
 msgstr ""
 
 #: nnmbot.py:361
-msgid "Control DB"
+msgid "Control"
 msgstr ""
 
 #: nnmbot.py:370
@@ -138,7 +138,7 @@ msgstr ""
 msgid ""
 "Sorry you are not registered user.\n"
 "You can only set Reaction.\n"
-"You can register, press Control DB button."
+"You can register, press [Control] button."
 msgstr ""
 
 #: nnmbot.py:580 nnmbot.py:612
