@@ -3,8 +3,8 @@
 # bash scripts for create i18n   
 #
 domain=nnmbot
-PATH_TR="./locales"
-PATH_IN="."
+PATH_TR="../locales"
+PATH_IN=".."
 RETVAL=0
 
 
@@ -49,18 +49,5 @@ case "$1" in
 esac
 
 exit $RETVAL
-
-python setup.py extract_messages 
-
-#Init tarnslation tree
-python setup.py init_catalog -l en -i ${PATH_TR}/messages.pot -o ${PATH_TR}/en/LC_MESSAGES/${domain}.po
-python setup.py init_catalog -l ru -i ${PATH_TR}/messages.pot -o ${PATH_TR}/ru/LC_MESSAGES/${domain}.po
-
-#UPDATE translation tree
-python setup.py update_catalog -l en -i ${PATH_TR}/messages.pot -o ${PATH_TR}/en/LC_MESSAGES/${domain}.po
-python setup.py update_catalog -l ru -i ${PATH_TR}/messages.pot -o ${PATH_TR}/ru/LC_MESSAGES/${domain}.po
-
-#Compile to *.po to *.mo
-python setup.py compile_catalog --directory ${PATH_TR} --domain ${domain}
 
 
