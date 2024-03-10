@@ -590,7 +590,7 @@ def main_bot():
             raise StopPropagation
         button_data = event.data.decode()
         if button_data.find('XX', 0, 2) != -1:
-           # Add to Film to DB and remove Button 'Add to DB'
+           # Add to Film to DB 
            data = button_data
            data = data.replace('XX', '')
            logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
@@ -949,7 +949,7 @@ def main_client():
         try:
             async with db_lock:
                 if db_exist_Id(id_kpsk, id_imdb):
-                    logging.info(f"Check for resolve race condition: Film {d_nnm} exist in db - end analize.")
+                    logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
                     send_msg = await client.send_message(PeerChannel(Channel_my_id), msg, parse_mode='md')
                     db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
@@ -980,8 +980,6 @@ else:
   def _(message): return message
  
 db_lock = asyncio.Lock()
-
-
 
 connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
