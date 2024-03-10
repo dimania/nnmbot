@@ -500,7 +500,7 @@ async def query_wait_users(event):
             id_user = dict(row).get('id_user')
             message = dict(row).get('name_user')
             bdata='ENABLE'+id_user
-            button.append([ Button.inline('☑ '+message, bdata)])
+            button.append([ Button.inline(message, bdata)])
         await event.respond(_("List awaiting users:"), buttons=button)    
     else:
         message = _(".....No records.....")
