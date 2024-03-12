@@ -1,6 +1,6 @@
 myconfig.py
 *database*.db
-*.sesssion
+*.session
 test/*
 *.log
 __pycache__/*
