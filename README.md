@@ -8,7 +8,6 @@ Bot получает описание фильма с сайта https://nnmclub
 Исключает из пересылки повторяющиеся фильмы.<br><br>
 На данный момент используется два подключения к Telegram. Одно подключение как пользователь, второе как Bot. Два подключения используется потому, что Bot не может прослушивать каналы на которые он не подписан. 
 
-<<<<<<< HEAD
 Для прослушивания используется первое подключение как пользователя. С помощью этого соединения получаем сообщения согласно настроенному фильтру, из канала [NNMCLUB](t.me/nnmclubtor) и пересылаем его в наш личный канал. Там сообщение подхватывает уже Bot - второе соединение и присоединяет к нему кнопки управления - 'Add to DB' и 'Control DB'. 
 
 Управлять базой данных (DB) могут только администраторы канала. По нажатию первой кнопки в базе отмечается фильм на котором нажата кнопка (tagged film). Можно убрать отметку, но в базе останется признак снятия отметки (early tagged). 
@@ -58,7 +57,7 @@ Bot получает описание фильма с сайта https://nnmclub
 	 * Заблокировать/Разблокировать пользователей
 	 * Управлять правами пользователей (Разницы в правах только чтение и чтение и запись нет - не придумал разграничения)
 	 * Удалять пользователей
->>>>>>> develop
+
 
 ## Настройка и запуск
 
@@ -72,11 +71,11 @@ Bot получает описание фильма с сайта https://nnmclub
 
 
 ## Description
-<<<<<<< HEAD
+
 =======
 Note: Google translate
 
->>>>>>> develop
+
 Telegram Bot for filtering Telegram channel [NNMCLUB](t.me/nnmclubtor) <br> <br>
 A Python script listens to the Telegram channel [NNMCLUB](t.me/nnmclubtor) and forwards messages containing information only about movies to your personal channel. The filter is configured in the configuration file. <br><br>
 Bot receives a description of the film from the site https://nnmclub.to and the rating of the film from the site [Kinopoisk](https://www.kinopoisk.ru) and [Imdb](https://www.imdb.com).<br> <br>
@@ -130,7 +129,7 @@ Administrators have access to:
 	* Block/Unblock users
 	* Manage user rights (There are no differences in rights only read and read and write - I didn’t come up with a distinction)
 	* Delete users
->>>>>>> develop
+
 
 ## Setup and launch
 
