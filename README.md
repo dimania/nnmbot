@@ -8,18 +8,6 @@ Bot получает описание фильма с сайта https://nnmclub
 Исключает из пересылки повторяющиеся фильмы.<br><br>
 На данный момент используется два подключения к Telegram. Одно подключение как пользователь, второе как Bot. Два подключения используется потому, что Bot не может прослушивать каналы на которые он не подписан. 
 
-Для прослушивания используется первое подключение как пользователя. С помощью этого соединения получаем сообщения согласно настроенному фильтру, из канала [NNMCLUB](t.me/nnmclubtor) и пересылаем его в наш личный канал. Там сообщение подхватывает уже Bot - второе соединение и присоединяет к нему кнопки управления - 'Add to DB' и 'Control DB'. 
-
-Управлять базой данных (DB) могут только администраторы канала. По нажатию первой кнопки в базе отмечается фильм на котором нажата кнопка (tagged film). Можно убрать отметку, но в базе останется признак снятия отметки (early tagged). 
-
-По второй кнопке происходит перенаправление  на диалог с Bot(ом) где появляется меню управления базой данных. Доступны следующие действия:<br>
-* List Films tagged - Вывести список помеченных фильмов
-* List Films tagged early - Вывести список  фильмов у которых снята ранее проставленнная отметка
-* Clear all tagged Films - очистить все отметки
-* Get database info - получить информацию о записях в базе данных
-* Search Films in database - поиск фильма в базе данных
-=======
-
 Для прослушивания используется первое подключение как пользователя. С помощью этого соединения получаем сообщения согласно настроенному фильтру, из канала [NNMCLUB](t.me/nnmclubtor) и пересылаем его в наш личный канал. Там сообщение подхватывает уже Bot - второе соединение и присоединяет к нему кнопки управления - 'Добавить' и 'Управлять'.
 
 ### Пользователи
@@ -82,17 +70,7 @@ Bot receives a description of the film from the site https://nnmclub.to and the 
 Maintains a local database of forwarded messages - films.<br><br>
 Excludes duplicate films from forwarding.<br><br>
 Currently there are two connections to Telegram. One connection as a user, the second as a Bot. Two connections are used because the Bot cannot listen to channels to which it is not subscribed.
-<<<<<<< HEAD
-The first connection as a user is used to listen. Using this connection, we receive messages according to the configured filter from the [NNMCLUB](t.me/nnmclubtor) channel and forward it to our personal channel. There the message is picked up by the Bot - the second connection - and attaches control buttons to it - 'Add to DB' and 'Control DB'.
 
-Only channel administrators can manage the database (DB). When you press the first button, the movie on which the button was pressed is marked in the database (tagged film). You can remove the mark, but the early tagged sign will remain in the database.
-The second button redirects to a dialogue with the Bot where the database management menu appears. The following actions are available:<br>
-* List Films tagged - Display a list of tagged films
-* List Films tagged early - Display a list of films for which the previously tagged mark has been removed
-* Clear all tagged Films - clear all tags
-* Get database info - get information about records in the database
-* Search Films in database - search for a film in the database
-=======
 The first connection as a user is used to listen. Using this connection, we receive messages according to the configured filter from the [NNMCLUB](t.me/nnmclubtor) channel and forward it to our personal channel. There the message is picked up by the Bot - the second connection - and attaches control buttons to it - 'Add to DB' and 'Control'.
 
 ### Users
