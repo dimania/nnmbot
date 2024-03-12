@@ -174,6 +174,12 @@ def db_get_id_nnm(id_msg):
     else:
         return None
 
+#def db_get_id_msg():
+#    ''' Get all id_msg '''
+#    cursor.execute("SELECT id_msg,id_nnm FROM Films")
+#    rows = cursor.fetchone()
+#    return rows
+
 def db_info( id_user ):
     ''' Get Info database: all records, tagged records and tagged early records for user '''
     cursor.execute("SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Ufilms WHERE tag = ? AND id_user = ? UNION ALL SELECT COUNT(*) FROM Ufilms WHERE tag = ? AND id_user = ?", (SETTAG, id_user, UNSETTAG, id_user,) )
@@ -494,7 +500,7 @@ async def query_wait_users(event):
             id_user = dict(row).get('id_user')
             message = dict(row).get('name_user')
             bdata='ENABLE'+id_user
-            button.append([ Button.inline('☑ '+message, bdata)])
+            button.append([ Button.inline(message, bdata)])
         await event.respond(_("List awaiting users:"), buttons=button)    
     else:
         message = _(".....No records.....")
@@ -532,17 +538,19 @@ async def query_all_users(event, bdata_id, message):
         message = _(".....No records.....")
         await event.respond(message)
 
-async def query_user_tag_film(event, id_nnm, id_user):
-    ''' User tag film '''
-    res=db_get_tag( id_nnm, id_user )
-    if res:
-       await event.answer(_('Film already in database!'), alert=True) 
-       logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
-       return
-    res=db_add_tag( id_nnm, SETTAG, id_user )
-    logging.info(f"User {id_user} tag film id_nnm={id_nnm} with result={res}")
-    #bdata = 'TAG'+id_nnm
-    await event.answer(_('Film added to database'), alert=True) 
+#async def query_edit_msg_4_migrate( clent ):
+#    ''' Edit message for change buttons when migrate to new version '''
+#    res=db_get_id_msg()
+#    for row in rows:
+#       logging.info(f"Get id_nnm={id_nnm} by message id={id_msg} bot_name={bot_name}")
+#       bdata = 'XX'+dict(row).get('id_nnm')
+#       buttons_film = [
+#                Button.inline(_("Add Film"), bdata),
+#                Button.url(_("Control"), 't.me/'+bot_name+'?start')
+#               ]
+#
+#        await client.edit_message(message=dict(row).get('id_msg'), buttons_film)
+
     
 def main_bot():
     ''' Loop for bot connection '''
@@ -582,7 +590,7 @@ def main_bot():
             raise StopPropagation
         button_data = event.data.decode()
         if button_data.find('XX', 0, 2) != -1:
-           # Add to Film to DB and remove Button 'Add to DB'
+           # Add to Film to DB 
            data = button_data
            data = data.replace('XX', '')
            logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
@@ -931,7 +939,7 @@ def main_client():
                 imdb_r = "-"
 
         logging.info(f"Add info to message")
-        film_add_info = f"\n_________________________________\nРейтинг: КП[{kpsk_r}] Imdb[{imdb_r}]\n{Id[2]} {mydict.get(Id[2])}\n{Id[5]}\n{mydict.get(Id[5])}"
+        film_add_info = f"\n_________________________\nРейтинг: КП[{kpsk_r}] Imdb[{imdb_r}]\n{Id[2]} {mydict.get(Id[2])}\n{Id[5]}\n{mydict.get(Id[5])}"
 
         msg.message = msg.message+film_add_info
 
@@ -941,7 +949,7 @@ def main_client():
         try:
             async with db_lock:
                 if db_exist_Id(id_kpsk, id_imdb):
-                    logging.info(f"Check for resolve race condition: Film {d_nnm} exist in db - end analize.")
+                    logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
                     send_msg = await client.send_message(PeerChannel(Channel_my_id), msg, parse_mode='md')
                     db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
@@ -958,6 +966,10 @@ print('Start bot.')
 
 get_config(cfg)
 
+# Enable logging
+logging.basicConfig(level=log_level, filename=logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
+logging.info(f"Start bot.")
+
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
 if os.path.isdir(localedir):
@@ -968,11 +980,6 @@ else:
   def _(message): return message
  
 db_lock = asyncio.Lock()
-
-# Enable logging
-logging.basicConfig(level=log_level, filename=logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
-logging.info(f"Start bot.")
-
 
 connection = sqlite3.connect(db_name)
 connection.row_factory = sqlite3.Row
