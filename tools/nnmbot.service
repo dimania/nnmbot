@@ -1,0 +1,14 @@
+[Unit]
+Description=Forwarder Telegram Messages Service
+After=network.target
+
+[Service]
+Type=idle
+Restart=always
+RestartSec=3
+User=nnmbot
+WorkingDirectory=/home/nnmbot
+ExecStart=python3 nnmbot.py
+
+[Install]
+WantedBy=multi-user.target

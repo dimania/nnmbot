@@ -8,6 +8,7 @@ Bot получает описание фильма с сайта https://nnmclub
 Исключает из пересылки повторяющиеся фильмы.<br><br>
 На данный момент используется два подключения к Telegram. Одно подключение как пользователь, второе как Bot. Два подключения используется потому, что Bot не может прослушивать каналы на которые он не подписан. 
 
+<<<<<<< HEAD
 Для прослушивания используется первое подключение как пользователя. С помощью этого соединения получаем сообщения согласно настроенному фильтру, из канала [NNMCLUB](t.me/nnmclubtor) и пересылаем его в наш личный канал. Там сообщение подхватывает уже Bot - второе соединение и присоединяет к нему кнопки управления - 'Add to DB' и 'Control DB'. 
 
 Управлять базой данных (DB) могут только администраторы канала. По нажатию первой кнопки в базе отмечается фильм на котором нажата кнопка (tagged film). Можно убрать отметку, но в базе останется признак снятия отметки (early tagged). 
@@ -18,6 +19,46 @@ Bot получает описание фильма с сайта https://nnmclub
 * Clear all tagged Films - очистить все отметки
 * Get database info - получить информацию о записях в базе данных
 * Search Films in database - поиск фильма в базе данных
+=======
+
+Для прослушивания используется первое подключение как пользователя. С помощью этого соединения получаем сообщения согласно настроенному фильтру, из канала [NNMCLUB](t.me/nnmclubtor) и пересылаем его в наш личный канал. Там сообщение подхватывает уже Bot - второе соединение и присоединяет к нему кнопки управления - 'Добавить' и 'Управлять'.
+
+### Пользователи
+Новые пользователи могут подать заявку на регистрацию, после рассмотрения заявки администратром им станет доступно:
+1. По кнопке Добавить:
+*  Добавлять (отмечать) фильмы в базу данных.
+2. По кнопке Управлять:
+* Просматривать список добавленных фильмов.
+* Очищать список добавленных фильмов.
+* Просматривать ранее добавленные и очищенные фильмы.
+* Искать фильмы в базе данных.
+* Получить информацию о базе данных.
+
+
+### Администратор
+Пользователи которые являются Администраторами канала автоматически являются и Администраторами бота.
+Процедура регистрации администратора аналогична процедуре для пользоателя:
+1. Подать заявку на подключение.
+2. Вернуться в канал и еще раз нажать Управление.
+3. В меню работы с пользователями одобрить запрос от себя.
+
+Администраторам доступно:
+1. По кнопке Добавить:
+  * Добавлять (отмечать) фильмы в базе данных для последующей работы.
+2. По кнопке Управлять:
+  * Просматривать список добавленных фильмов.
+  * Очищать список добавленных фильмов.
+  * Просматривать ранее добавленные и очищенные фильмы.
+  * Искать фильмы в базе данных.
+  * Получить информацию о базе данных.
+  * Получить список всех фильмов в базе данных.
+  * Перейти в меню управления пользователями:
+  	 * Просмотреть список запросов на подключение, одобрить запрос.
+ 	 * Просмотреть список всех пользователей
+	 * Заблокировать/Разблокировать пользователей
+	 * Управлять правами пользователей (Разницы в правах только чтение и чтение и запись нет - не придумал разграничения)
+	 * Удалять пользователей
+>>>>>>> develop
 
 ## Настройка и запуск
 
@@ -31,12 +72,18 @@ Bot получает описание фильма с сайта https://nnmclub
 
 
 ## Description
+<<<<<<< HEAD
+=======
+Note: Google translate
+
+>>>>>>> develop
 Telegram Bot for filtering Telegram channel [NNMCLUB](t.me/nnmclubtor) <br> <br>
 A Python script listens to the Telegram channel [NNMCLUB](t.me/nnmclubtor) and forwards messages containing information only about movies to your personal channel. The filter is configured in the configuration file. <br><br>
 Bot receives a description of the film from the site https://nnmclub.to and the rating of the film from the site [Kinopoisk](https://www.kinopoisk.ru) and [Imdb](https://www.imdb.com).<br> <br>
 Maintains a local database of forwarded messages - films.<br><br>
 Excludes duplicate films from forwarding.<br><br>
 Currently there are two connections to Telegram. One connection as a user, the second as a Bot. Two connections are used because the Bot cannot listen to channels to which it is not subscribed.
+<<<<<<< HEAD
 The first connection as a user is used to listen. Using this connection, we receive messages according to the configured filter from the [NNMCLUB](t.me/nnmclubtor) channel and forward it to our personal channel. There the message is picked up by the Bot - the second connection - and attaches control buttons to it - 'Add to DB' and 'Control DB'.
 
 Only channel administrators can manage the database (DB). When you press the first button, the movie on which the button was pressed is marked in the database (tagged film). You can remove the mark, but the early tagged sign will remain in the database.
@@ -46,6 +93,44 @@ The second button redirects to a dialogue with the Bot where the database manage
 * Clear all tagged Films - clear all tags
 * Get database info - get information about records in the database
 * Search Films in database - search for a film in the database
+=======
+The first connection as a user is used to listen. Using this connection, we receive messages according to the configured filter from the [NNMCLUB](t.me/nnmclubtor) channel and forward it to our personal channel. There the message is picked up by the Bot - the second connection - and attaches control buttons to it - 'Add to DB' and 'Control'.
+
+### Users
+New users can apply for registration, after reviewing the application by the administrator, they will have access to:
+1. Click the Add button:
+* Add (tag) films to the database.
+2. Click the Manage button:
+* View the list of added movies.
+* Clear the list of added movies.
+* View previously added and cleared movies.
+* Search movies in the database.
+* Get information about the database.
+
+### Administrator
+Users who are channel Administrators are automatically also bot Administrators.
+The procedure for registering as an administrator is similar to that for a user:
+1. Apply for connection.
+2. Return to the channel and press Control again.
+3. In the menu for working with users, approve the request on your own behalf.
+
+Administrators have access to:
+1. Click the Add button:
+  * Add (mark) films to the database for subsequent work.
+2. Click the Manage button:
+  * View the list of added movies.
+  * Clear the list of added movies.
+  * View previously added and cleared movies.
+  * Search movies in the database.
+  * Get information about the database.
+  * Get a list of all movies in the database.
+  * Go to user management menu:
+  	* View the list of connection requests, approve the request.
+ 	* View list of all users
+	* Block/Unblock users
+	* Manage user rights (There are no differences in rights only read and read and write - I didn’t come up with a distinction)
+	* Delete users
+>>>>>>> develop
 
 ## Setup and launch
 

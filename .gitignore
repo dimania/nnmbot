@@ -2,5 +2,9 @@ myconfig.py
 *database*.db
 *.session
 test/*
+test*
+*.backup
 *.log
 __pycache__/*
+*swp
+*.old

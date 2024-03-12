@@ -30,6 +30,9 @@ Channel_my  = 't.me/######'
 # Name of bot - will be to switch on you bot for control database.
 bot_name = 'control_bd_bot'
 
+#Admin name - where send messages from new user about request add to users bot
+admin_name = 'adm_dimania'
+
 # filename database - better use full path
 db_name = 'database.db'  # database name, better set full path
 
@@ -56,3 +59,5 @@ ICU_extension_lib = "/usr/lib64/sqlite3/libSqliteIcu.so"
 #Possible value: NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL  
 log_level='INFO'
 
+# Set lang for dialogs. Possible values ru,en 
+Lang='en'
