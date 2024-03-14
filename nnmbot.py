@@ -174,12 +174,6 @@ def db_get_id_nnm(id_msg):
     else:
         return None
 
-#def db_get_id_msg():
-#    ''' Get all id_msg '''
-#    cursor.execute("SELECT id_msg,id_nnm FROM Films")
-#    rows = cursor.fetchone()
-#    return rows
-
 def db_info( id_user ):
     ''' Get Info database: all records, tagged records and tagged early records for user '''
     cursor.execute("SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Ufilms WHERE tag = ? AND id_user = ? UNION ALL SELECT COUNT(*) FROM Ufilms WHERE tag = ? AND id_user = ?", (SETTAG, id_user, UNSETTAG, id_user,) )
@@ -467,8 +461,15 @@ async def create_yes_no_dialog(question, event):
 
 async def check_user(channel, user, event):
     ''' Check right of User '''
-    permissions = await bot.get_permissions(channel, user)
-    logging.debug(f"Get permissions for channe={channel} user={user}")
+    logging.debug(f"Try Get permissions for channe={channel} user={user}")
+    
+    try:
+      permissions = await bot.get_permissions(channel, user)
+      if permissions.is_admin:
+        return USER_SUPERADMIN # Admin
+    except:
+      logging.error(f"Can not get permissions for channe={channel} user={user}. Possibly user not join to group but send request for Control")  
+    
     user_db = db_exist_user(user)
     ret = -1
     if not user_db:
@@ -484,9 +485,7 @@ async def check_user(channel, user, event):
     elif dict(user_db[0]).get('rights') == USER_READ_WRITE:
       logging.debug(f"User {user} admin in your db")
       ret = USER_READ_WRITE
-     
-    if permissions.is_admin:
-        ret = USER_SUPERADMIN  # Admin
+    
     return ret
 
 async def query_wait_users(event):
@@ -537,19 +536,6 @@ async def query_all_users(event, bdata_id, message):
     else:
         message = _(".....No records.....")
         await event.respond(message)
-
-#async def query_edit_msg_4_migrate( clent ):
-#    ''' Edit message for change buttons when migrate to new version '''
-#    res=db_get_id_msg()
-#    for row in rows:
-#       logging.info(f"Get id_nnm={id_nnm} by message id={id_msg} bot_name={bot_name}")
-#       bdata = 'XX'+dict(row).get('id_nnm')
-#       buttons_film = [
-#                Button.inline(_("Add Film"), bdata),
-#                Button.url(_("Control"), 't.me/'+bot_name+'?start')
-#               ]
-#
-#        await client.edit_message(message=dict(row).get('id_msg'), buttons_film)
 
     
 def main_bot():
