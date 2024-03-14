@@ -161,8 +161,13 @@ def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb):
 
 def db_exist_Id(id_kpsk, id_imdb):
     ''' Test exist Film in database '''
-    cursor.execute(
-        "SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk, id_imdb))
+    if id_kpsk == 0: 
+      cursor.execute("SELECT 1 FROM Films WHERE id_imdb = ?", (id_imdb,))
+    elif id_imdb == 0:
+      cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ?", (id_kpsk,))
+    else:
+      cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk, id_imdb))
+     
     return cursor.fetchone()
 
 def db_get_id_nnm(id_msg):
@@ -317,7 +322,7 @@ async def query_search(str_search, event):
 
 async def query_tagged_records(id_user, tag, event):
     ''' Get films tagget for user '''
-    logging.info(f"Query db records with set download tag ")
+    logging.info(f"Query db records with set tag")
     rows = db_list_tagged_films( id_user=id_user, tag=tag )
     if rows:
         for row in rows:
@@ -655,16 +660,16 @@ def main_bot():
             await query_all_records(event_bot)
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwlist':
-            # Get films tagget for download
+            # Get films tagget
             await query_tagged_records(id_user, SETTAG, event_bot)
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwclear':
-            # Clear all tag for download
+            # Clear all tag 
             res=db_switch_user_tag( id_user, UNSETTAG )
             await event_bot.respond(_("  Clear ")+res+_(" records  "))
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwearly':
-            # Get films tagget early for download
+            # Get films tagget early
             await query_tagged_records(id_user, UNSETTAG, event_bot)
             send_menu = BASIC_MENU
         elif button_data == '/bm_dbinfo':
@@ -891,7 +896,7 @@ def main_client():
             id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
 
             if db_exist_Id(id_kpsk, id_imdb):
-                logging.info(f"Film {id_nnm} exist in db - end analize.")
+                logging.info(f"Film id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm={id_nnm} exist in db - end analize.")
                 return
 
             # Get rating film from kinopoisk if not then from imdb site
