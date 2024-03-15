@@ -542,7 +542,18 @@ async def query_all_users(event, bdata_id, message):
         message = _(".....No records.....")
         await event.respond(message)
 
-    
+async def query_user_tag_film(event, id_nnm, id_user):
+    ''' User tag film '''
+    res=db_get_tag( id_nnm, id_user )
+    if res:
+       await event.answer(_('Film already in database!'), alert=True)
+       logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
+       return
+    res=db_add_tag( id_nnm, SETTAG, id_user )
+    logging.info(f"User {id_user} tag film id_nnm={id_nnm} with result={res}")
+    #bdata = 'TAG'+id_nnm
+    await event.answer(_('Film added to database'), alert=True)
+  
 def main_bot():
     ''' Loop for bot connection '''
 
