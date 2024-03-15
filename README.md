@@ -59,8 +59,6 @@ Bot получает описание фильма с сайта https://nnmclub
 
 
 ## Description
-
-=======
 Note: Google translate
 
 
