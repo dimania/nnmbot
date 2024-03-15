@@ -161,8 +161,13 @@ def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb):
 
 def db_exist_Id(id_kpsk, id_imdb):
     ''' Test exist Film in database '''
-    cursor.execute(
-        "SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk, id_imdb))
+    if id_kpsk == 0: 
+      cursor.execute("SELECT 1 FROM Films WHERE id_imdb = ?", (id_imdb,))
+    elif id_imdb == 0:
+      cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ?", (id_kpsk,))
+    else:
+      cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk, id_imdb))
+     
     return cursor.fetchone()
 
 def db_get_id_nnm(id_msg):
@@ -173,12 +178,6 @@ def db_get_id_nnm(id_msg):
         return dict(row).get('id_nnm')
     else:
         return None
-
-#def db_get_id_msg():
-#    ''' Get all id_msg '''
-#    cursor.execute("SELECT id_msg,id_nnm FROM Films")
-#    rows = cursor.fetchone()
-#    return rows
 
 def db_info( id_user ):
     ''' Get Info database: all records, tagged records and tagged early records for user '''
@@ -323,7 +322,7 @@ async def query_search(str_search, event):
 
 async def query_tagged_records(id_user, tag, event):
     ''' Get films tagget for user '''
-    logging.info(f"Query db records with set download tag ")
+    logging.info(f"Query db records with set tag")
     rows = db_list_tagged_films( id_user=id_user, tag=tag )
     if rows:
         for row in rows:
@@ -467,8 +466,15 @@ async def create_yes_no_dialog(question, event):
 
 async def check_user(channel, user, event):
     ''' Check right of User '''
-    permissions = await bot.get_permissions(channel, user)
-    logging.debug(f"Get permissions for channe={channel} user={user}")
+    logging.debug(f"Try Get permissions for channe={channel} user={user}")
+    
+    try:
+      permissions = await bot.get_permissions(channel, user)
+      if permissions.is_admin:
+        return USER_SUPERADMIN # Admin
+    except:
+      logging.error(f"Can not get permissions for channe={channel} user={user}. Possibly user not join to group but send request for Control")  
+    
     user_db = db_exist_user(user)
     ret = -1
     if not user_db:
@@ -484,9 +490,7 @@ async def check_user(channel, user, event):
     elif dict(user_db[0]).get('rights') == USER_READ_WRITE:
       logging.debug(f"User {user} admin in your db")
       ret = USER_READ_WRITE
-     
-    if permissions.is_admin:
-        ret = USER_SUPERADMIN  # Admin
+    
     return ret
 
 async def query_wait_users(event):
@@ -538,20 +542,18 @@ async def query_all_users(event, bdata_id, message):
         message = _(".....No records.....")
         await event.respond(message)
 
-#async def query_edit_msg_4_migrate( clent ):
-#    ''' Edit message for change buttons when migrate to new version '''
-#    res=db_get_id_msg()
-#    for row in rows:
-#       logging.info(f"Get id_nnm={id_nnm} by message id={id_msg} bot_name={bot_name}")
-#       bdata = 'XX'+dict(row).get('id_nnm')
-#       buttons_film = [
-#                Button.inline(_("Add Film"), bdata),
-#                Button.url(_("Control"), 't.me/'+bot_name+'?start')
-#               ]
-#
-#        await client.edit_message(message=dict(row).get('id_msg'), buttons_film)
-
-    
+async def query_user_tag_film(event, id_nnm, id_user):
+    ''' User tag film '''
+    res=db_get_tag( id_nnm, id_user )
+    if res:
+       await event.answer(_('Film already in database!'), alert=True)
+       logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
+       return
+    res=db_add_tag( id_nnm, SETTAG, id_user )
+    logging.info(f"User {id_user} tag film id_nnm={id_nnm} with result={res}")
+    #bdata = 'TAG'+id_nnm
+    await event.answer(_('Film added to database'), alert=True)
+  
 def main_bot():
     ''' Loop for bot connection '''
 
@@ -669,16 +671,16 @@ def main_bot():
             await query_all_records(event_bot)
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwlist':
-            # Get films tagget for download
+            # Get films tagget
             await query_tagged_records(id_user, SETTAG, event_bot)
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwclear':
-            # Clear all tag for download
+            # Clear all tag 
             res=db_switch_user_tag( id_user, UNSETTAG )
             await event_bot.respond(_("  Clear ")+res+_(" records  "))
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwearly':
-            # Get films tagget early for download
+            # Get films tagget early
             await query_tagged_records(id_user, UNSETTAG, event_bot)
             send_menu = BASIC_MENU
         elif button_data == '/bm_dbinfo':
@@ -905,7 +907,7 @@ def main_client():
             id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
 
             if db_exist_Id(id_kpsk, id_imdb):
-                logging.info(f"Film {id_nnm} exist in db - end analize.")
+                logging.info(f"Film id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm={id_nnm} exist in db - end analize.")
                 return
 
             # Get rating film from kinopoisk if not then from imdb site
