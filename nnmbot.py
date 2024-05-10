@@ -10,7 +10,7 @@ import myconfig as cfg
 # --------------------------------
 
 from telethon import TelegramClient, events, utils
-from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl
+from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl, MessageEntityUrl
 from telethon.tl.custom import Button
 from telethon.errors import MessageNotModifiedError
 from telethon.events import StopPropagation
@@ -834,12 +834,21 @@ def main_client():
         msg = event.message
 
         url_tmpl = re.compile(r'viewtopic.php\?t')
+        #                       viewtopic.php?t
         # Get URL nnmclub page with Film
-        for url_entity, inner_text in msg.get_entities_text(MessageEntityTextUrl):
-            if url_tmpl.search(url_entity.url):
-                url = url_entity.url
+        #for url_entity, inner_text in msg.get_entities_text(MessageEntityTextUrl):
+        #    logging.debug(f"Urls: {url_entity}")
+        #    if url_tmpl.search(url_entity.url):
+        #        url = url_entity.url
+
+        for url_entity, inner_text in msg.get_entities_text(MessageEntityUrl):
+            logging.debug(f"Urls: {url_entity, inner_text}")
+            if url_tmpl.search(inner_text):
+                url = inner_text
+
 
         logging.info(f"Get URL nnmclub page with Film: {url}")
+
 
         # if URL exist get additional info for film
         if url:
