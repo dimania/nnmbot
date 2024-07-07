@@ -75,6 +75,7 @@ def get_config(config):
     global ICU_extension_lib
     global log_level
     global Lang
+    global magnet_helper
 
     try:
         api_id = config.api_id
@@ -94,6 +95,7 @@ def get_config(config):
         log_level = config.log_level
         Lang = config.Lang
         ICU_extension_lib = config.ICU_extension_lib
+        magnet_helper = config.magnet_helper
 
         if use_proxy:
             proxies = config.proxies
@@ -840,16 +842,12 @@ def main_client():
         #    logging.debug(f"Urls: {url_entity}")
         #    if url_tmpl.search(url_entity.url):
         #        url = url_entity.url
-
+        
         for url_entity, inner_text in msg.get_entities_text(MessageEntityUrl):
             logging.debug(f"Urls: {url_entity, inner_text}")
             if url_tmpl.search(inner_text):
                 url = inner_text
-
-
         logging.info(f"Get URL nnmclub page with Film: {url}")
-
-
         # if URL exist get additional info for film
         if url:
             try:
@@ -865,6 +863,19 @@ def main_client():
 
             logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}")
             soup = BeautifulSoup(page.text, 'html.parser')
+
+            # Select data where class - nav - info about tracker section
+            post_body = soup.findAll('a', {'class': 'nav'})
+            section = post_body[-1].get_text('\n', strip='True')
+            logging.debug(f"Section nnm tracker: {section}")
+
+            # Select data where class - gensmall - get magnet link
+            post_body = soup.find( href=re.compile("magnet:") )
+            if post_body:
+               mag_link = post_body.get('href')
+               logging.debug(f"Magnet link: {mag_link}\n")
+            else:
+               mag_link = None  
 
             # Select data where class - postbody
             post_body = soup.find(class_='postbody')
@@ -912,7 +923,7 @@ def main_client():
                     imdb_url = rat.replace(
                         '?ref_=plg_rt_1', 'ratings/?ref_=tt_ov_rt')
                     logging.info(f"Create url rating from imdb: {imdb_url}")
-
+               
             id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
 
             if db_exist_Id(id_kpsk, id_imdb):
@@ -950,9 +961,24 @@ def main_client():
                 imdb_r = "-"
 
         logging.info(f"Add info to message")
-        film_add_info = f"\n_________________________\nРейтинг: КП[{kpsk_r}] Imdb[{imdb_r}]\n{Id[2]} {mydict.get(Id[2])}\n{Id[5]}\n{mydict.get(Id[5])}"
-
-        msg.message = msg.message+film_add_info
+        film_name = f"{mydict.get(Id[0])}\n"
+        len_url=len(film_name)
+        msg.entities=[MessageEntityTextUrl(offset=0, length=len_url, url=url)]
+        film_section = f"🟢Раздел: {section}\n"
+        film_genre = f"🟢Жанр: {mydict.get(Id[2])}\n"
+        film_rating = f"🟢Рейтинг: КП[{kpsk_r}] Imdb[{imdb_r}]\n"
+        film_description = f"🟢Описание: \n{mydict.get(Id[5])}\n"
+        # if magnet link exist create string and href link
+        if mag_link:
+           film_magnet_link = f"🧲Примагнититься\n" #🧲 
+           msg.entities.append(MessageEntityTextUrl(offset=len_url, length=len(film_magnet_link), url=magnet_helper+mag_link))
+        else:
+           film_magnet_link=""
+        # Create new message 
+        msg.message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
+        
+        logging.debug(f"Msg New:{msg}")
+       
 
         if len(msg.message) > 1023:
             msg.message = msg.message[:1019]+'...'
@@ -962,12 +988,11 @@ def main_client():
                 if db_exist_Id(id_kpsk, id_imdb):
                     logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
-                    send_msg = await client.send_message(PeerChannel(Channel_my_id), msg, parse_mode='md')
-                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
+                    send_msg = await client.send_message(PeerChannel(Channel_my_id), msg ) #, parse_mode='html'                    
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
-        except errors.BadRequestError as error:
-            logging.error(f'Error db_lock: {error}')
+        except:
+            logging.error(f'Error db_lock')
 
     return client
 
