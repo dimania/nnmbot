@@ -988,7 +988,8 @@ def main_client():
                 if db_exist_Id(id_kpsk, id_imdb):
                     logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
-                    send_msg = await client.send_message(PeerChannel(Channel_my_id), msg ) #, parse_mode='html'                    
+                    send_msg = await client.send_message(PeerChannel(Channel_my_id), msg ) #, parse_mode='html'
+                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except:
