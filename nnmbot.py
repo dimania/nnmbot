@@ -601,14 +601,12 @@ def main_bot():
            await query_user_tag_film(event, data, event.query.user_id)
            raise StopPropagation
 
-    #TODO remove query_add_button if all will be work without handler 
-    ## Attach inline button to new film message 
-    #@bot.on(events.NewMessage(chats=[PeerChannel(Channel_my_id)], pattern=filter))
-    #async def normal_handler(event):
-    #    logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
-    #    # Add button 'Add Film to database' as inline button for message
-    #    await query_add_button(event, event.message.id, bot_name)
-    #    raise StopPropagation  # Stop handle this event other handlers
+    @bot.on(events.NewMessage(chats=[PeerChannel(Channel_my_id)]))
+    async def normal_handler(event):
+        logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
+        # Add button 'Add Film to database' as inline button for message
+        await query_add_button(event, event.message.id, bot_name)
+        raise StopPropagation  # Stop handle this event other handlers
 
     # Handle messages in bot chat
     @bot.on(events.NewMessage())
@@ -980,18 +978,10 @@ def main_client():
            msg.entities.append(MessageEntityTextUrl(offset=len_url, length=len(film_magnet_link), url=magnet_helper+mag_link))
         else:
            film_magnet_link=""
-        # Create buttons on message
-        
-        bdata = 'XX'+id_nnm
-        buttons_film = [
-                Button.inline(_("Add Film"), bdata),
-                Button.url(_("Control"), 't.me/'+bot_name+'?start')
-                ]
+       
         # Create new message 
         msg.message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
-        
         logging.debug(f"Msg New:{msg}")
-       
 
         if len(msg.message) > 1023:
             msg.message = msg.message[:1019]+'...'
@@ -1001,12 +991,12 @@ def main_client():
                 if db_exist_Id(id_kpsk, id_imdb):
                     logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
-                    send_msg = await client.send_message(PeerChannel(Channel_my_id), msg, buttons=buttons_film ) 
-                    #db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
+                    send_msg = await client.send_message(PeerChannel(Channel_my_id), msg )
+                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
-        except:
-            logging.error(f'Error db_lock')
+        except Exception as error:
+            logging.error(f'Error in block db_lock: {error}')
 
     return client
 
