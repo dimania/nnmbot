@@ -786,7 +786,11 @@ def main_client():
           "Перевод:", "Язык озвучки:", "Субтитры:", "Видео:", "Аудио 1:",
           "Аудио 2:", "Аудио 3:", "Скриншоты:", "Время раздачи:"]
 
-    
+    f_tmpl = re.compile('film/(.+?)/')
+    t_tmpl = re.compile('title/(.+?)/')
+    url_tmpl = re.compile(r'viewtopic.php\?t')
+    kpr_tmpl = re.compile('www.kinopoisk.ru/rating')
+    desc_tmpl = re.compile(':$')
 
     # Connect to Telegram
     if use_proxy:
@@ -794,8 +798,7 @@ def main_client():
         client = TelegramClient(session_client, api_id, api_hash, system_version=system_version, proxy=(
             prx.group(1), prx.group(2), int(prx.group(3))))
     else:
-        client = TelegramClient(session_client, api_id,
-                                api_hash, system_version=system_version)
+        client = TelegramClient(session_client, api_id, api_hash, system_version=system_version)
 
     client.start()
     Channel_my_id = client.loop.run_until_complete(client.get_peer_id(Channel_my))
@@ -810,7 +813,7 @@ def main_client():
         logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")
         msg = event.message
 
-        url_tmpl = re.compile(r'viewtopic.php\?t')
+        # OLD NNM url parser 
         #                       viewtopic.php?t
         # Get URL nnmclub page with Film
         #for url_entity, inner_text in msg.get_entities_text(MessageEntityTextUrl):
@@ -823,128 +826,121 @@ def main_client():
             if url_tmpl.search(inner_text):
                 url = inner_text
         logging.info(f"Get URL nnmclub page with Film: {url}")
-        # if URL exist get additional info for film
-        if url:
-            try:
-                page = requests.get(url, proxies=proxies)
-                if page.status_code != 200:
-                    logging.error(f"Can't open url:{url}, status:{page.status}")
-                    return
-            except Exception as ConnectionError:
-                logging.error(f"Can't open url:{url}, status:{ConnectionError}")
-                logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
-                client.disconnect()
+       
+        # if URL not exist return 
+        if not url:
+           return
+          
+        try:
+            page = requests.get(url, proxies=proxies)
+            if page.status_code != 200:
+                logging.error(f"Can't open url:{url}, status:{page.status}")
                 return
+        except Exception as ConnectionError:
+            logging.error(f"Can't open url:{url}, status:{ConnectionError}")
+            logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
+            client.disconnect()
+            return
 
-            logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}")
+        logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}")
+        soup = BeautifulSoup(page.text, 'html.parser')
+
+        # Select data where class - nav - info about tracker section
+        post_body = soup.findAll('a', {'class': 'nav'})
+        section = post_body[-1].get_text('\n', strip='True')
+        logging.debug(f"Section nnm tracker: {section}")
+
+        # Select data where class - gensmall - get magnet link
+        post_body = soup.find( href=re.compile("magnet:") )
+        if post_body:
+           mag_link = post_body.get('href')
+           logging.debug(f"Magnet link: {mag_link}\n")
+        else:
+           mag_link = None  
+
+        # Select data where class - postbody
+        post_body = soup.find(class_='postbody')
+        text = post_body.get_text('\n', strip='True')
+
+        # Get url picture with rating Film on Kinopoisk site
+        for a_hr in post_body.find_all(class_='postImg'):
+            rat = a_hr.get('title')
+            if kpr_tmpl.search(rat):
+                rating_url = rat
+
+        k = Id[0]
+        v = ""
+        
+        # Create Dict for data about Film
+        for line in text.split("\n"):
+            if not line.strip():
+                continue
+            else:
+                if desc_tmpl.search(line):
+                    k = line
+                    v = ""
+                elif k != "":
+                    v = v+line
+                    mydict[k] = v
+
+        kpsk_r = imdb_r = "-"
+        kpsk_url = imdb_url = rat_url = ""
+        id_kpsk = id_imdb = id_nnm = 0
+
+        # Get rating urls and id film on kinopoisk and iddb
+        for a_hr in post_body.find_all('a'):
+            rat = a_hr.get('href')
+            if rat.find('https://www.kinopoisk.ru/film/') != -1:
+                id_kpsk = f_tmpl.search(rat).group(1)
+                kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+                logging.info(f"Create url rating from kinopoisk: {kpsk_url}")
+            elif rat.find('https://www.imdb.com/title/') != -1:
+                id_imdb = t_tmpl.search(rat).group(1)
+                imdb_url = rat.replace('?ref_=plg_rt_1', 'ratings/?ref_=tt_ov_rt')
+                logging.info(f"Create url rating from imdb: {imdb_url}")
+           
+        id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
+
+        if db_exist_Id(id_kpsk, id_imdb):
+            logging.info(f"Film id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm={id_nnm} exist in db - end analize.")
+            return
+
+        # Get rating film from kinopoisk if not then from imdb site
+        if kpsk_url:
+            rat_url = kpsk_url
+            page = requests.get(
+                rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
+            # Parse data
+            # FIXME me be better use xml.parser ?
             soup = BeautifulSoup(page.text, 'html.parser')
-
-            # Select data where class - nav - info about tracker section
-            post_body = soup.findAll('a', {'class': 'nav'})
-            section = post_body[-1].get_text('\n', strip='True')
-            logging.debug(f"Section nnm tracker: {section}")
-
-            # Select data where class - gensmall - get magnet link
-            post_body = soup.find( href=re.compile("magnet:") )
-            if post_body:
-               mag_link = post_body.get('href')
-               logging.debug(f"Magnet link: {mag_link}\n")
-            else:
-               mag_link = None  
-
-            # Select data where class - postbody
-            post_body = soup.find(class_='postbody')
-            text = post_body.get_text('\n', strip='True')
-
-            kpr_tmpl = re.compile('www.kinopoisk.ru/rating')
-            # Get url picture with rating Film on Kinopoisk site
-            for a_hr in post_body.find_all(class_='postImg'):
-                rat = a_hr.get('title')
-                if kpr_tmpl.search(rat):
-                    rating_url = rat
-
-            k = Id[0]
-            v = ""
-
-            desc_tmpl = re.compile(':$')
-            # Create Dict for data about Film
-            for line in text.split("\n"):
-                if not line.strip():
-                    continue
-                else:
-                    if desc_tmpl.search(line):
-                        k = line
-                        v = ""
-                    elif k != "":
-                        v = v+line
-                        mydict[k] = v
-
-            kpsk_r = imdb_r = "-"
-            kpsk_url = imdb_url = rat_url = ""
-            id_kpsk = id_imdb = id_nnm = 0
-
-            # Get rating urls and id film on kinopoisk and iddb
-            f_tmpl = re.compile('film/(.+?)/')
-            t_tmpl = re.compile('title/(.+?)/')
-            for a_hr in post_body.find_all('a'):
-                rat = a_hr.get('href')
-                if rat.find('https://www.kinopoisk.ru/film/') != -1:
-                    id_kpsk = f_tmpl.search(rat).group(1)
-                    kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
-                    logging.info(
-                        f"Create url rating from kinopoisk: {kpsk_url}")
-                elif rat.find('https://www.imdb.com/title/') != -1:
-                    id_imdb = t_tmpl.search(rat).group(1)
-                    imdb_url = rat.replace(
-                        '?ref_=plg_rt_1', 'ratings/?ref_=tt_ov_rt')
-                    logging.info(f"Create url rating from imdb: {imdb_url}")
-               
-            id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
-
-            if db_exist_Id(id_kpsk, id_imdb):
-                logging.info(f"Film id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm={id_nnm} exist in db - end analize.")
-                return
-
-            # Get rating film from kinopoisk if not then from imdb site
-            if kpsk_url:
-                rat_url = kpsk_url
-                page = requests.get(
-                    rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
-                # Parse data
-                # FIXME me be better use xml.parser ?
-                soup = BeautifulSoup(page.text, 'html.parser')
-                try:
-                    rating_xml = soup.find('rating')
-                    kpsk_r = rating_xml.find(
-                        'kp_rating').get_text('\n', strip='True')
-                    imdb_r = rating_xml.find(
-                        'imdb_rating').get_text('\n', strip='True')
-                    logging.info(f"Get rating from kinopoisk: {kpsk_url}")
-                except:
-                    logging.info(f"No kinopoisk rating on site")
-            elif imdb_url:
-                rat_url = imdb_url
-                page = requests.get(
-                    rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
-                # Parse data
-                soup = BeautifulSoup(page.text, 'html.parser')
-                post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
-                imdb_r = post_body.get_text('\n', strip='True')
-                logging.info(f"Get rating from imdb: {imdb_url}")
-            else:
-                kpsk_r = "-"
-                imdb_r = "-"
+            try:
+                rating_xml = soup.find('rating')
+                kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
+                imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
+                logging.info(f"Get rating from kinopoisk: {kpsk_url}")
+            except:
+                logging.info(f"No kinopoisk rating on site")
+        elif imdb_url:
+            rat_url = imdb_url
+            page = requests.get(rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
+            # Parse data
+            soup = BeautifulSoup(page.text, 'html.parser')
+            post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
+            imdb_r = post_body.get_text('\n', strip='True')
+            logging.info(f"Get rating from imdb: {imdb_url}")
+        else:
+            kpsk_r = "-"
+            imdb_r = "-"
 
         logging.info(f"Add info to message")
         film_name = f"<a href='{url}'>{mydict.get(Id[0])}</a>\n"
-        len_url=len(film_name)
         film_section = f"🟢<b>Раздел:</b> {section}\n"
         film_genre = f"🟢<b>Жанр:</b> {mydict.get(Id[2])}\n"
         film_rating = f"🟢<b>Рейтинг:</b> КП[{kpsk_r}] Imdb[{imdb_r}]\n"
         film_description = f"🟢<b>Описание:</b> \n{mydict.get(Id[5])}\n"
         # if magnet link exist create string and href link
         if mag_link:
-           film_magnet_link = f"<a href='{magnet_helper+mag_link}'>🧲Примагнититься</a>\n" #🧲 
+           film_magnet_link = f"<a href='{magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
         else:
            film_magnet_link=""
         # Create buttons for message
@@ -958,15 +954,15 @@ def main_client():
         file_photo = io.BytesIO(film_photo)
         file_photo.name = "image.jpg" 
         file_photo.seek(0)  # set cursor to the beginning
-        logging.debug(f"Msg fhoto{film_photo}")
+        logging.debug(f"Message Photo{film_photo}")
         
         # Create new message 
         new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
-        logging.debug(f"Msg New:{new_message}")
+        logging.debug(f"New message:{new_message}")
         
         #trim long message
-        if len(msg.message) > 1023:
-            msg.message = msg.message[:1019]+'...'
+        if len(new_message) > 1023:
+            new_message = new_message[:1019]+'...'
 
         try:
             async with db_lock:
@@ -974,7 +970,7 @@ def main_client():
                     logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
                     send_msg = await bot.send_file(PeerChannel(Channel_my_id), file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" ) 
-                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
+                    #db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except Exception as error:
