@@ -10,7 +10,7 @@ import myconfig as cfg
 # --------------------------------
 
 from telethon import TelegramClient, events, utils
-from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl, MessageEntityUrl
+from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl, MessageEntityUrl, DocumentAttributeFilename
 from telethon.tl.custom import Button
 from telethon.errors import MessageNotModifiedError
 from telethon.events import StopPropagation
@@ -25,7 +25,7 @@ import asyncio
 import os.path
 import sys
 import gettext
-
+import io
 #import nnm_module as db
 
 #-----------------
@@ -356,19 +356,6 @@ async def query_db_info(event, id_user):
         str(rows[1][0])+_("\nEarly tagged: ")+str(rows[2][0])
     await event.respond(message, parse_mode='html', link_preview=0)
 
-async def query_add_button(event, id_msg, bot_name):
-    ''' Add Button 'Add Film' and 'Control' in message '''
-    await asyncio.sleep(1)  # wait while write to DB on previous step
-    id_nnm = db_get_id_nnm(id_msg)
-    logging.info(f"Get id_nnm={id_nnm} by message id={id_msg} bot_name={bot_name}")
-    if id_nnm:
-        bdata = 'XX'+id_nnm
-        buttons_film = [
-                Button.inline(_("Add Film"), bdata),
-                Button.url(_("Control"), 't.me/'+bot_name+'?start')
-                ]
-        await event.edit(buttons=buttons_film)
-
 async def query_add_user(id_user, name_user, event):
     ''' Add user to database '''
     logging.info(f"Add user to database ")
@@ -600,15 +587,6 @@ def main_bot():
            logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
            await query_user_tag_film(event, data, event.query.user_id)
            raise StopPropagation
-
-    #TODO remove query_add_button if all will be work without handler 
-    ## Attach inline button to new film message 
-    #@bot.on(events.NewMessage(chats=[PeerChannel(Channel_my_id)], pattern=filter))
-    #async def normal_handler(event):
-    #    logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
-    #    # Add button 'Add Film to database' as inline button for message
-    #    await query_add_button(event, event.message.id, bot_name)
-    #    raise StopPropagation  # Stop handle this event other handlers
 
     # Handle messages in bot chat
     @bot.on(events.NewMessage())
@@ -967,32 +945,35 @@ def main_client():
                 imdb_r = "-"
 
         logging.info(f"Add info to message")
-        film_name = f"{mydict.get(Id[0])}\n"
+        film_name = f"<a href='{url}'>{mydict.get(Id[0])}</a>\n"
         len_url=len(film_name)
-        msg.entities=[MessageEntityTextUrl(offset=0, length=len_url, url=url)]
-        film_section = f"🟢Раздел: {section}\n"
-        film_genre = f"🟢Жанр: {mydict.get(Id[2])}\n"
-        film_rating = f"🟢Рейтинг: КП[{kpsk_r}] Imdb[{imdb_r}]\n"
-        film_description = f"🟢Описание: \n{mydict.get(Id[5])}\n"
+        film_section = f"🟢<b>Раздел:</b> {section}\n"
+        film_genre = f"🟢<b>Жанр:</b> {mydict.get(Id[2])}\n"
+        film_rating = f"🟢<b>Рейтинг:</b> КП[{kpsk_r}] Imdb[{imdb_r}]\n"
+        film_description = f"🟢<b>Описание:</b> \n{mydict.get(Id[5])}\n"
         # if magnet link exist create string and href link
         if mag_link:
-           film_magnet_link = f"🧲Примагнититься\n" #🧲 
-           msg.entities.append(MessageEntityTextUrl(offset=len_url, length=len(film_magnet_link), url=magnet_helper+mag_link))
+           film_magnet_link = f"<a href='{magnet_helper+mag_link}'>🧲Примагнититься</a>\n" #🧲 
         else:
            film_magnet_link=""
-        # Create buttons on message
-        
+        # Create buttons for message
         bdata = 'XX'+id_nnm
         buttons_film = [
                 Button.inline(_("Add Film"), bdata),
                 Button.url(_("Control"), 't.me/'+bot_name+'?start')
                 ]
-        # Create new message 
-        msg.message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
+        # get photo from nnm message and create my photo
+        film_photo = await client.download_media(msg, bytes)
+        file_photo = io.BytesIO(film_photo)
+        file_photo.name = "image.jpg" 
+        file_photo.seek(0)  # set cursor to the beginning
+        logging.debug(f"Msg fhoto{film_photo}")
         
-        logging.debug(f"Msg New:{msg}")
-       
-
+        # Create new message 
+        new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
+        logging.debug(f"Msg New:{new_message}")
+        
+        #trim long message
         if len(msg.message) > 1023:
             msg.message = msg.message[:1019]+'...'
 
@@ -1001,8 +982,8 @@ def main_client():
                 if db_exist_Id(id_kpsk, id_imdb):
                     logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
-                    send_msg = await bot.send_message(PeerChannel(Channel_my_id), msg, buttons=buttons_film ) 
-                    #db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
+                    send_msg = await bot.send_file(PeerChannel(Channel_my_id), file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" ) 
+                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except Exception as error:
