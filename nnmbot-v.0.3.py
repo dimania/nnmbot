@@ -10,7 +10,7 @@ import myconfig as cfg
 # --------------------------------
 
 from telethon import TelegramClient, events, utils
-from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl, MessageEntityUrl, DocumentAttributeFilename
+from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl, MessageEntityUrl
 from telethon.tl.custom import Button
 from telethon.errors import MessageNotModifiedError
 from telethon.events import StopPropagation
@@ -171,15 +171,6 @@ def db_exist_Id(id_kpsk, id_imdb):
       cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk, id_imdb))
      
     return cursor.fetchone()
-
-def db_get_id_nnm(id_msg):
-    ''' Get id_nm by id_msg '''
-    cursor.execute("SELECT id_nnm FROM Films WHERE id_msg = ?", (id_msg,))
-    row = cursor.fetchone()
-    if row:
-        return dict(row).get('id_nnm')
-    else:
-        return None
 
 def db_info( id_user ):
     ''' Get Info database: all records, tagged records and tagged early records for user '''
