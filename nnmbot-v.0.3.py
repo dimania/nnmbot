@@ -125,6 +125,7 @@ def db_init():
       name TEXT,
       id_kpsk TEXT,
       id_imdb TEXT,
+      mag_link TEXT DEFAULT NULL,
       date TEXT
       )
       ''')
@@ -154,11 +155,11 @@ def db_init():
 
     connection.commit()
 
-def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb):
+def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link):
     ''' Add new Film to database '''
     cur_date = datetime.now()
-    cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, date) VALUES(?, ?, ?, ?, ?, ?, ?)",
-                   (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, cur_date))
+    cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                   (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, cur_date))
     connection.commit()
 
 def db_exist_Id(id_kpsk, id_imdb):
@@ -252,7 +253,7 @@ def db_list_users( id_user=None, active=None, rights=None ):
 
 def db_list_tagged_films( id_user=None, tag=SETTAG ):
     ''' List only records with set tag '''
-    cursor.execute("SELECT name,nnm_url FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
+    cursor.execute("SELECT name,nnm_url,mag_link FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
     rows = cursor.fetchall()
     return rows
 
@@ -317,12 +318,13 @@ async def query_tagged_records(id_user, tag, event):
     ''' Get films tagget for user '''
     logging.info(f"Query db records with set tag")
     rows = db_list_tagged_films( id_user=id_user, tag=tag )
+    
     if rows:
         for row in rows:
-            # print(dict(row))
-            message = '<a href="' + \
-                dict(row).get('nnm_url') + '">' + \
-                dict(row).get('name') + '</a>'
+            message = f'<a href="{dict(row).get('nnm_url')}">{dict(row).get('name')}</a>\n'
+            mag_link_str = dict(row).get('mag_link')
+            if mag_link_str:
+               message = message + f'<a href="{magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
             await event.respond(message, parse_mode='html', link_preview=0)
     else:
         message = _("No records")
@@ -970,7 +972,7 @@ def main_client():
                     logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
                     send_msg = await bot.send_file(PeerChannel(Channel_my_id), file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" ) 
-                    #db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
+                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link)
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except Exception as error:

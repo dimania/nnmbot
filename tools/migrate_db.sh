@@ -4,6 +4,7 @@
 #
 # Use migrate_db.sh olddatabase.db newdatabase.db
 #
+# version 0.3
 #
 #|| [ "$2" == "" ]
 
@@ -31,6 +32,7 @@ sqlite3  newdatabase.db <<EOF
       name TEXT,
       id_kpsk TEXT,
       id_imdb TEXT,
+      mag_link TEXT DEFAULT NULL,
       date TEXT
       );
 
@@ -57,12 +59,14 @@ EOF
 NEW_DB=newdatabase.db
 fi
 
-
 sqlite3 <<EOF_2
 ATTACH "$OLD_DB" AS old;
 ATTACH "$NEW_DB" AS new;
 .databases
 INSERT INTO new.Films(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, date) SELECT id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, date FROM old.Films;
+INSERT INTO new.Users(id_user, name_user, date, active, rights) SELECT id_user, name_user, date, active, rights FROM old.Users;
+INSERT INTO new.Ufilms(ufilms_id, id_user, id_Films, date, tag ) SELECT ufilms_id, id_user, id_Films, date, tag FROM old.Ufilms;
+
 EOF_2
 
 exit 0
@@ -76,6 +80,7 @@ exit 0
       name TEXT,
       id_kpsk TEXT,
       id_imdb TEXT,
+      mag_link TEXT DEFAULT NULL,
       date TEXT
       )
  # old shema
@@ -87,6 +92,5 @@ exit 0
     name TEXT,
     id_kpsk TEXT,
     id_imdb TEXT,
-    date TEXT,
-    download INT DEFAULT 0
+    date TEXT
     )
