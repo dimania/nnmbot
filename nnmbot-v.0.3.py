@@ -776,7 +776,6 @@ def main_bot():
 
     return bot
 
-
 def main_client():
     ''' Loop for client connection '''
 
