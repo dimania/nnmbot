@@ -53,6 +53,7 @@ CUSER_MENU = 2
 CURIGHTS_MENU = 3
 NO_MENU = 0
 
+LIST_REC_IN_MSG = 20
 #-----------------
 
 def get_config(config):
@@ -289,45 +290,42 @@ async def query_all_records(event):
     ''' Get all database, Use with carefully may be many records '''
     logging.info(f"Query all db records")
     rows = db_list_all()
-    if rows:
-        for row in rows:
-            # print(dict(row))
-            message = '<a href="' + \
-                dict(row).get('nnm_url') + '">' + \
-                dict(row).get('name') + '</a>'
-            await event.respond(message, parse_mode='html', link_preview=0)
-    else:
-        message = _(".....No records.....")
-        await event.respond(message, parse_mode='html', link_preview=0)
-
+    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+    
 async def query_search(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
     rows = db_search(str_search)
-    if rows:
-        for row in rows:
-            message = '<a href="' + \
-                dict(row).get('nnm_url') + '">' + \
-                dict(row).get('name') + '</a>'
-            await event.respond(message, parse_mode='html', link_preview=0)
-    else:
-        message = _("No records")
-        await event.respond(message, parse_mode='html', link_preview=0)
-
+    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+    
 async def query_tagged_records(id_user, tag, event):
     ''' Get films tagget for user '''
     logging.info(f"Query db records with set tag")
     rows = db_list_tagged_films( id_user=id_user, tag=tag )
+    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+    
+async def send_lists_records( rows, num, event ):
+    ''' Create messages from  list records and send to channel 
+        rows - list records {url,name,magnet_url}
+        num - module how many records insert in one messag
+        event - descriptor channel '''
     
     if rows:
+        i = 0
+        message=""
         for row in rows:
-            message = f'<a href="{dict(row).get('nnm_url')}">{dict(row).get('name')}</a>\n'
+            message = message + f'{i+1}. <a href="{dict(row).get('nnm_url')}">{dict(row).get('name')}</a>\n'
             mag_link_str = dict(row).get('mag_link')
             if mag_link_str:
                message = message + f'<a href="{magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
-            await event.respond(message, parse_mode='html', link_preview=0)
+            i = i + 1
+            if not i%num:
+               await event.respond(message, parse_mode='html', link_preview=0)
+               message=""
+        if i < 8 and i != 0: 
+           await event.respond(message, parse_mode='html', link_preview=0) 
     else:
-        message = _("No records")
+        message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)
 
 async def query_clear_tagged_records(id_user, event):
