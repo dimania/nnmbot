@@ -314,8 +314,8 @@ async def send_lists_records( rows, num, event ):
         i = 0
         message=""
         for row in rows:
-            message = message + f'{i+1}. <a href="{dict(row).get('nnm_url')}">{dict(row).get('name')}</a>\n'
-            mag_link_str = dict(row).get('mag_link')
+            message = message + f'{i+1}. <a href="{dict(row).get("nnm_url")}">{dict(row).get("name")}</a>\n'
+            mag_link_str = dict(row).get("mag_link")
             if mag_link_str:
                message = message + f'<a href="{magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
             i = i + 1
