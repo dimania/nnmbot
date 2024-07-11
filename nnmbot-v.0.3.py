@@ -322,7 +322,7 @@ async def send_lists_records( rows, num, event ):
             if not i%num:
                await event.respond(message, parse_mode='html', link_preview=0)
                message=""
-        if i < 8 and i != 0: 
+        if i < num and i != 0: 
            await event.respond(message, parse_mode='html', link_preview=0) 
     else:
         message = _("😔 No records")
