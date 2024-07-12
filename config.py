@@ -2,7 +2,7 @@
 # Connfig settings file
 # By default filename - config.py
 # Please check directive - import config in programm
-# 
+# version 0.4
 
 # Api id getted from telegram from  https://my.telegram.org change to 60328456 by example
 api_id = <API_ID>
