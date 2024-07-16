@@ -2,7 +2,7 @@
 # Connfig settings file
 # By default filename - config.py
 # Please check directive - import config in programm
-# 
+# version 0.4
 
 # Api id getted from telegram from  https://my.telegram.org change to 60328456 by example
 api_id = <API_ID>
@@ -51,6 +51,9 @@ use_proxy = 0 # if use proxy set to 1
 
 #Pattern for filter messages from channelId 
 filter=r'(?:.*Фильм.*)|(?:.*Новинки.*)'
+
+#Helper for open magnet links in telegram
+magnet_helper = 'https://ivan386.github.io/#'
 
 #ICU extension for case independet search  in DB if Not when set in None
 ICU_extension_lib = "/usr/lib64/sqlite3/libSqliteIcu.so"

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #
 # Telegram Bot for filter films from NNMCLUB channel
-#
+# version 0.4
 # load config file
 #!!!!!!!! Replace with you config file here !!!!!!!
 # replace myconfig with config by example
@@ -10,7 +10,7 @@ import myconfig as cfg
 # --------------------------------
 
 from telethon import TelegramClient, events, utils
-from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl
+from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl, MessageEntityUrl
 from telethon.tl.custom import Button
 from telethon.errors import MessageNotModifiedError
 from telethon.events import StopPropagation
@@ -25,7 +25,7 @@ import asyncio
 import os.path
 import sys
 import gettext
-
+import io
 #import nnm_module as db
 
 #-----------------
@@ -53,6 +53,7 @@ CUSER_MENU = 2
 CURIGHTS_MENU = 3
 NO_MENU = 0
 
+LIST_REC_IN_MSG = 20
 #-----------------
 
 def get_config(config):
@@ -75,6 +76,7 @@ def get_config(config):
     global ICU_extension_lib
     global log_level
     global Lang
+    global magnet_helper
 
     try:
         api_id = config.api_id
@@ -94,6 +96,7 @@ def get_config(config):
         log_level = config.log_level
         Lang = config.Lang
         ICU_extension_lib = config.ICU_extension_lib
+        magnet_helper = config.magnet_helper
 
         if use_proxy:
             proxies = config.proxies
@@ -123,6 +126,7 @@ def db_init():
       name TEXT,
       id_kpsk TEXT,
       id_imdb TEXT,
+      mag_link TEXT DEFAULT NULL,
       date TEXT
       )
       ''')
@@ -152,11 +156,11 @@ def db_init():
 
     connection.commit()
 
-def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb):
+def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link):
     ''' Add new Film to database '''
     cur_date = datetime.now()
-    cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, date) VALUES(?, ?, ?, ?, ?, ?, ?)",
-                   (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, cur_date))
+    cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                   (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, cur_date))
     connection.commit()
 
 def db_exist_Id(id_kpsk, id_imdb):
@@ -169,15 +173,6 @@ def db_exist_Id(id_kpsk, id_imdb):
       cursor.execute("SELECT 1 FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk, id_imdb))
      
     return cursor.fetchone()
-
-def db_get_id_nnm(id_msg):
-    ''' Get id_nm by id_msg '''
-    cursor.execute("SELECT id_nnm FROM Films WHERE id_msg = ?", (id_msg,))
-    row = cursor.fetchone()
-    if row:
-        return dict(row).get('id_nnm')
-    else:
-        return None
 
 def db_info( id_user ):
     ''' Get Info database: all records, tagged records and tagged early records for user '''
@@ -259,7 +254,7 @@ def db_list_users( id_user=None, active=None, rights=None ):
 
 def db_list_tagged_films( id_user=None, tag=SETTAG ):
     ''' List only records with set tag '''
-    cursor.execute("SELECT name,nnm_url FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
+    cursor.execute("SELECT name,nnm_url,mag_link FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
     rows = cursor.fetchall()
     return rows
 
@@ -295,44 +290,42 @@ async def query_all_records(event):
     ''' Get all database, Use with carefully may be many records '''
     logging.info(f"Query all db records")
     rows = db_list_all()
-    if rows:
-        for row in rows:
-            # print(dict(row))
-            message = '<a href="' + \
-                dict(row).get('nnm_url') + '">' + \
-                dict(row).get('name') + '</a>'
-            await event.respond(message, parse_mode='html', link_preview=0)
-    else:
-        message = _(".....No records.....")
-        await event.respond(message, parse_mode='html', link_preview=0)
-
+    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+    
 async def query_search(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
     rows = db_search(str_search)
-    if rows:
-        for row in rows:
-            message = '<a href="' + \
-                dict(row).get('nnm_url') + '">' + \
-                dict(row).get('name') + '</a>'
-            await event.respond(message, parse_mode='html', link_preview=0)
-    else:
-        message = _("No records")
-        await event.respond(message, parse_mode='html', link_preview=0)
-
+    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+    
 async def query_tagged_records(id_user, tag, event):
     ''' Get films tagget for user '''
     logging.info(f"Query db records with set tag")
     rows = db_list_tagged_films( id_user=id_user, tag=tag )
+    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+    
+async def send_lists_records( rows, num, event ):
+    ''' Create messages from  list records and send to channel 
+        rows - list records {url,name,magnet_url}
+        num - module how many records insert in one messag
+        event - descriptor channel '''
+    
     if rows:
+        i = 0
+        message=""
         for row in rows:
-            # print(dict(row))
-            message = '<a href="' + \
-                dict(row).get('nnm_url') + '">' + \
-                dict(row).get('name') + '</a>'
-            await event.respond(message, parse_mode='html', link_preview=0)
+            message = message + f'{i+1}. <a href="{dict(row).get("nnm_url")}">{dict(row).get("name")}</a>\n'
+            mag_link_str = dict(row).get("mag_link")
+            if mag_link_str:
+               message = message + f'<a href="{magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
+            i = i + 1
+            if not i%num:
+               await event.respond(message, parse_mode='html', link_preview=0)
+               message=""
+        if i < num and i != 0: 
+           await event.respond(message, parse_mode='html', link_preview=0) 
     else:
-        message = _("No records")
+        message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)
 
 async def query_clear_tagged_records(id_user, event):
@@ -353,19 +346,6 @@ async def query_db_info(event, id_user):
         str(rows[0][0])+_("\nTagged records: ") + \
         str(rows[1][0])+_("\nEarly tagged: ")+str(rows[2][0])
     await event.respond(message, parse_mode='html', link_preview=0)
-
-async def query_add_button(event, id_msg, bot_name):
-    ''' Add Button 'Add Film' and 'Control' in message '''
-    await asyncio.sleep(1)  # wait while write to DB on previous step
-    id_nnm = db_get_id_nnm(id_msg)
-    logging.info(f"Get id_nnm={id_nnm} by message id={id_msg} bot_name={bot_name}")
-    if id_nnm:
-        bdata = 'XX'+id_nnm
-        buttons_film = [
-                Button.inline(_("Add Film"), bdata),
-                Button.url(_("Control"), 't.me/'+bot_name+'?start')
-                ]
-        await event.edit(buttons=buttons_film)
 
 async def query_add_user(id_user, name_user, event):
     ''' Add user to database '''
@@ -599,28 +579,24 @@ def main_bot():
            await query_user_tag_film(event, data, event.query.user_id)
            raise StopPropagation
 
-    # Attach inline button to new film message
-    @bot.on(events.NewMessage(chats=[PeerChannel(Channel_my_id)], pattern=filter))
-    async def normal_handler(event):
-        logging.debug(f"Get NewMessage event: {event}\nEvent message:{event.message}")
-        # Add button 'Add Film to database' as inline button for message
-        await query_add_button(event, event.message.id, bot_name)
-        raise StopPropagation  # Stop handle this event other handlers
-
     # Handle messages in bot chat
     @bot.on(events.NewMessage())
     async def bot_handler(event_bot):
         logging.debug(f"Get NewMessage event_bot: {event_bot}")
         menu_level = 0
         #user = event_bot.message.peer_id.user_id
-        ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
-       
+        try:
+            ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
+        except Exception as error:
+            print(f"Error get user: {error}")
+            return
+        
         if ret == USER_NEW:     # New user
-             await create_yes_no_dialog(_('**Y realy want tag/untag films**'), event_bot)
-             return
+            await create_yes_no_dialog(_('**Y realy want tag/untag films**'), event_bot)
+            return
         elif ret == USER_BLOCKED:   # Blocked
-             await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
-             return
+            await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
+            return
         elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View?
         elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
         elif ret == USER_SUPERADMIN: menu_level = MENU_SUPERADMIN # SuperUser
@@ -628,7 +604,8 @@ def main_bot():
         if event_bot.message.message == '/start':
           # show admin menu
           await create_basic_menu(menu_level, event_bot)
-
+         
+            
     # Handle basic Menu
     @bot.on(events.CallbackQuery())
     async def callback_bot(event_bot):
@@ -799,7 +776,6 @@ def main_bot():
 
     return bot
 
-
 def main_client():
     ''' Loop for client connection '''
 
@@ -809,7 +785,11 @@ def main_client():
           "Перевод:", "Язык озвучки:", "Субтитры:", "Видео:", "Аудио 1:",
           "Аудио 2:", "Аудио 3:", "Скриншоты:", "Время раздачи:"]
 
-    
+    f_tmpl = re.compile('film/(.+?)/')
+    t_tmpl = re.compile('title/(.+?)/')
+    url_tmpl = re.compile(r'viewtopic.php\?t')
+    kpr_tmpl = re.compile('www.kinopoisk.ru/rating')
+    desc_tmpl = re.compile(':$')
 
     # Connect to Telegram
     if use_proxy:
@@ -817,8 +797,7 @@ def main_client():
         client = TelegramClient(session_client, api_id, api_hash, system_version=system_version, proxy=(
             prx.group(1), prx.group(2), int(prx.group(3))))
     else:
-        client = TelegramClient(session_client, api_id,
-                                api_hash, system_version=system_version)
+        client = TelegramClient(session_client, api_id, api_hash, system_version=system_version)
 
     client.start()
     Channel_my_id = client.loop.run_until_complete(client.get_peer_id(Channel_my))
@@ -833,133 +812,168 @@ def main_client():
         logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")
         msg = event.message
 
-        url_tmpl = re.compile(r'viewtopic.php\?t')
+        # OLD NNM url parser 
+        #                       viewtopic.php?t
         # Get URL nnmclub page with Film
-        for url_entity, inner_text in msg.get_entities_text(MessageEntityTextUrl):
-            if url_tmpl.search(url_entity.url):
-                url = url_entity.url
-
+        #for url_entity, inner_text in msg.get_entities_text(MessageEntityTextUrl):
+        #    logging.debug(f"Urls: {url_entity}")
+        #    if url_tmpl.search(url_entity.url):
+        #        url = url_entity.url
+        
+        for url_entity, inner_text in msg.get_entities_text(MessageEntityUrl):
+            logging.debug(f"Urls: {url_entity, inner_text}")
+            if url_tmpl.search(inner_text):
+                url = inner_text
         logging.info(f"Get URL nnmclub page with Film: {url}")
-
-        # if URL exist get additional info for film
-        if url:
-            try:
-                page = requests.get(url, proxies=proxies)
-                if page.status_code != 200:
-                    logging.error(f"Can't open url:{url}, status:{page.status}")
-                    return
-            except Exception as ConnectionError:
-                logging.error(f"Can't open url:{url}, status:{ConnectionError}")
-                logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
-                client.disconnect()
+       
+        # if URL not exist return 
+        if not url:
+           return
+          
+        try:
+            page = requests.get(url, proxies=proxies)
+            if page.status_code != 200:
+                logging.error(f"Can't open url:{url}, status:{page.status}")
                 return
+        except Exception as ConnectionError:
+            logging.error(f"Can't open url:{url}, status:{ConnectionError}")
+            logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
+            client.disconnect()
+            return
 
-            logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}")
-            soup = BeautifulSoup(page.text, 'html.parser')
+        logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}")
+        soup = BeautifulSoup(page.text, 'html.parser')
 
-            # Select data where class - postbody
-            post_body = soup.find(class_='postbody')
-            text = post_body.get_text('\n', strip='True')
+        # Select data where class - nav - info about tracker section
+        post_body = soup.findAll('a', {'class': 'nav'})
+        section = post_body[-1].get_text('\n', strip='True')
+        logging.debug(f"Section nnm tracker: {section}")
 
-            kpr_tmpl = re.compile('www.kinopoisk.ru/rating')
-            # Get url picture with rating Film on Kinopoisk site
-            for a_hr in post_body.find_all(class_='postImg'):
-                rat = a_hr.get('title')
-                if kpr_tmpl.search(rat):
-                    rating_url = rat
+        # Select data where class - gensmall - get magnet link
+        post_body = soup.find( href=re.compile("magnet:") )
+        if post_body:
+           mag_link = post_body.get('href')
+           logging.debug(f"Magnet link: {mag_link}\n")
+        else:
+           mag_link = None  
 
-            k = Id[0]
-            v = ""
+        # Select data where class - postbody
+        post_body = soup.find(class_='postbody')
+        text = post_body.get_text('\n', strip='True')
 
-            desc_tmpl = re.compile(':$')
-            # Create Dict for data about Film
-            for line in text.split("\n"):
-                if not line.strip():
-                    continue
-                else:
-                    if desc_tmpl.search(line):
-                        k = line
-                        v = ""
-                    elif k != "":
-                        v = v+line
-                        mydict[k] = v
+        # Get url picture with rating Film on Kinopoisk site
+        for a_hr in post_body.find_all(class_='postImg'):
+            rat = a_hr.get('title')
+            if kpr_tmpl.search(rat):
+                rating_url = rat
 
-            kpsk_r = imdb_r = "-"
-            kpsk_url = imdb_url = rat_url = ""
-            id_kpsk = id_imdb = id_nnm = 0
-
-            # Get rating urls and id film on kinopoisk and iddb
-            f_tmpl = re.compile('film/(.+?)/')
-            t_tmpl = re.compile('title/(.+?)/')
-            for a_hr in post_body.find_all('a'):
-                rat = a_hr.get('href')
-                if rat.find('https://www.kinopoisk.ru/film/') != -1:
-                    id_kpsk = f_tmpl.search(rat).group(1)
-                    kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
-                    logging.info(
-                        f"Create url rating from kinopoisk: {kpsk_url}")
-                elif rat.find('https://www.imdb.com/title/') != -1:
-                    id_imdb = t_tmpl.search(rat).group(1)
-                    imdb_url = rat.replace(
-                        '?ref_=plg_rt_1', 'ratings/?ref_=tt_ov_rt')
-                    logging.info(f"Create url rating from imdb: {imdb_url}")
-
-            id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
-
-            if db_exist_Id(id_kpsk, id_imdb):
-                logging.info(f"Film id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm={id_nnm} exist in db - end analize.")
-                return
-
-            # Get rating film from kinopoisk if not then from imdb site
-            if kpsk_url:
-                rat_url = kpsk_url
-                page = requests.get(
-                    rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
-                # Parse data
-                # FIXME me be better use xml.parser ?
-                soup = BeautifulSoup(page.text, 'html.parser')
-                try:
-                    rating_xml = soup.find('rating')
-                    kpsk_r = rating_xml.find(
-                        'kp_rating').get_text('\n', strip='True')
-                    imdb_r = rating_xml.find(
-                        'imdb_rating').get_text('\n', strip='True')
-                    logging.info(f"Get rating from kinopoisk: {kpsk_url}")
-                except:
-                    logging.info(f"No kinopoisk rating on site")
-            elif imdb_url:
-                rat_url = imdb_url
-                page = requests.get(
-                    rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
-                # Parse data
-                soup = BeautifulSoup(page.text, 'html.parser')
-                post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
-                imdb_r = post_body.get_text('\n', strip='True')
-                logging.info(f"Get rating from imdb: {imdb_url}")
+        k = Id[0]
+        v = ""
+        
+        # Create Dict for data about Film
+        for line in text.split("\n"):
+            if not line.strip():
+                continue
             else:
-                kpsk_r = "-"
-                imdb_r = "-"
+                if desc_tmpl.search(line):
+                    k = line
+                    v = ""
+                elif k != "":
+                    v = v+line
+                    mydict[k] = v
+
+        kpsk_r = imdb_r = "-"
+        kpsk_url = imdb_url = rat_url = ""
+        id_kpsk = id_imdb = id_nnm = 0
+
+        # Get rating urls and id film on kinopoisk and iddb
+        for a_hr in post_body.find_all('a'):
+            rat = a_hr.get('href')
+            if rat.find('https://www.kinopoisk.ru/film/') != -1:
+                id_kpsk = f_tmpl.search(rat).group(1)
+                kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+                logging.info(f"Create url rating from kinopoisk: {kpsk_url}")
+            elif rat.find('https://www.imdb.com/title/') != -1:
+                id_imdb = t_tmpl.search(rat).group(1)
+                imdb_url = rat.replace('?ref_=plg_rt_1', 'ratings/?ref_=tt_ov_rt')
+                logging.info(f"Create url rating from imdb: {imdb_url}")
+           
+        id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
+
+        if db_exist_Id(id_kpsk, id_imdb):
+            logging.info(f"Film id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm={id_nnm} exist in db - end analize.")
+            return
+
+        # Get rating film from kinopoisk if not then from imdb site
+        if kpsk_url:
+            rat_url = kpsk_url
+            page = requests.get(
+                rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
+            # Parse data
+            # FIXME me be better use xml.parser ?
+            soup = BeautifulSoup(page.text, 'html.parser')
+            try:
+                rating_xml = soup.find('rating')
+                kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
+                imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
+                logging.info(f"Get rating from kinopoisk: {kpsk_url}")
+            except:
+                logging.info(f"No kinopoisk rating on site")
+        elif imdb_url:
+            rat_url = imdb_url
+            page = requests.get(rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
+            # Parse data
+            soup = BeautifulSoup(page.text, 'html.parser')
+            post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
+            imdb_r = post_body.get_text('\n', strip='True')
+            logging.info(f"Get rating from imdb: {imdb_url}")
+        else:
+            kpsk_r = "-"
+            imdb_r = "-"
 
         logging.info(f"Add info to message")
-        film_add_info = f"\n_________________________\nРейтинг: КП[{kpsk_r}] Imdb[{imdb_r}]\n{Id[2]} {mydict.get(Id[2])}\n{Id[5]}\n{mydict.get(Id[5])}"
-
-        msg.message = msg.message+film_add_info
-
-        if len(msg.message) > 1023:
-            msg.message = msg.message[:1019]+'...'
+        film_name = f"<a href='{url}'>{mydict.get(Id[0])}</a>\n"
+        film_section = f"🟢<b>Раздел:</b> {section}\n"
+        film_genre = f"🟢<b>Жанр:</b> {mydict.get(Id[2])}\n"
+        film_rating = f"🟢<b>Рейтинг:</b> КП[{kpsk_r}] Imdb[{imdb_r}]\n"
+        film_description = f"🟢<b>Описание:</b> \n{mydict.get(Id[5])}\n"
+        # if magnet link exist create string and href link
+        if mag_link:
+           film_magnet_link = f"<a href='{magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
+        else:
+           film_magnet_link=""
+        # Create buttons for message
+        bdata = 'XX'+id_nnm
+        buttons_film = [
+                Button.inline(_("Add Film"), bdata),
+                Button.url(_("Control"), 't.me/'+bot_name+'?start')
+                ]
+        # get photo from nnm message and create my photo
+        film_photo = await client.download_media(msg, bytes)
+        file_photo = io.BytesIO(film_photo)
+        file_photo.name = "image.jpg" 
+        file_photo.seek(0)  # set cursor to the beginning
+        logging.debug(f"Message Photo{film_photo}")
+        
+        # Create new message 
+        new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
+        logging.debug(f"New message:{new_message}")
+        
+        #trim long message
+        if len(new_message) > 1023:
+            new_message = new_message[:1019]+'...'
 
         try:
             async with db_lock:
                 if db_exist_Id(id_kpsk, id_imdb):
                     logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
-                    send_msg = await client.send_message(PeerChannel(Channel_my_id), msg, parse_mode='md')
-                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb)
+                    send_msg = await bot.send_file(PeerChannel(Channel_my_id), file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" ) 
+                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link)
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
-        except errors.BadRequestError as error:
-            logging.error(f'Error db_lock: {error}')
-
+        except Exception as error:
+            logging.error(f'Error in block db_lock: {error}')
     return client
 
 

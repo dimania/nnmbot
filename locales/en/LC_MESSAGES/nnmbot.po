@@ -7,242 +7,251 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-03-08 15:19+0300\n"
+"POT-Creation-Date: 2024-07-11 23:12+0300\n"
 "PO-Revision-Date: 2024-03-06 23:11+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
 "Language-Team: en <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.9.0\n"
+"Generated-By: Babel 2.15.0\n"
 
-#: nnmbot.py:301 nnmbot.py:500 nnmbot.py:532
+#: ../nnmbot-v.0.2.py:308 ../nnmbot-v.0.2.py:512 ../nnmbot-v.0.2.py:544
+#: ../nnmbot-v.0.3.py:490 ../nnmbot-v.0.3.py:522
 msgid ".....No records....."
 msgstr ""
 
-#: nnmbot.py:315 nnmbot.py:330 nnmbot.py:340
+#: ../nnmbot-v.0.2.py:322 ../nnmbot-v.0.2.py:337 ../nnmbot-v.0.2.py:347
+#: ../nnmbot-v.0.3.py:338
 msgid "No records"
 msgstr ""
 
-#: nnmbot.py:347
+#: ../nnmbot-v.0.2.py:354 ../nnmbot-v.0.3.py:345
 msgid "All records: "
 msgstr ""
 
-#: nnmbot.py:348
+#: ../nnmbot-v.0.2.py:355 ../nnmbot-v.0.3.py:346
 msgid ""
 "\n"
 "Tagged records: "
 msgstr ""
 
-#: nnmbot.py:349
+#: ../nnmbot-v.0.2.py:356 ../nnmbot-v.0.3.py:347
 msgid ""
 "\n"
 "Early tagged: "
 msgstr ""
 
-#: nnmbot.py:360
+#: ../nnmbot-v.0.2.py:367 ../nnmbot-v.0.3.py:948
 msgid "Add Film"
 msgstr ""
 
-#: nnmbot.py:361
+#: ../nnmbot-v.0.2.py:368 ../nnmbot-v.0.3.py:949
 msgid "Control"
 msgstr ""
 
-#: nnmbot.py:370
+#: ../nnmbot-v.0.2.py:377 ../nnmbot-v.0.3.py:355
 msgid "Yoy already power user!"
 msgstr ""
 
-#: nnmbot.py:372
+#: ../nnmbot-v.0.2.py:379 ../nnmbot-v.0.3.py:357
 msgid "You request send to Admins, and will be reviewed soon."
 msgstr ""
 
-#: nnmbot.py:381
+#: ../nnmbot-v.0.2.py:388 ../nnmbot-v.0.3.py:366
 msgid "List Films tagged"
 msgstr ""
 
-#: nnmbot.py:384
+#: ../nnmbot-v.0.2.py:391 ../nnmbot-v.0.3.py:369
 msgid "List Films tagged early"
 msgstr ""
 
-#: nnmbot.py:387
+#: ../nnmbot-v.0.2.py:394 ../nnmbot-v.0.3.py:372
 msgid "Clear all tagged Films"
 msgstr ""
 
-#: nnmbot.py:390
+#: ../nnmbot-v.0.2.py:397 ../nnmbot-v.0.3.py:375
 msgid "Get database info "
 msgstr ""
 
-#: nnmbot.py:393
+#: ../nnmbot-v.0.2.py:400 ../nnmbot-v.0.3.py:378
 msgid "Search Films in database "
 msgstr ""
 
-#: nnmbot.py:399
+#: ../nnmbot-v.0.2.py:406 ../nnmbot-v.0.3.py:384
 msgid "List All Films in DB"
 msgstr ""
 
-#: nnmbot.py:400
+#: ../nnmbot-v.0.2.py:407 ../nnmbot-v.0.3.py:385
 msgid "Go to control users menu"
 msgstr ""
 
-#: nnmbot.py:403
+#: ../nnmbot-v.0.2.py:410 ../nnmbot-v.0.3.py:388
 msgid "**☣ Work with database:**"
 msgstr ""
 
-#: nnmbot.py:410
+#: ../nnmbot-v.0.2.py:417 ../nnmbot-v.0.3.py:395
 msgid "List user requests"
 msgstr ""
 
-#: nnmbot.py:413
+#: ../nnmbot-v.0.2.py:420 ../nnmbot-v.0.3.py:398
 msgid "List all users"
 msgstr ""
 
-#: nnmbot.py:416
+#: ../nnmbot-v.0.2.py:423 ../nnmbot-v.0.3.py:401
 msgid "Block/Unblock user"
 msgstr ""
 
-#: nnmbot.py:419
+#: ../nnmbot-v.0.2.py:426 ../nnmbot-v.0.3.py:404
 msgid "Change rights user"
 msgstr ""
 
-#: nnmbot.py:422
+#: ../nnmbot-v.0.2.py:429 ../nnmbot-v.0.3.py:407
 msgid "Delete user"
 msgstr ""
 
-#: nnmbot.py:426
+#: ../nnmbot-v.0.2.py:433 ../nnmbot-v.0.3.py:411
 msgid "Back to basic menu"
 msgstr ""
 
-#: nnmbot.py:430
+#: ../nnmbot-v.0.2.py:437 ../nnmbot-v.0.3.py:415
 msgid "**☣ Work with users:**"
 msgstr ""
 
-#: nnmbot.py:438
+#: ../nnmbot-v.0.2.py:445 ../nnmbot-v.0.3.py:423
 msgid "Set Read only"
 msgstr ""
 
-#: nnmbot.py:441
+#: ../nnmbot-v.0.2.py:448 ../nnmbot-v.0.3.py:426
 msgid "Set Read Write"
 msgstr ""
 
-#: nnmbot.py:444
+#: ../nnmbot-v.0.2.py:451 ../nnmbot-v.0.3.py:429
 msgid "Back to users menu"
 msgstr ""
 
-#: nnmbot.py:448
+#: ../nnmbot-v.0.2.py:455 ../nnmbot-v.0.3.py:433
 msgid "**☣     Select rights:    **"
 msgstr ""
 
-#: nnmbot.py:455
+#: ../nnmbot-v.0.2.py:462 ../nnmbot-v.0.3.py:440
 msgid "Yes"
 msgstr ""
 
-#: nnmbot.py:456
+#: ../nnmbot-v.0.2.py:463 ../nnmbot-v.0.3.py:441
 msgid "No"
 msgstr ""
 
-#: nnmbot.py:498
+#: ../nnmbot-v.0.2.py:510 ../nnmbot-v.0.3.py:488
 msgid "List awaiting users:"
 msgstr ""
 
-#: nnmbot.py:539
+#: ../nnmbot-v.0.2.py:551 ../nnmbot-v.0.3.py:529
 msgid "Film already in database!"
 msgstr ""
 
-#: nnmbot.py:545
+#: ../nnmbot-v.0.2.py:557 ../nnmbot-v.0.3.py:535
 msgid "Film added to database"
 msgstr ""
 
-#: nnmbot.py:576
+#: ../nnmbot-v.0.2.py:588 ../nnmbot-v.0.3.py:566
 msgid ""
 "Sorry you are not registered user.\n"
 "You can only set Reaction.\n"
 "You can register, press [Control] button."
 msgstr ""
 
-#: nnmbot.py:580 nnmbot.py:612
+#: ../nnmbot-v.0.2.py:592 ../nnmbot-v.0.2.py:627 ../nnmbot-v.0.3.py:570
+#: ../nnmbot-v.0.3.py:598
 msgid ""
 "Sorry You are Blocked!\n"
 " Send message to Admin this channel"
 msgstr ""
 
-#: nnmbot.py:609
+#: ../nnmbot-v.0.2.py:624 ../nnmbot-v.0.3.py:595
 msgid "**Y realy want tag/untag films**"
 msgstr ""
 
-#: nnmbot.py:650
+#: ../nnmbot-v.0.2.py:666 ../nnmbot-v.0.3.py:637
 msgid "New user **"
 msgstr ""
 
-#: nnmbot.py:650
+#: ../nnmbot-v.0.2.py:666 ../nnmbot-v.0.3.py:637
 msgid "** request approve."
 msgstr ""
 
-#: nnmbot.py:655
+#: ../nnmbot-v.0.2.py:671 ../nnmbot-v.0.3.py:642
 msgid "Goodbye! See you later..."
 msgstr ""
 
-#: nnmbot.py:670
+#: ../nnmbot-v.0.2.py:686 ../nnmbot-v.0.3.py:657
 msgid "  Clear "
 msgstr ""
 
-#: nnmbot.py:670
+#: ../nnmbot-v.0.2.py:686 ../nnmbot-v.0.3.py:657
 msgid " records  "
 msgstr ""
 
-#: nnmbot.py:682
+#: ../nnmbot-v.0.2.py:698 ../nnmbot-v.0.3.py:669
 msgid "Write and send what you search:"
 msgstr ""
 
-#: nnmbot.py:688
+#: ../nnmbot-v.0.2.py:704 ../nnmbot-v.0.3.py:675
 msgid "🏁............Done............🏁"
 msgstr ""
 
-#: nnmbot.py:709 nnmbot.py:729 nnmbot.py:771 nnmbot.py:775
+#: ../nnmbot-v.0.2.py:725 ../nnmbot-v.0.2.py:745 ../nnmbot-v.0.2.py:787
+#: ../nnmbot-v.0.2.py:791 ../nnmbot-v.0.3.py:696 ../nnmbot-v.0.3.py:716
+#: ../nnmbot-v.0.3.py:758 ../nnmbot-v.0.3.py:762
 msgid "User: "
 msgstr ""
 
-#: nnmbot.py:709
+#: ../nnmbot-v.0.2.py:725 ../nnmbot-v.0.3.py:696
 msgid " add to DB"
 msgstr ""
 
-#: nnmbot.py:711
+#: ../nnmbot-v.0.2.py:727 ../nnmbot-v.0.3.py:698
 msgid ""
 "You request approved\n"
 "Now Yoy can work with films."
 msgstr ""
 
-#: nnmbot.py:715
+#: ../nnmbot-v.0.2.py:731 ../nnmbot-v.0.3.py:702
 msgid "List current users:"
 msgstr ""
 
-#: nnmbot.py:719
+#: ../nnmbot-v.0.2.py:735 ../nnmbot-v.0.3.py:706
 msgid "Select user for delete:"
 msgstr ""
 
-#: nnmbot.py:729
+#: ../nnmbot-v.0.2.py:745 ../nnmbot-v.0.3.py:716
 msgid " deleted from DB"
 msgstr ""
 
-#: nnmbot.py:733
+#: ../nnmbot-v.0.2.py:749 ../nnmbot-v.0.3.py:720
 msgid "Select user for change rights:"
 msgstr ""
 
-#: nnmbot.py:741
+#: ../nnmbot-v.0.2.py:757 ../nnmbot-v.0.3.py:728
 msgid "Change righst for user: "
 msgstr ""
 
-#: nnmbot.py:759
+#: ../nnmbot-v.0.2.py:775 ../nnmbot-v.0.3.py:746
 msgid "Select user for block/unblock:"
 msgstr ""
 
-#: nnmbot.py:771
+#: ../nnmbot-v.0.2.py:787 ../nnmbot-v.0.3.py:758
 msgid " Unblocked"
 msgstr ""
 
-#: nnmbot.py:775
+#: ../nnmbot-v.0.2.py:791 ../nnmbot-v.0.3.py:762
 msgid " Blocked"
+msgstr ""
+
+#: ../nnmbot-v.0.3.py:328
+msgid "😔 No records"
 msgstr ""
 
 #~ msgid ""
