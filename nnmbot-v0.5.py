@@ -16,6 +16,7 @@ from telethon.errors import MessageNotModifiedError
 from telethon.events import StopPropagation
 from datetime import datetime, date, time, timezone
 from bs4 import BeautifulSoup
+from collections import OrderedDict
 import requests
 import re
 import sqlite3
@@ -143,7 +144,8 @@ def db_init():
       name_user TEXT NOT NULL,
       date TEXT NOT NULL,
       active INTEGER DEFAULT 0,
-      rights INTEGER DEFAULT 0
+      rights INTEGER DEFAULT 0,
+      setings TEXT DEFAULT NULL
       )
       ''')
     # Create table Ufilms - films tagged users
@@ -301,7 +303,7 @@ def db_list_tagged_films_id_new( id_user=None, tag=SETTAG ):
 
 def db_film_by_id_new( id=None ):
     ''' List info by id record '''
-    cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, photo FROM Films WHERE id=?)", (id,))
+    cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, photo FROM Films WHERE id=?", (id,))
     row = cursor.fetchone()
     return row
 
@@ -357,22 +359,38 @@ async def query_tagged_records_new(id_user, tag, event):
     rows = db_list_tagged_films_id_new( id_user=id_user, tag=tag )
     await show_card_one_record_menu( rows, event )
 
-async def show_card_one_record_menu( rows, event ):
+async def show_card_one_record_menu( rows=None, event=None ):
     ''' Create card of one film and send to channel 
         rows - list id records 
         event - descriptor channel '''
+    lenrows=len(rows)
+    i=0    
     if rows:       
-        for row in rows:
-          send_card_one_record( dict(row).get("id"), event )    
+        await send_card_one_record( dict(rows[i]).get("id"), i, event )
+        @bot.on(events.CallbackQuery())
+        async def callback_bot_list(event_bot_list):
+            logging.debug(f"Get callback event_bot_list {event_bot_list}")  
+            button_data = event_bot_list.data.decode()
+            await event_bot_list.delete()
+            raise StopPropagation
+            bot.remove_event_handler(event_bot_list)
+            if button_data.find('NEXT', 0, 4) != -1:
+               i = int(button_data.replace('NEXT', '')) + 1 
+               if i == lenrows-1:
+                 i = 0  
+            if button_data.find('PREV', 0, 4) != -1:
+               i = int(button_data.replace('PREV', '')) - 1
+               if i == -1:
+                 i = lenrows-1       
+            await send_card_one_record( dict(rows[i]).get("id"), i, event )
     else:
         message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)           
 
-async def send_card_one_record( id, event ):
+async def send_card_one_record( id, index, event ):
     ''' Create card of one film and send to channel 
         id - number film in db
         event - descriptor channel '''
-       #{dict(row).get("nnm_url")} 
 
     row=db_film_by_id_new( id )
     film_name = f"<a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
@@ -387,12 +405,13 @@ async def send_card_one_record( id, event ):
     else:
         film_magnet_link=""
     # Create buttons for message
-    f_prev = 'PREV'+f'{id-1}'
-    f_next = 'NEXT'+f'{id+1}'
+    f_prev = 'PREV'+f'{index}'
+    f_next = 'NEXT'+f'{index}'
+    f_curr = 'CURR'+f'{index}'
     buttons_film = [
-            Button.inline(_("<<"), f_prev),
-            Button.inline(_(f'{id}'), ''),
-            Button.inline(_(">>"), f_next)
+            Button.inline(_("◀"), f_prev),
+            Button.inline(_("◼"), f_curr),
+            Button.inline(_("▶"), f_next)
             ]
     film_photo = dict(row).get("photo")
     file_photo = io.BytesIO(film_photo)
@@ -403,8 +422,9 @@ async def send_card_one_record( id, event ):
     logging.debug(f"New message:{new_message}")
     #FIX ME as send? as respond or as send_file message
     #await event.respond(message, parse_mode='html', link_preview=0)
-    send_msg = await bot.send_file(event.user_id, file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" )  
-
+    logging.debug(f"Event:{event}")
+    send_msg = await bot.send_file(event.original_update.peer, file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" )
+    
 async def send_lists_records( rows, num, event ):
     ''' Create messages from  list records and send to channel 
         rows - list records {url,name,magnet_url}
@@ -750,7 +770,7 @@ def main_bot():
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwlist':
             # Get films tagget
-            await query_tagged_records(id_user, SETTAG, event_bot)
+            await query_tagged_records_new(id_user, SETTAG, event_bot)
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwclear':
             # Clear all tag 
@@ -759,7 +779,7 @@ def main_bot():
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early
-            await query_tagged_records(id_user, UNSETTAG, event_bot)
+            await query_tagged_records_new(id_user, UNSETTAG, event_bot)
             send_menu = BASIC_MENU
         elif button_data == '/bm_dbinfo':
             # Get info about DB
@@ -1050,11 +1070,12 @@ def main_client():
                 Button.url(_("Control"), 't.me/'+bot_name+'?start')
                 ]
         # get photo from nnm message and create my photo
-        film_photo = await client.download_media(msg, bytes)
-        file_photo = io.BytesIO(film_photo)
+        film_photo_t = await client.download_media(msg, bytes)
+        film_photo_d = film_photo_t
+        file_photo = io.BytesIO(film_photo_d)
         file_photo.name = "image.jpg" 
         file_photo.seek(0)  # set cursor to the beginning
-        logging.debug(f"Message Photo{film_photo}")
+        logging.debug(f"Message Photo{film_photo_d}")
         
         # Create new message 
         new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
@@ -1071,7 +1092,7 @@ def main_client():
                 else:
                     send_msg = await bot.send_file(PeerChannel(Channel_my_id), file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" ) 
                     #db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link)
-                    db_add_film_new(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, film_section, film_genre, kpsk_r, imdb_r, film_description, file_photo )
+                    db_add_film_new(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, film_section, film_genre, kpsk_r, imdb_r, film_description, film_photo_t )
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except Exception as error:
