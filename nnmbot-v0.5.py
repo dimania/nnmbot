@@ -357,35 +357,37 @@ async def query_tagged_records_new(id_user, tag, event):
     ''' Get films tagget for user '''
     logging.info(f"Query db records with set tag")
     rows = db_list_tagged_films_id_new( id_user=id_user, tag=tag )
-    await show_card_one_record_menu( rows, event )
+    ret = await show_card_one_record_menu( rows, event )
+    return ret
 
 async def show_card_one_record_menu( rows=None, event=None ):
     ''' Create card of one film and send to channel 
         rows - list id records 
         event - descriptor channel '''
     lenrows=len(rows)
-    i=0    
     if rows:       
-        await send_card_one_record( dict(rows[i]).get("id"), i, event )
+        await send_card_one_record( dict(rows[0]).get("id"), 0, event )
         @bot.on(events.CallbackQuery())
         async def callback_bot_list(event_bot_list):
             logging.debug(f"Get callback event_bot_list {event_bot_list}")  
             button_data = event_bot_list.data.decode()
             await event_bot_list.delete()
-            raise StopPropagation
             bot.remove_event_handler(event_bot_list)
+            i=0
             if button_data.find('NEXT', 0, 4) != -1:
-               i = int(button_data.replace('NEXT', '')) + 1 
-               if i == lenrows-1:
-                 i = 0  
+                i = int(button_data.replace('NEXT', '')) + 1 
+                if i == lenrows:
+                   i = 0
+                await send_card_one_record( dict(rows[i]).get("id"), i, event )  
             if button_data.find('PREV', 0, 4) != -1:
-               i = int(button_data.replace('PREV', '')) - 1
-               if i == -1:
-                 i = lenrows-1       
-            await send_card_one_record( dict(rows[i]).get("id"), i, event )
+                i = int(button_data.replace('PREV', '')) - 1
+                if i == -1:
+                   i = lenrows-1
+                await send_card_one_record( dict(rows[i]).get("id"), i, event )
     else:
         message = _("😔 No records")
-        await event.respond(message, parse_mode='html', link_preview=0)           
+        await event.respond(message, parse_mode='html', link_preview=0)
+        return 0           
 
 async def send_card_one_record( id, index, event ):
     ''' Create card of one film and send to channel 
@@ -393,7 +395,7 @@ async def send_card_one_record( id, index, event ):
         event - descriptor channel '''
 
     row=db_film_by_id_new( id )
-    film_name = f"<a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
+    film_name = f"<b>{index+1}. </b><a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
     film_section = f"🟢<b>Раздел:</b> \n{dict(row).get("section")}"
     film_genre = f"🟢<b>Жанр:</b> {dict(row).get("genre")}\n"
     film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get("rate_kpsk")}] Imdb[{dict(row).get("rate_imdb")}]\n"
@@ -407,16 +409,21 @@ async def send_card_one_record( id, index, event ):
     # Create buttons for message
     f_prev = 'PREV'+f'{index}'
     f_next = 'NEXT'+f'{index}'
-    f_curr = 'CURR'+f'{index}'
+    f_curr = 'HOME_MENU'
     buttons_film = [
             Button.inline(_("◀"), f_prev),
             Button.inline(_("◼"), f_curr),
             Button.inline(_("▶"), f_next)
             ]
     film_photo = dict(row).get("photo")
-    file_photo = io.BytesIO(film_photo)
-    file_photo.name = "image.jpg" 
-    file_photo.seek(0)  # set cursor to the beginning        
+    logging.debug(f"Film_photo:{film_photo}")
+    if film_photo != None:
+        file_photo = io.BytesIO(film_photo)
+        file_photo.name = "image.jpg" 
+        file_photo.seek(0)  # set cursor to the beginning        
+    else:
+        file_photo='no_image.jpg' #FIXME
+        logging.debug(f"File_photo:{file_photo}")
     # Create new message 
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
     logging.debug(f"New message:{new_message}")
@@ -763,24 +770,26 @@ def main_bot():
             await event_bot.respond(_('Goodbye! See you later...'))
             send_menu = NO_MENU
             return
-        
-        if button_data == '/bm_dblist':  
+        if button_data == 'HOME_MENU':  
+            # Goto basic menu
+            send_menu = BASIC_MENU
+        elif button_data == '/bm_dblist':  
             # Get all database, Use with carefully may be many records
             await query_all_records(event_bot)
-            send_menu = BASIC_MENU
-        elif button_data == '/bm_dwlist':
-            # Get films tagget
-            await query_tagged_records_new(id_user, SETTAG, event_bot)
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwclear':
             # Clear all tag 
             res=db_switch_user_tag( id_user, UNSETTAG )
             await event_bot.respond(_("  Clear ")+res+_(" records  "))
             send_menu = BASIC_MENU
+        elif button_data == '/bm_dwlist':
+            # Get films tagget
+            await query_tagged_records_new(id_user, SETTAG, event_bot)
+            send_menu = NO_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early
             await query_tagged_records_new(id_user, UNSETTAG, event_bot)
-            send_menu = BASIC_MENU
+            send_menu = NO_MENU
         elif button_data == '/bm_dbinfo':
             # Get info about DB
             await query_db_info(event_bot,id_user)
@@ -1070,8 +1079,8 @@ def main_client():
                 Button.url(_("Control"), 't.me/'+bot_name+'?start')
                 ]
         # get photo from nnm message and create my photo
-        film_photo_t = await client.download_media(msg, bytes)
-        film_photo_d = film_photo_t
+        film_photo = await client.download_media(msg, bytes)
+        film_photo_d = film_photo
         file_photo = io.BytesIO(film_photo_d)
         file_photo.name = "image.jpg" 
         file_photo.seek(0)  # set cursor to the beginning
@@ -1092,7 +1101,7 @@ def main_client():
                 else:
                     send_msg = await bot.send_file(PeerChannel(Channel_my_id), file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" ) 
                     #db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link)
-                    db_add_film_new(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, film_section, film_genre, kpsk_r, imdb_r, film_description, film_photo_t )
+                    db_add_film_new(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, film_section, film_genre, kpsk_r, imdb_r, film_description, film_photo )
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except Exception as error:
