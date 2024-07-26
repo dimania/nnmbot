@@ -372,7 +372,6 @@ async def show_card_one_record_menu( rows=None, event=None ):
             logging.debug(f"Get callback event_bot_list {event_bot_list}")  
             button_data = event_bot_list.data.decode()
             await event_bot_list.delete()
-            bot.remove_event_handler(event_bot_list)
             i=0
             if button_data.find('NEXT', 0, 4) != -1:
                 i = int(button_data.replace('NEXT', '')) + 1 
@@ -384,6 +383,9 @@ async def show_card_one_record_menu( rows=None, event=None ):
                 if i == -1:
                    i = lenrows-1
                 await send_card_one_record( dict(rows[i]).get("id"), i, event )
+            if button_data == 'HOME_MENU':
+                removed_handler=bot.remove_event_handler(callback_bot_list)
+                logging.debug(f"Remove handler event_bot_list =  {removed_handler}") 
     else:
         message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)
@@ -560,7 +562,7 @@ async def create_rights_user_menu(level, event, id_user):
     #await event.respond(_("Select user for change rights"))
     await event.respond(_("**☣     Select rights:    **"), parse_mode='md', buttons=keyboard)
 
-async def create_yes_no_dialog(question, event):
+async def create_yes_no_dialog(question, event): #FIXME change to create_choice_dialog
     ''' Create yes or no buttons with text '''
     logging.debug(f"Create yes or no buttons")
     keyboard = [
@@ -571,6 +573,28 @@ async def create_yes_no_dialog(question, event):
     ]
     # await bot.send_message(PeerChannel(Channel_my_id),_("Work with database"), buttons=keyboard)
     await event.respond(question, parse_mode='md', buttons=keyboard)
+
+async def create_choice_dialog(question, choice_buttons, event):
+    ''' Create choice buttons with text question
+        dict choice_buttons = {
+             "text_button":"values for bot"
+             ....
+            }
+    '''
+    logging.debug(f"Create choice buttons")
+    button = []
+    for text, action in choice_buttons.items():
+        button.append(Button.inline(text, action))
+
+    await event.respond(question, parse_mode='md', buttons=button)
+    @bot.on(events.CallbackQuery())
+    async def callback_bot_choice(event_bot_choice):
+        logging.debug(f"Get callback event_bot_list {event_bot_choice}")  
+        button_data = event_bot_choice.data.decode()
+        await event_bot_list.delete()
+        #ACTION()
+        removed_handler=bot.remove_event_handler(callback_bot_choice)
+        logging.debug(f"Remove handler event_bot_list =  {removed_handler}")
 
 async def check_user(channel, user, event):
     ''' Check right of User '''
@@ -784,10 +808,12 @@ def main_bot():
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwlist':
             # Get films tagget
+            await create_choice_dialog(_("Get list or card format"), {_("List"):"list",_("Card"):"card"}, event_bot)
             await query_tagged_records_new(id_user, SETTAG, event_bot)
             send_menu = NO_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early
+            await create_choice_dialog(_("Get list or card format"), {_("List"):"list",_("Card"):"card"}, event_bot)
             await query_tagged_records_new(id_user, UNSETTAG, event_bot)
             send_menu = NO_MENU
         elif button_data == '/bm_dbinfo':
