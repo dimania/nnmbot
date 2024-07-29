@@ -574,6 +574,39 @@ async def create_yes_no_dialog(question, event): #FIXME change to create_choice_
     # await bot.send_message(PeerChannel(Channel_my_id),_("Work with database"), buttons=keyboard)
     await event.respond(question, parse_mode='md', buttons=keyboard)
 
+def decorator_dialog(question, choice_buttons, event):
+    ''' Create decorator for choice buttons with text question
+        and list by list or card show
+       dict choice_buttons = {
+            "button1": ["Yes", "yes", "test_fun_as_parm0(1,1,1)"],
+            "button2": ["No", "no", "test_fun_as_parm0(2,2,2)"],
+            "button3": ["Cancel", "cancel", "test_fun_as_parm0(3,3,3)"]
+        }
+    '''
+    def real_decorator(func): # бъявляем декоратор
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            #return func(*args, **kwargs)
+            logging.debug(f"Before call list") # мой код до выполнения фукции
+            logging.debug(f"Create choice buttons")
+            button = []
+            for text, action in choice_buttons.items():
+                button.append(Button.inline(text, action))
+
+            await event.respond(question, parse_mode='md', buttons=button)
+            @bot.on(events.CallbackQuery())
+            async def callback_bot_choice(event_bot_choice):
+                logging.debug(f"Get callback event_bot_list {event_bot_choice}")  
+                button_data = event_bot_choice.data.decode()
+                await event_bot_list.delete()
+                #IF
+                func(*args, **kwargs) # Call real list
+            logging.debug(f"After call list") # мой код после выполнения функции  
+        return wrapper
+    return real_decorator     # возвращаем декоратор
+
+
+
 async def create_choice_dialog(question, choice_buttons, event):
     ''' Create choice buttons with text question
         dict choice_buttons = {
