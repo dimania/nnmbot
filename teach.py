@@ -141,6 +141,39 @@ def db_list_tagged_films_id_new( id_user=None, tag=None ):
     rows = cursor.fetchall()
     return rows
 
+
+
+def decorator_dialog(question, choice_buttons, event):
+    ''' Create decorator for choice buttons with text question
+        and list by list or card show
+       dict choice_buttons = {
+            "button1": ["Yes", "yes", "test_fun_as_parm0(1,1,1)"],
+            "button2": ["No", "no", "test_fun_as_parm0(2,2,2)"],
+            "button3": ["Cancel", "cancel", "test_fun_as_parm0(3,3,3)"]
+        }
+    '''
+    def real_decorator(func): # бъявляем декоратор
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            #return func(*args, **kwargs)
+            logging.debug(f"Before call list") # мой код до выполнения фукции
+            logging.debug(f"Create choice buttons")
+            button = []
+            for text, action in choice_buttons.items():
+                button.append(Button.inline(text, action))
+
+            await event.respond(question, parse_mode='md', buttons=button)
+            @bot.on(events.CallbackQuery())
+            async def callback_bot_choice(event_bot_choice):
+                logging.debug(f"Get callback event_bot_list {event_bot_choice}")  
+                button_data = event_bot_choice.data.decode()
+                await event.delete()
+                #IF
+                func(*args, **kwargs) # Call real list
+            logging.debug(f"After call list") # мой код после выполнения функции  
+        return wrapper
+    return real_decorator     # возвращаем декоратор
+
 def test_fun_as_parm0(a1,b1,c1):
   print(f"Call func as par: {a1},{b1},{c1}")
 def test_fun_as_parm1(a1,b1,c1):
@@ -154,7 +187,7 @@ def decorator_wrapper(*args_p, **kwargs_p):
             #print(f"before {kwargs_p['some']['Message']},{kwargs_p['d']}") # мой код до выполнения фукции
             for data in kwargs_p['some']:
               #eval(kwargs_p['some'][0])
-              print(f"{kwargs_p['some'][data][2]}")
+              #print(f"{kwargs_p['some'][data][2]}")
               eval(kwargs_p['some'][data][2])
             func( *args, **kwargs)
             print("after") # мой код после выполнения функции  
@@ -164,10 +197,10 @@ def decorator_wrapper(*args_p, **kwargs_p):
 some_par=list(('test_fun_as_parm0(1,2,3)','test_fun_as_parm1(3,3,3)'))
 #some_par[0]=test_fun_as_parm0(1,2,3)
 #some_par[1]=test_fun_as_parm1(3,3,3)
-
+#x=10
 button_run = {
       #"Message": "Text of Message",
-      "button1": ["Yes", "yes", "test_fun_as_parm0(1,1,1)"],
+      "button1": ["Yes", "yes", "test_fun_as_parm0(x,1,1)"],
       "button2": ["No", "no", "test_fun_as_parm0(2,2,2)"],
       "button3": ["Cancel", "cancel", "test_fun_as_parm0(3,3,3)"]
 }
@@ -180,11 +213,45 @@ def func(a,b,c,d):
 def funcnew(a,b,c,d):
   print(f"In func! {a},{b},{c},{d}")
 
+def test_simle_func(choice_buttons,list_args):
+   for button_press in choice_buttons:
+      #eval(choice_buttons[button_press][2])
+      print(f"3:{choice_buttons[button_press][3]}")
+      choice_buttons[button_press][2](*choice_buttons[button_press][3])
+      choice_buttons[button_press][2](*list_args)
 
-func(3,4,5,6)
+   button = []
+   for button1 in choice_buttons:
+      print(f"Append:{choice_buttons[button1][0]}->{choice_buttons[button1][1]}")
+      button.append(Button.inline(choice_buttons[button1][0], choice_buttons[button1][1]))
+   print("----") 
+   #fun
 
+
+def test_local_var():
+  x=100
+  button_run = {
+      #"Message": "Text of Message",
+      "button1": ["Yes", "yes", test_fun_as_parm0,[x,10,11]]
+      #"button2": ["No", "no", "test_fun_as_parm0(2,2,2)"],
+      #"button3": ["Cancel", "cancel", "test_fun_as_parm0(3,3,3)"]
+    }
+  #func(3,4,5,6)
+  call_f=test_fun_as_parm0(x,1,2)
+  list_args=[9,10,11]
+  test_simle_func(button_run,list_args)
+
+
+#test_local_var()
+list_args=[9,10,11,[1,2,3],12,1]
+if 11 in list_args:
+   print("Exist")
+else: 
+    print("Not Exist")
+exit(0)
 #funcnew(6,5,4,3)
-
+for data in button_run:
+   print(f"{data}={button_run[data][0]}->{data[1]}")
 exit(0)
 
 def test_callf(func):

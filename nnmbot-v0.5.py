@@ -574,61 +574,39 @@ async def create_yes_no_dialog(question, event): #FIXME change to create_choice_
     # await bot.send_message(PeerChannel(Channel_my_id),_("Work with database"), buttons=keyboard)
     await event.respond(question, parse_mode='md', buttons=keyboard)
 
-def decorator_dialog(question, choice_buttons, event):
-    ''' Create decorator for choice buttons with text question
-        and list by list or card show
-       dict choice_buttons = {
-            "button1": ["Yes", "yes", "test_fun_as_parm0(1,1,1)"],
-            "button2": ["No", "no", "test_fun_as_parm0(2,2,2)"],
-            "button3": ["Cancel", "cancel", "test_fun_as_parm0(3,3,3)"]
-        }
-    '''
-    def real_decorator(func): # бъявляем декоратор
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            #return func(*args, **kwargs)
-            logging.debug(f"Before call list") # мой код до выполнения фукции
-            logging.debug(f"Create choice buttons")
-            button = []
-            for text, action in choice_buttons.items():
-                button.append(Button.inline(text, action))
-
-            await event.respond(question, parse_mode='md', buttons=button)
-            @bot.on(events.CallbackQuery())
-            async def callback_bot_choice(event_bot_choice):
-                logging.debug(f"Get callback event_bot_list {event_bot_choice}")  
-                button_data = event_bot_choice.data.decode()
-                await event_bot_list.delete()
-                #IF
-                func(*args, **kwargs) # Call real list
-            logging.debug(f"After call list") # мой код после выполнения функции  
-        return wrapper
-    return real_decorator     # возвращаем декоратор
-
-
-
-async def create_choice_dialog(question, choice_buttons, event):
-    ''' Create choice buttons with text question
+async def create_choice_dialog(question, choice_buttons, event, level):
+    ''' Create dialog for choice buttons with text question
+        and run function when choice was 
+        question = "Text message for choice"
         dict choice_buttons = {
-             "text_button":"values for bot"
-             ....
-            }
+            "button1": ["Yes", "_yes",func_show_sombody0,[arg1,arg2...], SHOW_OR_NOT_MENU (optional) ],
+            "button2": ["No", "_no", func_show_sombody1,[arg1,arg2...]],
+            "button3": ["Cancel", "_cancel", func_show_sombody0,[arg1,arg2...]]
+        }
+        event = bot event handled id
+        level = user level for show menu exxtended or no
     '''
     logging.debug(f"Create choice buttons")
     button = []
-    for text, action in choice_buttons.items():
-        button.append(Button.inline(text, action))
-
+    # Create butons and send to channel (choice dialog)
+    for button_s in choice_buttons:
+        button.append(Button.inline(choice_buttons[button_s][0], choice_buttons[button_s][1]))
     await event.respond(question, parse_mode='md', buttons=button)
+    # Run hundler for dialog
     @bot.on(events.CallbackQuery())
     async def callback_bot_choice(event_bot_choice):
         logging.debug(f"Get callback event_bot_list {event_bot_choice}")  
         button_data = event_bot_choice.data.decode()
-        await event_bot_list.delete()
-        #ACTION()
-        removed_handler=bot.remove_event_handler(callback_bot_choice)
-        logging.debug(f"Remove handler event_bot_list =  {removed_handler}")
-
+        await event.delete()
+        #Get reaction and run some function from dict choice_buttons
+        for button_press in choice_buttons:
+            if button_data == choice_buttons[button_press][1]:
+                removed_handler=bot.remove_event_handler(callback_bot_choice)
+                logging.debug(f"Remove handler callback_bot_choice =  {removed_handler}")
+                await choice_buttons[button_press][2](*choice_buttons[button_press][3])
+                if BASIC_MENU in choice_buttons[button_press]: #FIXME BASIC_MENU in list may be or not accidentally?
+                    await create_basic_menu(level, event)
+        
 async def check_user(channel, user, event):
     ''' Check right of User '''
     logging.debug(f"Try Get permissions for channe={channel} user={user}")
@@ -718,7 +696,28 @@ async def query_user_tag_film(event, id_nnm, id_user):
     logging.info(f"User {id_user} tag film id_nnm={id_nnm} with result={res}")
     #bdata = 'TAG'+id_nnm
     await event.answer(_('Film added to database'), alert=True)
-  
+
+async def add_new_user(event):
+    '''
+    Add new user 
+    '''
+    id_user = event.message.peer_id.user_id
+    user_ent = await bot.get_entity(id_user)
+    name_user = user_ent.username
+    if name_user == None: name_user = user_ent.first_name
+    logging.debug(f"Get username for id {id_user}: {name_user}")
+    #await query_add_user(id_user, name_user, event)
+    user_ent = await bot.get_input_entity(admin_name)
+    await bot.send_message(user_ent,_("New user **")+name_user+_("** request approve."),parse_mode='md')
+    return
+
+async def home():
+    '''
+    stub function
+    '''
+    logging.debug("Call home stub function")
+    return 0 
+
 def main_bot():
     ''' Loop for bot connection '''
 
@@ -770,6 +769,7 @@ def main_bot():
         logging.debug(f"Get NewMessage event_bot: {event_bot}")
         menu_level = 0
         #user = event_bot.message.peer_id.user_id
+        #logging.info(f"USER_ID:{event_bot.message.peer_id.user_id}")
         try:
             ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
         except Exception as error:
@@ -777,7 +777,13 @@ def main_bot():
             return
         
         if ret == USER_NEW:     # New user
-            await create_yes_no_dialog(_('**Y realy want tag/untag films**'), event_bot)
+            choice_buttons = {
+            "button1": [_("Yes"), "YES_NEW_USER",add_new_user,[event_bot,event_bot.message.peer_id.user_id]],
+            "button2": [_("No"), "NO_NEW_USER", event_bot.respond,[_('Goodbye! See you later...')]]
+            }
+            await create_choice_dialog(_('**Y realy want tag/untag films**'), choice_buttons, event_bot, menu_level)
+            send_menu = NO_MENU
+            #await create_yes_no_dialog(_('**Y realy want tag/untag films**'), event_bot)
             return
         elif ret == USER_BLOCKED:   # Blocked
             await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
@@ -841,13 +847,23 @@ def main_bot():
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwlist':
             # Get films tagget
-            await create_choice_dialog(_("Get list or card format"), {_("List"):"list",_("Card"):"card"}, event_bot)
-            await query_tagged_records_new(id_user, SETTAG, event_bot)
+            choice_buttons = {
+            "button1": ["Card", "CARD", query_tagged_records_new,[id_user, SETTAG, event_bot]],
+            "button2": ["List", "LIST", query_tagged_records,[id_user, SETTAG, event_bot],BASIC_MENU],
+            "button3": ["Cancel", "HOME_MENU", home,[]]
+            }
+            await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
+            #await query_tagged_records_new(id_user, SETTAG, event_bot)
             send_menu = NO_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early
-            await create_choice_dialog(_("Get list or card format"), {_("List"):"list",_("Card"):"card"}, event_bot)
-            await query_tagged_records_new(id_user, UNSETTAG, event_bot)
+            choice_buttons = {
+            "button1": ["Card", "CARD", query_tagged_records_new,[id_user, SETTAG, event_bot]],
+            "button2": ["List", "LIST", query_tagged_records,[id_user, SETTAG, event_bot]],
+            "button3": ["Cancel", "HOME_MENU", home,[]]
+            }
+            await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
+            #await query_tagged_records_new(id_user, UNSETTAG, event_bot)
             send_menu = NO_MENU
         elif button_data == '/bm_dbinfo':
             # Get info about DB
