@@ -12,7 +12,8 @@ import myconfig as cfg
 from telethon import TelegramClient, events, utils
 from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl, MessageEntityUrl
 from telethon.tl.custom import Button
-from telethon.errors import MessageNotModifiedError
+from telethon import errors
+from telethon.errors import MessageNotModifiedError 
 from telethon.events import StopPropagation
 from datetime import datetime, date, time, timezone
 from bs4 import BeautifulSoup
@@ -195,12 +196,6 @@ def db_info( id_user ):
     rows = cursor.fetchall()
     return rows
 
-def db_list_all_old():# NO NEED LATE
-    ''' List all database '''
-    cursor.execute('SELECT  * FROM Films')
-    rows = cursor.fetchall()
-    return rows
-
 def db_list_all():
     ''' List all records form database '''
     cursor.execute('SELECT name, nnm_url, mag_link FROM Films')
@@ -301,12 +296,6 @@ def db_list_tagged_films( id_user=None, tag=SETTAG ):
     rows = cursor.fetchall()
     return rows
 
-def db_list_tagged_films_new( id_user=None, tag=SETTAG ): #NO NEED
-    ''' List only records with set tag '''
-    cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, photo FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
-    rows = cursor.fetchall()
-    return rows
-
 def db_list_tagged_films_id( id_user=None, tag=SETTAG ):
     ''' List only records with set tag '''
     cursor.execute("SELECT id FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
@@ -346,12 +335,6 @@ def db_get_tag( id_nnm, id_user ):
     cursor.execute("SELECT tag FROM Ufilms WHERE id_Films = (SELECT id FROM Films WHERE id_nnm=?) AND id_user=?", (id_nnm, id_user,))
     rows = cursor.fetchall()
     return rows
-
-async def query_all_records_old(event):
-    ''' Get all database, Use with carefully may be many records '''
-    logging.info(f"Query all db records")
-    rows = db_list_all_old()
-    await send_lists_records( rows, LIST_REC_IN_MSG, event )
 
 async def query_all_records(event):
     ''' 
@@ -397,7 +380,7 @@ async def show_card_one_record_menu( rows=None, event=None ):
         rows - list id records 
         event - descriptor channel '''
     lenrows=len(rows)
-    if rows:       
+    if rows:
         await send_card_one_record( dict(rows[0]).get("id"), 0, event )
         @bot.on(events.CallbackQuery())
         async def callback_bot_list(event_bot_list):
@@ -475,7 +458,6 @@ async def send_lists_records( rows, num_per_message, event ):
     if rows:
         i = 0
         message=""
-        #logging.info(f"LENS ROWS:{len(rows)}")
         for row in rows:
             message = message + f'{i+1}. <a href="{dict(row).get("nnm_url")}">{dict(row).get("name")}</a>\n'
             mag_link_str = dict(row).get("mag_link")
@@ -483,10 +465,18 @@ async def send_lists_records( rows, num_per_message, event ):
                message = message + f'<a href="{magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
             i = i + 1
             if not i%num_per_message:
-               await event.respond(message, parse_mode='html', link_preview=0)
-               message=""
-        if (i < num_per_message and i != 0) or (i != len(rows)):  
-           await event.respond(message, parse_mode='html', link_preview=0) 
+                try:
+                    await event.respond(message, parse_mode='html', link_preview=0)
+                except errors.FloodWaitError as e:
+                    logging.info('Have to sleep', e.seconds, 'seconds')
+                    asyncio.sleep(e.seconds)
+                message=""
+        if i%num_per_message:
+            try: 
+                await event.respond(message, parse_mode='html', link_preview=0) 
+            except errors.FloodWaitError as e:
+                    logging.info('Have to sleep', e.seconds, 'seconds')
+                    asyncio.sleep(e.seconds)
     else:
         message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)
@@ -510,16 +500,6 @@ async def query_db_info(event, id_user):
         str(rows[1][0])+_("\nEarly tagged: ")+str(rows[2][0])
     await event.respond(message, parse_mode='html', link_preview=0)
 
-async def query_add_user(id_user, name_user, event): #NO NEED MORE
-    ''' Add user to database '''
-    logging.info(f"Add user to database ")
-    res = db_add_user(id_user, name_user)
-    if res:
-        await event.respond(_("Yoy already power user!"))
-    else:
-        message = _("You request send to Admins, and will be reviewed soon.")
-        await event.respond(message)
-        
 async def create_basic_menu(level, event):
     ''' Create basic menu control database '''
     logging.info(f"Create menu buttons")
@@ -593,18 +573,6 @@ async def create_rights_user_menu(level, event, id_user):
     ]
     #await event.respond(_("Select user for change rights"))
     await event.respond(_("**☣     Select rights:    **"), parse_mode='md', buttons=keyboard)
-
-async def create_yes_no_dialog(question, event): #NO NEED MORE
-    ''' Create yes or no buttons with text '''
-    logging.debug(f"Create yes or no buttons")
-    keyboard = [
-        [
-            Button.inline(_("Yes"), b"/yes"),
-            Button.inline(_("No"), b"/no")
-        ]
-    ]
-    # await bot.send_message(PeerChannel(Channel_my_id),_("Work with database"), buttons=keyboard)
-    await event.respond(question, parse_mode='md', buttons=keyboard)
 
 async def create_choice_dialog(question, choice_buttons, event, level):
     ''' Create dialog for choice buttons with text question
