@@ -195,15 +195,21 @@ def db_info( id_user ):
     rows = cursor.fetchall()
     return rows
 
-def db_list_all_old():
+def db_list_all_old():# NO NEED LATE
     ''' List all database '''
     cursor.execute('SELECT  * FROM Films')
     rows = cursor.fetchall()
     return rows
 
-def db_list_all_old():
-    ''' List all database '''
-    cursor.execute('SELECT  * FROM Films')
+def db_list_all():
+    ''' List all records form database '''
+    cursor.execute('SELECT name, nnm_url, mag_link FROM Films')
+    rows = cursor.fetchall()
+    return rows
+
+def db_list_all_id():
+    ''' List only id all records from database '''
+    cursor.execute('SELECT id FROM Films')
     rows = cursor.fetchall()
     return rows
 
@@ -341,12 +347,32 @@ def db_get_tag( id_nnm, id_user ):
     rows = cursor.fetchall()
     return rows
 
-async def query_all_records(event):
+async def query_all_records_old(event):
     ''' Get all database, Use with carefully may be many records '''
     logging.info(f"Query all db records")
     rows = db_list_all_old()
     await send_lists_records( rows, LIST_REC_IN_MSG, event )
-    
+
+async def query_all_records(event):
+    ''' 
+        Get and send all database records, 
+        Use with carefully may be many records 
+    '''
+    logging.info(f"Query all db records")
+    rows = db_list_all()
+    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+
+async def query_all_records_by_one(event):
+    ''' 
+        Get and send all database records, 
+        one by one wint menu.
+        Use with carefully may be many records 
+    '''
+    logging.info(f"Query db records for  ")
+    rows = db_list_all_id()
+    ret = await show_card_one_record_menu( rows, event )
+    return ret
+
 async def query_search(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
@@ -440,25 +466,26 @@ async def send_card_one_record( id, index, event ):
     logging.debug(f"Event:{event}")
     send_msg = await bot.send_file(event.original_update.peer, file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" )
     
-async def send_lists_records( rows, num, event ):
+async def send_lists_records( rows, num_per_message, event ):
     ''' Create messages from  list records and send to channel 
         rows - list records {url,name,magnet_url}
-        num - module how many records insert in one messag
+        num_per_message - module how many records insert in one messag
         event - descriptor channel '''
     
     if rows:
         i = 0
         message=""
+        #logging.info(f"LENS ROWS:{len(rows)}")
         for row in rows:
             message = message + f'{i+1}. <a href="{dict(row).get("nnm_url")}">{dict(row).get("name")}</a>\n'
             mag_link_str = dict(row).get("mag_link")
             if mag_link_str:
                message = message + f'<a href="{magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
             i = i + 1
-            if not i%num:
+            if not i%num_per_message:
                await event.respond(message, parse_mode='html', link_preview=0)
                message=""
-        if i < num and i != 0: 
+        if (i < num_per_message and i != 0) or (i != len(rows)):  
            await event.respond(message, parse_mode='html', link_preview=0) 
     else:
         message = _("😔 No records")
@@ -831,8 +858,13 @@ def main_bot():
             send_menu = BASIC_MENU
         elif button_data == '/bm_dblist':  
             # Get all database, Use with carefully may be many records
-            await query_all_records(event_bot)
-            send_menu = BASIC_MENU
+            choice_buttons = {
+            "button1": [_("Card"), "CARD", query_all_records_by_one,[event_bot]],
+            "button2": [_("List"), "LIST", query_all_records,[event_bot],BASIC_MENU],
+            "button3": [_("Cancel"), "HOME_MENU", home,[]]
+            }
+            await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
+            send_menu = NO_MENU            
         elif button_data == '/bm_dwclear':
             # Clear all tag 
             res=db_switch_user_tag( id_user, UNSETTAG )
@@ -841,18 +873,18 @@ def main_bot():
         elif button_data == '/bm_dwlist':
             # Get films tagget
             choice_buttons = {
-            "button1": ["Card", "CARD", query_tagged_records_by_one,[id_user, SETTAG, event_bot]],
-            "button2": ["List", "LIST", query_tagged_records_list,[id_user, SETTAG, event_bot],BASIC_MENU],
-            "button3": ["Cancel", "HOME_MENU", home,[]]
+            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, SETTAG, event_bot]],
+            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, SETTAG, event_bot],BASIC_MENU],
+            "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
             await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
             send_menu = NO_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early
             choice_buttons = {
-            "button1": ["Card", "CARD", query_tagged_records_by_one,[id_user, SETTAG, event_bot]],
-            "button2": ["List", "LIST", query_tagged_records_list,[id_user, SETTAG, event_bot]],
-            "button3": ["Cancel", "HOME_MENU", home,[]]
+            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, SETTAG, event_bot]],
+            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, SETTAG, event_bot],BASIC_MENU],
+            "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
             await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
             send_menu = NO_MENU
