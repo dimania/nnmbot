@@ -165,13 +165,6 @@ def db_init():
 
     connection.commit()
 
-def db_add_film_old(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link): #NO NEED
-    ''' Add new Film to database '''
-    cur_date = datetime.now()
-    cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                   (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, cur_date))
-    connection.commit()
-
 def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, film_genre, film_rating_kpsk, film_rating_imdb, film_description, film_photo ):
     ''' Add new Film to database '''
     cur_date = datetime.now()
@@ -447,6 +440,7 @@ async def send_card_one_record( id, index, event ):
     #FIX ME as send? as respond or as send_file message
     #await event.respond(message, parse_mode='html', link_preview=0)
     logging.debug(f"Event:{event}")
+    file_photo="https://nnmstatic.win/forum/image.php?link=https://i.ibb.co/dLmk02S/234234.jpg"
     send_msg = await bot.send_file(event.original_update.peer, file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" )
     
 async def send_lists_records( rows, num_per_message, event ):
@@ -1003,7 +997,7 @@ def main_client():
 
     @client.on(events.NewMessage(chats=[PeerChannel(Channel_mon_id)], pattern=filter))
     async def normal_handler(event):
-        url = post_body = rating_url = []
+        url = post_body = rating_url =  image_url = []
         mydict = {}
         logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")
         msg = event.message
@@ -1062,6 +1056,8 @@ def main_client():
             rat = a_hr.get('title')
             if kpr_tmpl.search(rat):
                 rating_url = rat
+        for a_hr in post_body.find_all(class_='postImg postImgAligned img-right'):
+            image_url = a_hr.get('title')
 
         k = Id[0]
         v = ""
@@ -1167,7 +1163,7 @@ def main_client():
                 else:
                     send_msg = await bot.send_file(PeerChannel(Channel_my_id), file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" ) 
                     #db_add_film_old(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link)
-                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, film_section, film_genre, kpsk_r, imdb_r, film_description, film_photo )
+                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, section, mydict.get(Id[2]), kpsk_r, imdb_r, mydict.get(Id[5]), film_photo )
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except Exception as error:
