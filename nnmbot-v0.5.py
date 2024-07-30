@@ -164,14 +164,14 @@ def db_init():
 
     connection.commit()
 
-def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link):
+def db_add_film_old(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link): #NO NEED
     ''' Add new Film to database '''
     cur_date = datetime.now()
     cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                    (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, cur_date))
     connection.commit()
 
-def db_add_film_new(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, film_genre, film_rating_kpsk, film_rating_imdb, film_description, film_photo ):
+def db_add_film(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, film_genre, film_rating_kpsk, film_rating_imdb, film_description, film_photo ):
     ''' Add new Film to database '''
     cur_date = datetime.now()
     cursor.execute("INSERT INTO Films (id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, section, genre, rating_kpsk, rating_imdb, description, photo, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
@@ -195,13 +195,19 @@ def db_info( id_user ):
     rows = cursor.fetchall()
     return rows
 
-def db_list_all():
+def db_list_all_old():
     ''' List all database '''
     cursor.execute('SELECT  * FROM Films')
     rows = cursor.fetchall()
     return rows
 
-def db_search(str_search):
+def db_list_all_old():
+    ''' List all database '''
+    cursor.execute('SELECT  * FROM Films')
+    rows = cursor.fetchall()
+    return rows
+
+def db_search_old(str_search): #NO NEED LATE
     ''' Search in db '''
     str_search = '%'+str_search+'%'
     cursor.execute(
@@ -209,7 +215,7 @@ def db_search(str_search):
     rows = cursor.fetchall()
     return rows
 
-def db_search_new(str_search):
+def db_search_list(str_search):
     ''' Search in db '''
     str_search = '%'+str_search+'%'
     cursor.execute(
@@ -217,7 +223,7 @@ def db_search_new(str_search):
     rows = cursor.fetchall()
     return rows
 
-def db_search_id_new(str_search):
+def db_search_id(str_search):
     ''' Search in db '''
     str_search = '%'+str_search+'%'
     cursor.execute(
@@ -289,19 +295,19 @@ def db_list_tagged_films( id_user=None, tag=SETTAG ):
     rows = cursor.fetchall()
     return rows
 
-def db_list_tagged_films_new( id_user=None, tag=SETTAG ):
+def db_list_tagged_films_new( id_user=None, tag=SETTAG ): #NO NEED
     ''' List only records with set tag '''
     cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, photo FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
     rows = cursor.fetchall()
     return rows
 
-def db_list_tagged_films_id_new( id_user=None, tag=SETTAG ):
+def db_list_tagged_films_id( id_user=None, tag=SETTAG ):
     ''' List only records with set tag '''
     cursor.execute("SELECT id FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
     rows = cursor.fetchall()
     return rows
 
-def db_film_by_id_new( id=None ):
+def db_film_by_id( id=None ):
     ''' List info by id record '''
     cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, photo FROM Films WHERE id=?", (id,))
     row = cursor.fetchone()
@@ -338,25 +344,25 @@ def db_get_tag( id_nnm, id_user ):
 async def query_all_records(event):
     ''' Get all database, Use with carefully may be many records '''
     logging.info(f"Query all db records")
-    rows = db_list_all()
+    rows = db_list_all_old()
     await send_lists_records( rows, LIST_REC_IN_MSG, event )
     
 async def query_search(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
-    rows = db_search(str_search)
+    rows = db_search_old(str_search)
     await send_lists_records( rows, LIST_REC_IN_MSG, event )
     
-async def query_tagged_records(id_user, tag, event):
+async def query_tagged_records_list(id_user, tag, event):
     ''' Get films tagget for user '''
     logging.info(f"Query db records with set tag")
     rows = db_list_tagged_films( id_user=id_user, tag=tag )
     await send_lists_records( rows, LIST_REC_IN_MSG, event )
 
-async def query_tagged_records_new(id_user, tag, event):
+async def query_tagged_records_by_one(id_user, tag, event):
     ''' Get films tagget for user '''
     logging.info(f"Query db records with set tag")
-    rows = db_list_tagged_films_id_new( id_user=id_user, tag=tag )
+    rows = db_list_tagged_films_id( id_user=id_user, tag=tag )
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
@@ -396,7 +402,7 @@ async def send_card_one_record( id, index, event ):
         id - number film in db
         event - descriptor channel '''
 
-    row=db_film_by_id_new( id )
+    row=db_film_by_id( id )
     film_name = f"<b>{index+1}. </b><a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
     film_section = f"🟢<b>Раздел:</b> \n{dict(row).get("section")}"
     film_genre = f"🟢<b>Жанр:</b> {dict(row).get("genre")}\n"
@@ -463,7 +469,7 @@ async def query_clear_tagged_records(id_user, event):
     logging.info(f"Query db for clear tag ")
     rows = db_switch_user_tag( UNSETTAG, id_user )
     if rows:
-        message = 'Clear '+rows+' records'
+        message = _('Clear ')+rows+_(' records')
     else:
         message = _("No records")
     await event.respond(message, parse_mode='html', link_preview=0)
@@ -477,7 +483,7 @@ async def query_db_info(event, id_user):
         str(rows[1][0])+_("\nEarly tagged: ")+str(rows[2][0])
     await event.respond(message, parse_mode='html', link_preview=0)
 
-async def query_add_user(id_user, name_user, event):
+async def query_add_user(id_user, name_user, event): #NO NEED MORE
     ''' Add user to database '''
     logging.info(f"Add user to database ")
     res = db_add_user(id_user, name_user)
@@ -486,8 +492,7 @@ async def query_add_user(id_user, name_user, event):
     else:
         message = _("You request send to Admins, and will be reviewed soon.")
         await event.respond(message)
-        #TODO Send message Admins if need
-
+        
 async def create_basic_menu(level, event):
     ''' Create basic menu control database '''
     logging.info(f"Create menu buttons")
@@ -562,7 +567,7 @@ async def create_rights_user_menu(level, event, id_user):
     #await event.respond(_("Select user for change rights"))
     await event.respond(_("**☣     Select rights:    **"), parse_mode='md', buttons=keyboard)
 
-async def create_yes_no_dialog(question, event): #FIXME change to create_choice_dialog
+async def create_yes_no_dialog(question, event): #NO NEED MORE
     ''' Create yes or no buttons with text '''
     logging.debug(f"Create yes or no buttons")
     keyboard = [
@@ -699,7 +704,7 @@ async def query_user_tag_film(event, id_nnm, id_user):
 
 async def add_new_user(event):
     '''
-    Add new user 
+    Add new user to DB
     '''
     id_user = event.message.peer_id.user_id
     user_ent = await bot.get_entity(id_user)
@@ -707,9 +712,14 @@ async def add_new_user(event):
     if name_user == None: name_user = user_ent.first_name
     logging.debug(f"Get username for id {id_user}: {name_user}")
     #await query_add_user(id_user, name_user, event)
-    user_ent = await bot.get_input_entity(admin_name)
-    await bot.send_message(user_ent,_("New user **")+name_user+_("** request approve."),parse_mode='md')
-    return
+    res = db_add_user(id_user, name_user)
+    if res:
+        await event.respond(_("Yoy already power user!"))
+    else:
+        await event.respond(_("You request send to Admins, and will be reviewed soon."))
+        user_ent = await bot.get_input_entity(admin_name)
+        await bot.send_message(user_ent,_("New user **")+name_user+_("** request approve."),parse_mode='md')
+    return res
 
 async def home():
     '''
@@ -783,7 +793,6 @@ def main_bot():
             }
             await create_choice_dialog(_('**Y realy want tag/untag films**'), choice_buttons, event_bot, menu_level)
             send_menu = NO_MENU
-            #await create_yes_no_dialog(_('**Y realy want tag/untag films**'), event_bot)
             return
         elif ret == USER_BLOCKED:   # Blocked
             await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
@@ -816,23 +825,7 @@ def main_bot():
         elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View
         elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
         elif ret == USER_SUPERADMIN: menu_level = MENU_SUPERADMIN # SuperUser
-        
-        if ret == USER_NEW and button_data == '/yes':
-            # Add new user to db and set min rights and block
-            user_ent = await bot.get_entity(id_user)
-            name_user = user_ent.username
-            if name_user == None: name_user = user_ent.first_name
-            logging.debug(f"Get username for id {id_user}: {name_user}")
-            await query_add_user(id_user, name_user, event_bot)
-            user_ent = await bot.get_input_entity(admin_name)
-            await bot.send_message(user_ent,_("New user **")+name_user+_("** request approve."),parse_mode='md')
-            send_menu = NO_MENU
-            return
-        elif button_data == '/no':
-            # Say goodbye
-            await event_bot.respond(_('Goodbye! See you later...'))
-            send_menu = NO_MENU
-            return
+       
         if button_data == 'HOME_MENU':  
             # Goto basic menu
             send_menu = BASIC_MENU
@@ -848,22 +841,20 @@ def main_bot():
         elif button_data == '/bm_dwlist':
             # Get films tagget
             choice_buttons = {
-            "button1": ["Card", "CARD", query_tagged_records_new,[id_user, SETTAG, event_bot]],
-            "button2": ["List", "LIST", query_tagged_records,[id_user, SETTAG, event_bot],BASIC_MENU],
+            "button1": ["Card", "CARD", query_tagged_records_by_one,[id_user, SETTAG, event_bot]],
+            "button2": ["List", "LIST", query_tagged_records_list,[id_user, SETTAG, event_bot],BASIC_MENU],
             "button3": ["Cancel", "HOME_MENU", home,[]]
             }
             await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
-            #await query_tagged_records_new(id_user, SETTAG, event_bot)
             send_menu = NO_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early
             choice_buttons = {
-            "button1": ["Card", "CARD", query_tagged_records_new,[id_user, SETTAG, event_bot]],
-            "button2": ["List", "LIST", query_tagged_records,[id_user, SETTAG, event_bot]],
+            "button1": ["Card", "CARD", query_tagged_records_by_one,[id_user, SETTAG, event_bot]],
+            "button2": ["List", "LIST", query_tagged_records_list,[id_user, SETTAG, event_bot]],
             "button3": ["Cancel", "HOME_MENU", home,[]]
             }
             await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
-            #await query_tagged_records_new(id_user, UNSETTAG, event_bot)
             send_menu = NO_MENU
         elif button_data == '/bm_dbinfo':
             # Get info about DB
@@ -1175,8 +1166,8 @@ def main_client():
                     logging.info(f"Check for resolve race condition: Film {id_nnm} exist in db - end analize.")
                 else:
                     send_msg = await bot.send_file(PeerChannel(Channel_my_id), file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" ) 
-                    #db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link)
-                    db_add_film_new(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, film_section, film_genre, kpsk_r, imdb_r, film_description, film_photo )
+                    #db_add_film_old(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link)
+                    db_add_film(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, film_section, film_genre, kpsk_r, imdb_r, film_description, film_photo )
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     logging.debug(f"Send Message:{send_msg}")
         except Exception as error:
