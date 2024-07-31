@@ -82,7 +82,9 @@ def db_init():
         connection.load_extension(ICU_extension_lib)
 
     cursor.execute('''PRAGMA foreign_keys = ON''')
-
+    
+    #ALTER TABLE Films add COLUMN image_nnm_url TEXT DEFAULT NULL
+    
     # Create basic table Films
     cursor.execute('''
       CREATE TABLE IF NOT EXISTS Films (
@@ -100,6 +102,7 @@ def db_init():
       rating_imdb TEXT DEFAULT NULL,
       description TEXT DEFAULT NULL,
       photo BLOB DEFAULT NULL,
+      image_nnm_url TEXT NULL,
       date TEXT
       )
       ''')
@@ -127,19 +130,30 @@ def db_init():
         ON DELETE CASCADE
        )
       ''')
-
+# Create table Ufilms - films tagged users
+    cursor.execute('''
+      CREATE TABLE IF NOT EXISTS Not_exist_films (
+      nef_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_film INTEGER
+       )
+      ''')
     connection.commit()
 
-def db_add_film( film_magnet_link, film_section, film_genre, film_rating_kpsk, film_rating_imdb, film_description, film_photo ):
+def db_mod_film( id, film_magnet_link, film_section, film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url ):
     ''' Add new Film to database '''
-    cur_date = datetime.now()
-    cursor.execute("INSERT INTO Films ( mag_link, section, genre, rating_kpsk, rating_imdb, description, photo) VALUES(?, ?, ?, ?, ?, ?, ? )",
-                   ( film_magnet_link, film_section, film_genre, film_rating_kpsk, film_rating_imdb, film_description, film_photo))
+    update_statement = "UPDATE Films SET mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, description=?, image_nnm_url=? WHERE id=?"
+    cursor.execute(update_statement, (film_magnet_link, film_section, film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, id,))
     connection.commit()
+
+def db_add_not_exist_film(id_film):
+    ''' Add to DB Not exist films for deletion from DB '''
+    cursor.execute("INSERT INTO Not_exist_films (id_film) VALUES(?)", (id_film,))
+    connection.commit()
+
 
 def get_film_id_from_DB():
     ''' Get id, nnm_url,id_kpsk, id_imdb from database for parsing site NNM'''
-    cursor.execute('SELECT id, nnm_url, id_nnm, id_kpsk, id_imdb FROM Films WHERE photo IS NULL' )
+    cursor.execute('SELECT id, nnm_url, id_nnm, id_kpsk, id_imdb FROM Films WHERE image_nnm_url IS NULL' )
     rows = cursor.fetchall()
     return rows
 
@@ -160,31 +174,33 @@ def get_data():
 
     rows = get_film_id_from_DB()
     i=0
-    print(len(rows))
+    print(f"ALL RECORDS: {len(rows)}")
     #for rec in rows:
     #    print(f"rec:{dict(rec).get("nnm_url")}")
 
     for row in rows:
-        print(f"i={i}")
         i=i+1
-        if i == 2: 
-            print(i)
+        print(f"CURRENT RECORD={i}")
+        if i == 10: 
             return 
         url=dict(row).get("nnm_url")
         id=dict(row).get("id")
         id_kpsk=dict(row).get("id_kpsk")
         id_imdb=dict(row).get("id_imdb")
-
+        
         #url = post_body = rating_url = []
         mydict = {}
+
                   
         try:
             page = requests.get(url, proxies=proxies)
             if page.status_code != 200:
-                logging.error(f"Can't open url:{url}, status:{page.status}")
-                return
+                logging.error(f"Can't open url:{url}, status:{page.status_code}")
+                print(f"FILM NOT EXIST ON NNM {id}:{url}")
+                db_add_not_exist_film(id)
+                continue
         except Exception as ConnectionError:
-            logging.error(f"Can't open url:{url}, status:{ConnectionError}")
+            logging.error(f"Can't open url:{url}, Error:{ConnectionError}")
             logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
             return
 
@@ -298,11 +314,12 @@ def get_data():
         #file_photo.name = "image.jpg" 
         #file_photo.seek(0)  # set cursor to the beginning
         #logging.debug(f"Message Photo{film_photo_d}")
-        
-        #db_add_film_old(send_msg.id, id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link)
-        #db_add_film( mag_link, film_section, mydict.get(Id[2]), kpsk_r, imdb_r, mydict.get(Id[5]), film_photo )
-        new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}{image_url}"
-        print(f"\n-------------\n{new_message}\n")
+        #film_photo=NULL
+        print(f"Add record:\n {mag_link}\n{section}\n{mydict.get(Id[2])}\n{kpsk_r}\n{imdb_r}\n{mydict.get(Id[5])}\n{image_url}")
+        db_mod_film( id, mag_link, section, mydict.get(Id[2]), kpsk_r, imdb_r, mydict.get(Id[5]),image_url )
+        #new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}{image_url}"
+        #print(f"\n-------------\n{new_message}\n")
+
     #return 0
 
 # main()

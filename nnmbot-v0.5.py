@@ -297,7 +297,7 @@ def db_list_tagged_films_id( id_user=None, tag=SETTAG ):
 
 def db_film_by_id( id=None ):
     ''' List info by id record '''
-    cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, photo FROM Films WHERE id=?", (id,))
+    cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description,image_nnm_url ,photo FROM Films WHERE id=?", (id,))
     row = cursor.fetchone()
     return row
 
@@ -425,22 +425,24 @@ async def send_card_one_record( id, index, event ):
             Button.inline(_("◼"), f_curr),
             Button.inline(_("▶"), f_next)
             ]
-    film_photo = dict(row).get("photo")
-    logging.debug(f"Film_photo:{film_photo}")
-    if film_photo != None:
-        file_photo = io.BytesIO(film_photo)
-        file_photo.name = "image.jpg" 
-        file_photo.seek(0)  # set cursor to the beginning        
-    else:
-        file_photo='no_image.jpg' #FIXME
-        logging.debug(f"File_photo:{file_photo}")
+    film_photo =  dict(row).get("image_nnm_url")
+    if not film_photo:
+        film_photo = dict(row).get("photo")
+        logging.debug(f"Film_photo:{film_photo}")
+        if film_photo != None:
+            file_photo = io.BytesIO(film_photo)
+            file_photo.name = "image.jpg" 
+            file_photo.seek(0)  # set cursor to the beginning        
+        else:
+            file_photo='no_image.jpg' #FIXME
+            logging.debug(f"File_photo:{file_photo}")
+    
     # Create new message 
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
     logging.debug(f"New message:{new_message}")
     #FIX ME as send? as respond or as send_file message
     #await event.respond(message, parse_mode='html', link_preview=0)
     logging.debug(f"Event:{event}")
-    file_photo="https://nnmstatic.win/forum/image.php?link=https://i.ibb.co/dLmk02S/234234.jpg"
     send_msg = await bot.send_file(event.original_update.peer, file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" )
     
 async def send_lists_records( rows, num_per_message, event ):
@@ -1023,7 +1025,7 @@ def main_client():
         try:
             page = requests.get(url, proxies=proxies)
             if page.status_code != 200:
-                logging.error(f"Can't open url:{url}, status:{page.status}")
+                logging.error(f"Can't open url:{url}, status:{page.status_code}")
                 return
         except Exception as ConnectionError:
             logging.error(f"Can't open url:{url}, status:{ConnectionError}")
@@ -1056,6 +1058,7 @@ def main_client():
             rat = a_hr.get('title')
             if kpr_tmpl.search(rat):
                 rating_url = rat
+        #Get poster url
         for a_hr in post_body.find_all(class_='postImg postImgAligned img-right'):
             image_url = a_hr.get('title')
 
