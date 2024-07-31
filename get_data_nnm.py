@@ -181,7 +181,7 @@ def get_data():
     for row in rows:
         i=i+1
         print(f"CURRENT RECORD={i}")
-        if i == 10: 
+        if i == 100: 
             return 
         url=dict(row).get("nnm_url")
         id=dict(row).get("id")
@@ -205,10 +205,13 @@ def get_data():
             return
 
         logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}")
+
         soup = BeautifulSoup(page.text, 'html.parser')
 
         # Select data where class - nav - info about tracker section
         post_body = soup.findAll('a', {'class': 'nav'})
+        post_body = soup.findAll(class_='nav')
+        print(f"Post_body:{post_body}")
         section = post_body[-1].get_text('\n', strip='True')
         logging.debug(f"Section nnm tracker: {section}")
 
@@ -226,6 +229,7 @@ def get_data():
 
         # Get url picture with rating Film on Kinopoisk site
         for a_hr in post_body.find_all(class_='postImg'):
+            print(f"a_hr={a_hr}")
             rat = a_hr.get('title')
             if kpr_tmpl.search(rat):
                 rating_url = rat
@@ -233,7 +237,8 @@ def get_data():
         for a_hr in post_body.find_all(class_='postImg postImgAligned img-right'):
             image_url = a_hr.get('title')
             #<img class="postImg postImgAligned img-right" alt="pic" title="pic" src="https://nnmstatic.win/forum/image.php?link=https://i6.imageban.ru/out/2024/07/12/389682ee7ff2fc08e2faf153742e10ae.jpg">
-        
+            print(f"image_url={image_url}")
+
         k = Id[0]
         v = ""
         
@@ -255,7 +260,10 @@ def get_data():
 
         # Get rating urls and id film on kinopoisk and iddb
         for a_hr in post_body.find_all('a'):
+            print(f"a_hr={a_hr}")
             rat = a_hr.get('href')
+            if not rat:
+                continue
             if rat.find('https://www.kinopoisk.ru/film/') != -1:
                 id_kpsk = f_tmpl.search(rat).group(1)
                 kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
@@ -265,14 +273,13 @@ def get_data():
                 imdb_url = rat.replace('?ref_=plg_rt_1', 'ratings/?ref_=tt_ov_rt')
                 logging.info(f"Create url rating from imdb: {imdb_url}")
             
-           
+        exit(0)   
         id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
 
                # Get rating film from kinopoisk if not then from imdb site
         if kpsk_url:
             rat_url = kpsk_url
-            page = requests.get(
-                rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
+            page = requests.get(rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
             # Parse data
             # FIXME me be better use xml.parser ?
             soup = BeautifulSoup(page.text, 'html.parser')

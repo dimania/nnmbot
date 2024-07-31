@@ -1102,8 +1102,7 @@ def main_client():
         # Get rating film from kinopoisk if not then from imdb site
         if kpsk_url:
             rat_url = kpsk_url
-            page = requests.get(
-                rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
+            page = requests.get(rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
             # Parse data
             # FIXME me be better use xml.parser ?
             soup = BeautifulSoup(page.text, 'html.parser')
@@ -1120,8 +1119,11 @@ def main_client():
             # Parse data
             soup = BeautifulSoup(page.text, 'html.parser')
             post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
-            imdb_r = post_body.get_text('\n', strip='True')
-            logging.info(f"Get rating from imdb: {imdb_url}")
+            if post_body:
+                imdb_r = post_body.get_text('\n', strip='True')
+                logging.info(f"Get rating from imdb: {imdb_url}")
+            else:
+                imdb_r = "-"  
         else:
             kpsk_r = "-"
             imdb_r = "-"
