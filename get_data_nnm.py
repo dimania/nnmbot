@@ -190,7 +190,6 @@ def get_data():
         
         #url = post_body = rating_url = []
         mydict = {}
-
                   
         try:
             page = requests.get(url, proxies=proxies)
@@ -207,14 +206,13 @@ def get_data():
         logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}")
 
         soup = BeautifulSoup(page.text, 'html.parser')
-
-        # Select data where class - nav - info about tracker section
-        post_body = soup.findAll('a', {'class': 'nav'})
-        post_body = soup.findAll(class_='nav')
-        print(f"Post_body:{post_body}")
-        section = post_body[-1].get_text('\n', strip='True')
-        logging.debug(f"Section nnm tracker: {section}")
-
+        
+        if not soup.find(class_='thHead'):
+           logging.error(f"I think film Transfer to archive:{url}")
+           print(f"FILM WAS TRANSFER TO ARCHIVE {id}:{url}")
+           db_add_not_exist_film(id) 
+           continue
+        
         # Select data where class - gensmall - get magnet link
         post_body = soup.find( href=re.compile("magnet:") )
         if post_body:
@@ -227,6 +225,11 @@ def get_data():
         post_body = soup.find(class_='postbody')
         text = post_body.get_text('\n', strip='True')
 
+        # Select data where class - nav - info about tracker section
+        post_body = soup.findAll('a', {'class': 'nav'})        
+        section = post_body[-1].get_text('\n', strip='True')
+        logging.debug(f"Section nnm tracker: {section}")
+
         # Get url picture with rating Film on Kinopoisk site
         for a_hr in post_body.find_all(class_='postImg'):
             print(f"a_hr={a_hr}")
@@ -238,7 +241,12 @@ def get_data():
             image_url = a_hr.get('title')
             #<img class="postImg postImgAligned img-right" alt="pic" title="pic" src="https://nnmstatic.win/forum/image.php?link=https://i6.imageban.ru/out/2024/07/12/389682ee7ff2fc08e2faf153742e10ae.jpg">
             print(f"image_url={image_url}")
-
+        
+        # Select data where class - nav - info about tracker section
+        post_body = soup.findAll('a', {'class': 'nav'})        
+        section = post_body[-1].get_text('\n', strip='True')
+        logging.debug(f"Section nnm tracker: {section}")
+        
         k = Id[0]
         v = ""
         
