@@ -134,7 +134,7 @@ def db_init():
     cursor.execute('''
       CREATE TABLE IF NOT EXISTS Not_exist_films (
       nef_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      id_film INTEGER
+      id_film INTEGER UNIQUE
        )
       ''')
     connection.commit()
@@ -147,7 +147,7 @@ def db_mod_film( id, film_magnet_link, film_section, film_genre, film_rating_kps
 
 def db_add_not_exist_film(id_film):
     ''' Add to DB Not exist films for deletion from DB '''
-    cursor.execute("INSERT INTO Not_exist_films (id_film) VALUES(?)", (id_film,))
+    cursor.execute("INSERT OR IGNORE INTO Not_exist_films (id_film) VALUES(?)", (id_film,))
     connection.commit()
 
 
@@ -171,18 +171,18 @@ def get_data():
     url_tmpl = re.compile(r'viewtopic.php\?t')
     kpr_tmpl = re.compile('www.kinopoisk.ru/rating')
     desc_tmpl = re.compile(':$')
-
+    
+    # Get all records from DB where not exist image_url
     rows = get_film_id_from_DB()
     i=0
     print(f"ALL RECORDS: {len(rows)}")
-    #for rec in rows:
-    #    print(f"rec:{dict(rec).get("nnm_url")}")
 
     for row in rows:
         i=i+1
         print(f"CURRENT RECORD={i}")
-        if i == 100: 
-            return 
+        
+        if i == 10: return 
+
         url=dict(row).get("nnm_url")
         id=dict(row).get("id")
         id_kpsk=dict(row).get("id_kpsk")
@@ -207,12 +207,18 @@ def get_data():
 
         soup = BeautifulSoup(page.text, 'html.parser')
         
-        if not soup.find(class_='thHead'):
+        # if no acces to film, get login page - class thHead on login page
+        if soup.find(class_='thHead'):
            logging.error(f"I think film Transfer to archive:{url}")
            print(f"FILM WAS TRANSFER TO ARCHIVE {id}:{url}")
            db_add_not_exist_film(id) 
            continue
-        
+       
+        # Select data where class - nav - info about tracker section
+        post_body = soup.findAll('a', {'class': 'nav'})        
+        section = post_body[-1].get_text('\n', strip='True')
+        logging.debug(f"Section nnm tracker: {section}")
+
         # Select data where class - gensmall - get magnet link
         post_body = soup.find( href=re.compile("magnet:") )
         if post_body:
@@ -225,27 +231,17 @@ def get_data():
         post_body = soup.find(class_='postbody')
         text = post_body.get_text('\n', strip='True')
 
-        # Select data where class - nav - info about tracker section
-        post_body = soup.findAll('a', {'class': 'nav'})        
-        section = post_body[-1].get_text('\n', strip='True')
-        logging.debug(f"Section nnm tracker: {section}")
-
-        # Get url picture with rating Film on Kinopoisk site
+        # Get url picture with rating Film on Kinopoisk site where class postImg
         for a_hr in post_body.find_all(class_='postImg'):
-            print(f"a_hr={a_hr}")
             rat = a_hr.get('title')
             if kpr_tmpl.search(rat):
                 rating_url = rat
-        
+
+        # Get url poster where class postImg 'postImgAligned img-right'
         for a_hr in post_body.find_all(class_='postImg postImgAligned img-right'):
             image_url = a_hr.get('title')
             #<img class="postImg postImgAligned img-right" alt="pic" title="pic" src="https://nnmstatic.win/forum/image.php?link=https://i6.imageban.ru/out/2024/07/12/389682ee7ff2fc08e2faf153742e10ae.jpg">
-            print(f"image_url={image_url}")
-        
-        # Select data where class - nav - info about tracker section
-        post_body = soup.findAll('a', {'class': 'nav'})        
-        section = post_body[-1].get_text('\n', strip='True')
-        logging.debug(f"Section nnm tracker: {section}")
+            #print(f"image_url={image_url}")
         
         k = Id[0]
         v = ""
@@ -268,7 +264,7 @@ def get_data():
 
         # Get rating urls and id film on kinopoisk and iddb
         for a_hr in post_body.find_all('a'):
-            print(f"a_hr={a_hr}")
+            #print(f"a_hr={a_hr}")
             rat = a_hr.get('href')
             if not rat:
                 continue
@@ -281,16 +277,19 @@ def get_data():
                 imdb_url = rat.replace('?ref_=plg_rt_1', 'ratings/?ref_=tt_ov_rt')
                 logging.info(f"Create url rating from imdb: {imdb_url}")
             
-        exit(0)   
         id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
 
                # Get rating film from kinopoisk if not then from imdb site
         if kpsk_url:
             rat_url = kpsk_url
-            page = requests.get(rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=proxies)
+            page = requests.get(rat_url, headers={'User-Agent': 'Mozilla/5.0'}) #, proxies=proxies
             # Parse data
-            # FIXME me be better use xml.parser ?
+            # FIXME me be better use xml.parser ?            
             soup = BeautifulSoup(page.text, 'html.parser')
+            if page.url.find('captcha'):
+               print(f"I get CAPTCHA! EXIT NOW!")
+               logging.critical(f"I get CAPTCHA! EXIT NOW!")
+               exit(-5) 
             try:
                 rating_xml = soup.find('rating')
                 kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
@@ -312,16 +311,17 @@ def get_data():
 
 
         logging.info(f"Add info to message")
-        film_name = f"<a href='{url}'>{mydict.get(Id[0])}</a>\n"
-        film_section = f"🟢<b>Раздел:</b> {section}\n"
-        film_genre = f"🟢<b>Жанр:</b> {mydict.get(Id[2])}\n"
-        film_rating = f"🟢<b>Рейтинг:</b> КП[{kpsk_r}] Imdb[{imdb_r}]\n"
-        film_description = f"🟢<b>Описание:</b> \n{mydict.get(Id[5])}\n"
+        #film_name = f"<a href='{url}'>{mydict.get(Id[0])}</a>\n"
+        #film_section = f"🟢<b>Раздел:</b> {section}\n"
+        #film_genre = f"🟢<b>Жанр:</b> {mydict.get(Id[2])}\n"
+        #film_rating = f"🟢<b>Рейтинг:</b> КП[{kpsk_r}] Imdb[{imdb_r}]\n"
+        #film_description = f"🟢<b>Описание:</b> \n{mydict.get(Id[5])}\n"
+        
         # if magnet link exist create string and href link
-        if mag_link:
-           film_magnet_link = f"<a href='{magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
-        else:
-           film_magnet_link=""
+        #if mag_link:
+        #   film_magnet_link = f"<a href='{magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
+        #else:
+        #   film_magnet_link=""
         # get photo from nnm message and create my photo
         #film_photo = client.download_media(msg, bytes) #HERE
         #film_photo_d = film_photo

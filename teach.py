@@ -244,10 +244,19 @@ def test_local_var():
 
 #test_local_var()
 list_args=[9,10,11,[1,2,3],12,1]
-if 11 in list_args:
-   print("Exist")
-else: 
-    print("Not Exist")
+if 13 in list_args:   print("Exist")
+else: print("Not Exist")
+
+url_captcha="https://www.kinopoisk.ru/showcaptcha?cc=1&mt=9ED073E2484ADB7F3C4FA195B12E2A74F412309A6B6C5FDE0C4F664ABF91DC92438F4C713C26731248B6E6C89135268CB52C004553B56B1D91AA8EBFB4B555B1DEF81BAD893D614820566336FBA1A903B3B1AB03044EF1660CD3D643EE4F14B8F513BAC7FD20857251171AA468C1C39AEC343F7653DE2129BA21182AEDCC4F58D42CB85B86B2C578CB649CA7FA010109435DFE8C44F039B504234FF8F90EA392CB55EE0F9C60D6B9163143E43202585AA592865FF018748E063E94BAE27EB3307B602498229F0574CA4B0315BAF128E1DEB81A84723952C97697779D12E7&retpath=aHR0cHM6Ly93d3cua2lub3BvaXNrLnJ1L3dlYi9hcHAucGhwL2hhbmRsZXJfcmF0aW5nX3NoYXJlLnBocD9pZD00OTM0ODE5JnR5cGU9eG1s_7d1ce332cec247e26fa9bd9e46aa829b&t=2/1722617558/ede469dcd7f509ee1b6ea8370e43c323&u=bf66f180-9e276742-6a481105-19921d8a&s=1d41a5b2e768ef6e901d6d057aea6766"
+page = requests.get(url_captcha, headers={'User-Agent': 'Mozilla/5.0'}) #, proxies=proxies
+# Parse data
+soup = BeautifulSoup(page.text, 'html.parser')
+#soup.find(class_='Link Link_view_default').get('href')
+print(page.url.find('captcha'))
+if soup.find('captcha'):
+    print(f"I get CAPTCHA! EXIT NOW!")
+    logging.critical(f"I get CAPTCHA! EXIT NOW!")
+
 exit(0)
 #funcnew(6,5,4,3)
 for data in button_run:
