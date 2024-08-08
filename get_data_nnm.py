@@ -6,6 +6,7 @@
 #!!!!!!!! Replace with you config file here !!!!!!!
 # replace myconfig with config by example
 # --------------------------------
+
 import myconfig as cfg
 # --------------------------------
 
@@ -153,7 +154,8 @@ def db_add_not_exist_film(id_film):
 
 def get_film_id_from_DB():
     ''' Get id, nnm_url,id_kpsk, id_imdb from database for parsing site NNM'''
-    cursor.execute('SELECT id, nnm_url, id_nnm, id_kpsk, id_imdb FROM Films WHERE image_nnm_url IS NULL' )
+    #cursor.execute('SELECT id, nnm_url, id_nnm, id_kpsk, id_imdb FROM Films WHERE image_nnm_url IS NULL' )
+    cursor.execute('SELECT id, nnm_url, id_nnm, id_kpsk, id_imdb FROM Films a1 WHERE image_nnm_url is NULL AND  NOT EXISTS ( SELECT 1 FROM Not_exist_films a2 WHERE a2.id_film = a1.id )')
     rows = cursor.fetchall()
     return rows
 
@@ -245,9 +247,10 @@ def get_data():
         
         k = Id[0]
         v = ""
-        
+
         # Create Dict for data about Film
         for line in text.split("\n"):
+            #print(f"Line:{line}")
             if not line.strip():
                 continue
             else:
@@ -282,13 +285,30 @@ def get_data():
                # Get rating film from kinopoisk if not then from imdb site
         if kpsk_url:
             rat_url = kpsk_url
+            movie_id=1162809
+            kp_api_url='https://api.kinopoisk.dev/v1.4/movie/'
+            #curl -X 'GET' \
+            #'https://api.kinopoisk.dev/v1.4/movie/1162809' \
+            #-H 'accept: application/json' \
+            #-H 'X-API-KEY: EV00A7X-D77432W-JYBZ0Q9-9Z97C1K'
+            kp_api_key='EV00A7X-D77432W-JYBZ0Q9-9Z97C1K'
+            response = requests.get(kp_api_url+str(movie_id), headers={'accept': 'application/json', 'X-API-KEY': kp_api_key}) #, proxies=proxies
+            # Convert json into dictionary 
+            response_dict = response.json() 
+            print(f"Response:\n{response_dict.get('rating')}")
+            rating_kp=response_dict.get('rating')
+            print(f"Ratings:\nkp:{rating_kp.get('kp')}\nimdb:{rating_kp.get('imdb')}")
+            # Pretty Printing JSON string back 
+            #print(json.dumps(response_dict, indent=4, sort_keys=True))
+            exit(0)
+            
             page = requests.get(rat_url, headers={'User-Agent': 'Mozilla/5.0'}) #, proxies=proxies
             # Parse data
             # FIXME me be better use xml.parser ?            
             soup = BeautifulSoup(page.text, 'html.parser')
-            if page.url.find('captcha'):
-               print(f"I get CAPTCHA! EXIT NOW!")
-               logging.critical(f"I get CAPTCHA! EXIT NOW!")
+            if page.url.find('captcha') != -1:
+               print(f"I get CAPTCHA! EXIT NOW!:{page.url}")
+               logging.critical(f"I get CAPTCHA! EXIT NOW!:{page.url}")
                exit(-5) 
             try:
                 rating_xml = soup.find('rating')
