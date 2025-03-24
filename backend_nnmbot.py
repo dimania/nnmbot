@@ -21,6 +21,8 @@ from telethon.events import StopPropagation
 from datetime import datetime, date, time, timezone
 from bs4 import BeautifulSoup
 from collections import OrderedDict
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 import requests
 import re
 import sqlite3
@@ -31,9 +33,6 @@ import os.path
 import sys
 import gettext
 import io
-
-
-
 
 def main_client():
     ''' Loop for client connection '''
@@ -80,14 +79,34 @@ def main_client():
         # if URL not exist return 
         if not url:
            return
-          
+
         try:
-            page = requests.get(url, proxies=sts.proxies)
+            # Конфигурируем сессию requests
+            session = requests.Session()
+
+            # Устанавливаем стратегию повторных попыток
+            retries = Retry(total=5,
+                backoff_factor=0.1,
+                status_forcelist=[500, 502, 503, 504],
+                allowed_methods=frozenset(['GET', 'POST']))
+
+            # Связываем стратегию с сессией requests
+            session.mount('http://', HTTPAdapter(max_retries=retries))
+            session.mount('https://', HTTPAdapter(max_retries=retries))
+
+            page = requests.get(url, timeout=30, proxies=sts.proxies)
             if page.status_code != 200:
                 logging.error(f"Can't open url:{url}, status:{page.status_code}")
                 return
-        except Exception as ConnectionError:
-            logging.error(f"Can't open url:{url}, status:{ConnectionError}")
+        except requests.Timeout as e:
+            logging.error(f"Timeout Error: Can't open url:{url}, status:{e}")
+            return
+        except requests.ConnectionError as e:
+            logging.error(f"Max retries exceeded Error: Can't open url:{url}, status:{e}")
+            logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
+            return
+        except requests.RequestException as e:
+            logging.error(f"General Error: Can't open url:{url}, status:{e}")
             logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
             client.disconnect()
             return
@@ -196,10 +215,6 @@ def main_client():
         film_rating = f"🟢<b>Рейтинг:</b> КП[{kpsk_r}] Imdb[{imdb_r}]\n"
         film_description = f"🟢<b>Описание:</b> \n{mydict.get(Id[5])}\n"
         # if magnet link exist create string and href link
-        #--------------------
-        # DISBLE magnet link
-        mag_link = None
-        #--------------------
         if mag_link:
            film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
         else:
@@ -211,6 +226,7 @@ def main_client():
                 Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
                 ]
 
+        #TODO: remove in future, now save only url picture
         # get photo from nnm message and create my photo
         #film_photo = await client.download_media(msg, bytes)
         #film_photo_d = film_photo
@@ -244,11 +260,11 @@ def main_client():
                         mydict.get(Id[2]), kpsk_r, imdb_r, mydict.get(Id[5]), image_nnm_url, sts.PUBL_NOT)
                     logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
 
+            # TODO: remove in future, now need for some debug 
             # Send message to Telegramm channel    
-            send_msg = await client.send_file(PeerChannel(Channel_my_id), image_nnm_url, caption=new_message, \
-                buttons=buttons_film, parse_mode="html" )
-
-            logging.debug(f"Send Message:{send_msg}")
+            #send_msg = await client.send_file(PeerChannel(Channel_my_id), image_nnm_url, caption=new_message, \
+            #    buttons=buttons_film, parse_mode="html" )
+            #logging.debug(f"Send Message:{send_msg}")
         except Exception as error:
             logging.error(f'Error in block db_lock: {error}')
         
