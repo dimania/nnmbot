@@ -7,5 +7,14 @@
             "name": "nnbot01",
             "database": "file:///home/dima/src/nnmbot/mm_database.db"
         }
-    ]
+    ],
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./test",
+        "-p",
+        "test_*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true
 }

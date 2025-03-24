@@ -135,6 +135,7 @@ def db_init():
       rating_imdb TEXT DEFAULT NULL,
       description TEXT DEFAULT NULL,
       photo BLOB DEFAULT NULL,
+      image_nnm_url TEXT NULL,
       date TEXT
       )
       ''')
