@@ -53,9 +53,9 @@ def main_client():
     if sts.use_proxy:
         prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
         client = TelegramClient(sts.session_client, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=(
-            prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=sts.mybot_token)
+            prx.group(1), prx.group(2), int(prx.group(3))))
     else:
-        client = TelegramClient(sts.session_client, sts.api_id, sts.api_hash, system_version=sts.system_version).start(bot_token=sts.mybot_token)
+        client = TelegramClient(sts.session_client, sts.api_id, sts.api_hash, system_version=sts.system_version)
 
     client.start()
     Channel_my_id = client.loop.run_until_complete(client.get_peer_id(sts.Channel_my))
@@ -242,29 +242,27 @@ def main_client():
         #trim long message ( telegramm support only 1024 byte caption )
         if len(new_message) > 1023:
             new_message = new_message[:1019]+'...'
-
+        rec_upd = ""
         try:
             async with db_lock:
                 rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
                 if rec_id:
+                    rec_id=dict(rec_id).get("id")
                     # Update exist film to DB 🔄
-                    new_message = f"🔄{new_message}"
-                    dbm.db_update_film(dict(rec_id).get("id"), id_nnm, url, mydict[Id[0]], \
+                    #new_message = f"🔄{new_message}"
+                    dbm.db_update_film(rec_id, id_nnm, url, mydict[Id[0]], \
                         id_kpsk, id_imdb, mag_link, section, mydict.get(Id[2]), kpsk_r, imdb_r, \
                             mydict.get(Id[5]), image_nnm_url, sts.PUBL_UPD)
-
-                    logging.info(f"Dublicate in DB: Film id={dict(rec_id).get("id")} id_nnm={id_nnm} exist in db - update to new release.")
+                    rec_upd='UPD'
+                    logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
                 else:
                     # Add new film to DB                     
-                    dbm.db_add_film(id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, section, \
+                    rec_id=dbm.db_add_film(id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, section, \
                         mydict.get(Id[2]), kpsk_r, imdb_r, mydict.get(Id[5]), image_nnm_url, sts.PUBL_NOT)
-                    logging.info(f"Film not exist in db - add and send, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
-
-            # TODO: remove in future, now need for some debug 
-            # Send message to Telegramm channel    
-            #send_msg = await client.send_file(PeerChannel(Channel_my_id), image_nnm_url, caption=new_message, \
-            #    buttons=buttons_film, parse_mode="html" )
-            #logging.debug(f"Send Message:{send_msg}")
+                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
+            # Send message to frondend bot for publish Film 
+            send_msg = await client.send_message(sts.bot_name,rec_upd+"PUBLISH#"+str(rec_id)),
+            logging.debug(f"Send Message:{send_msg}")
         except Exception as error:
             logging.error(f'Error in block db_lock: {error}')
         
@@ -295,6 +293,7 @@ sts.connection.row_factory = sqlite3.Row
 sts.cursor = sts.connection.cursor()
 
 dbm.db_init()
+dbm.db_create()
 
 client = main_client()
 client.run_until_disconnected()

@@ -18,12 +18,16 @@ def db_init():
         sts.connection.load_extension(sts.ICU_extension_lib)
 
     sts.cursor.execute('''PRAGMA foreign_keys = ON''')
+    sts.connection.commit()
+
+def db_create():
+    ''' Creta DB if not exist '''
 
     # Create basic table Films
     # remove - id_msg TEXT,
     # remove: photo BLOB DEFAULT NULL,    
     # add: publish INTEGER DEFAULT 0, - Flag no publish/upgrade/not publish - 1/2/0  
-
+    
     sts.cursor.execute('''
       CREATE TABLE IF NOT EXISTS Films (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,6 +86,7 @@ def db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_
                    (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, publish, cur_date ))
     sts.connection.commit()
+    return str(sts.cursor.lastrowid)
 
 def db_update_film(id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, publish = 2 ):
@@ -118,15 +123,21 @@ def db_info( id_user ):
     rows = sts.cursor.fetchall()
     return rows
 
+def db_list_4_publish():
+    ''' List records for publish on Channel form database '''
+    sts.cursor.execute("SELECT id FROM Films WHERE publish = sts.PUB_NOT OR publish = sts.PUB_UPD")
+    rows = sts.cursor.fetchall()
+    return rows
+
 def db_list_all():
     ''' List all records form database '''
-    sts.cursor.execute('SELECT name, nnm_url, mag_link FROM Films')
+    sts.cursor.execute("SELECT name, nnm_url, mag_link FROM Films")
     rows = sts.cursor.fetchall()
     return rows
 
 def db_list_all_id():
     ''' List only id all records from database '''
-    sts.cursor.execute('SELECT id FROM Films')
+    sts.cursor.execute("SELECT id FROM Films")
     rows = sts.cursor.fetchall()
     return rows
 
@@ -261,41 +272,3 @@ def db_get_tag( id_nnm, id_user ):
     rows = sts.cursor.fetchall()
     return rows
 
-async def query_all_records(event):
-    ''' 
-        Get and send all database records, 
-        Use with carefully may be many records 
-    '''
-    logging.info(f"Query all db records")
-    rows = db_list_all()
-    await send_lists_records( rows, LIST_REC_IN_MSG, event )
-
-async def query_all_records_by_one(event):
-    ''' 
-        Get and send all database records, 
-        one by one wint menu.
-        Use with carefully may be many records 
-    '''
-    logging.info(f"Query db records for  ")
-    rows = db_list_all_id()
-    ret = await show_card_one_record_menu( rows, event )
-    return ret
-
-async def query_search(str_search, event):
-    ''' Search Films in database '''
-    logging.info(f"Search in database:{str_search}")
-    rows = db_search_old(str_search)
-    await send_lists_records( rows, LIST_REC_IN_MSG, event )
-    
-async def query_tagged_records_list(id_user, tag, event):
-    ''' Get films tagget for user '''
-    logging.info(f"Query db records with set tag")
-    rows = db_list_tagged_films( id_user=id_user, tag=tag )
-    await send_lists_records( rows, LIST_REC_IN_MSG, event )
-
-async def query_tagged_records_by_one(id_user, tag, event):
-    ''' Get films tagget for user '''
-    logging.info(f"Query db records with set tag")
-    rows = db_list_tagged_films_id( id_user=id_user, tag=tag )
-    ret = await show_card_one_record_menu( rows, event )
-    return ret

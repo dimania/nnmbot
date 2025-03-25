@@ -71,6 +71,7 @@ def get_config(config=cfg):
     global magnet_helper
     global cursor
     global connection
+    global backend_user
 
     try:
         api_id = config.api_id
@@ -91,6 +92,7 @@ def get_config(config=cfg):
         Lang = config.Lang
         ICU_extension_lib = config.ICU_extension_lib
         magnet_helper = config.magnet_helper
+        backend_user = config.backend_user
 
         if use_proxy:
             proxies = config.proxies
