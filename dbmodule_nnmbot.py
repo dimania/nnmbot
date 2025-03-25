@@ -123,11 +123,22 @@ def db_info( id_user ):
     rows = sts.cursor.fetchall()
     return rows
 
-def db_list_4_publish():
+def db_list_4_publish( rec_upd ):
     ''' List records for publish on Channel form database '''
-    sts.cursor.execute("SELECT id FROM Films WHERE publish = sts.PUB_NOT OR publish = sts.PUB_UPD")
+    if rec_upd == 0: 
+        sts.cursor.execute("SELECT id FROM Films WHERE publish = ?", (sts.PUBL_NOT,) )
+    if rec_upd == 1: 
+        sts.cursor.execute("SELECT id FROM Films WHERE publish = ?", (sts.PUBL_UPD,) )
     rows = sts.cursor.fetchall()
     return rows
+
+def db_update_publish( id ):
+    ''' Update record to PUBL_YES when publish on Channel  '''
+
+    sts.cursor.execute("UPDATE Films SET publish = ? WHERE id = ?", (sts.PUBL_YES, id,))
+    sts.connection.commit()
+    logging.info(f"SQL UPDATE: id={id} publish={sts.PUBL_YES} result={str(sts.cursor.rowcount)}" )
+    return str(sts.cursor.rowcount)  
 
 def db_list_all():
     ''' List all records form database '''

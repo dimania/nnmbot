@@ -41,7 +41,7 @@ async def query_all_records(event):
         Use with carefully may be many records 
     '''
     logging.info(f"Query all db records")
-    rows = db_list_all()
+    rows = dbm.db_list_all()
     await send_lists_records( rows, LIST_REC_IN_MSG, event )
 
 async def query_all_records_by_one(event):
@@ -51,26 +51,26 @@ async def query_all_records_by_one(event):
         Use with carefully may be many records 
     '''
     logging.info(f"Query db records for  ")
-    rows = db_list_all_id()
+    rows = dbm.db_list_all_id()
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
 async def query_search(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
-    rows = db_search_old(str_search)
+    rows = dbm.db_search_old(str_search)
     await send_lists_records( rows, LIST_REC_IN_MSG, event )
     
 async def query_tagged_records_list(id_user, tag, event):
     ''' Get films tagget for user '''
     logging.info(f"Query db records with set tag")
-    rows = db_list_tagged_films( id_user=id_user, tag=tag )
+    rows = dbm.db_list_tagged_films( id_user=id_user, tag=tag )
     await send_lists_records( rows, LIST_REC_IN_MSG, event )
 
 async def query_tagged_records_by_one(id_user, tag, event):
     ''' Get films tagget for user '''
     logging.info(f"Query db records with set tag")
-    rows = db_list_tagged_films_id( id_user=id_user, tag=tag )
+    rows = dbm.db_list_tagged_films_id( id_user=id_user, tag=tag )
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
@@ -105,12 +105,32 @@ async def show_card_one_record_menu( rows=None, event=None ):
         await event.respond(message, parse_mode='html', link_preview=0)
         return 0           
 
-async def publish_new_film( id, event, rec_upd ):
-    ''' Create card of one film and send to channel 
-        id - number film in db
-        event - descriptor channel '''
+async def publish_all_new_films():
+    ''' Publish All films on channel which are not published '''
 
-    row=db_film_by_id( id )
+    rows=dbm.db_list_4_publish(sts.PUBL_NOT)
+    if rows:
+       for row in rows:
+         publish_new_film(id, sts.PUBL_NOT)
+         #set to sts.PUBL_YES
+         dbm.db_update_publish(id)
+         asyncio.sleep(1)
+
+    rows=dbm.db_list_4_publish(sts.PUBL_UPD)
+    if rows:
+       for row in rows:
+         publish_new_film(id, sts.PUBL_UPD)
+         #set to sts.PUBL_YES
+         dbm.db_update_publish(id)
+         asyncio.sleep(1)
+
+
+async def publish_new_film( id, rec_upd ):
+    ''' Publish film on channel 
+        id - number film in db
+        rec_upd - was updated exist film'''
+
+    row=dbm.db_film_by_id( id )
     film_name = f"<b>{index+1}. </b><a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
     film_section = f"🟢<b>Раздел:</b> \n{dict(row).get("section")}"
     film_genre = f"🟢<b>Жанр:</b> {dict(row).get("genre")}\n"
@@ -127,12 +147,17 @@ async def publish_new_film( id, event, rec_upd ):
 
     # Create new message 
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
-    if rec_upd == 1:
+    if rec_upd == sts.PUBL_UPD:
        new_message = f"🔄{new_message}" 
-       
+
     # Send new message to Channel
-    send_msg = await bot.send_file(PeerChannel(Channel_my_id), image_nnm_url, caption=new_message, \
+    try:                
+        send_msg = await bot.send_file(PeerChannel(Channel_my_id), image_nnm_url, caption=new_message, \
                 buttons=buttons_film, parse_mode="html" )
+    except errors.FloodWaitError as e:
+        logging.info('Have to sleep', e.seconds, 'seconds')
+        asyncio.sleep(e.seconds)
+
     logging.debug(f"Send new film Message:{send_msg}")
     
 
@@ -141,7 +166,7 @@ async def send_card_one_record( id, index, event ):
         id - number film in db
         event - descriptor channel '''
 
-    row=db_film_by_id( id )
+    row=dbm.db_film_by_id( id )
     film_name = f"<b>{index+1}. </b><a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
     film_section = f"🟢<b>Раздел:</b> \n{dict(row).get("section")}"
     film_genre = f"🟢<b>Жанр:</b> {dict(row).get("genre")}\n"
@@ -217,17 +242,17 @@ async def send_lists_records( rows, num_per_message, event ):
 async def query_clear_tagged_records(id_user, event):
     ''' Clear all tag for user '''
     logging.info(f"Query db for clear tag ")
-    rows = db_switch_user_tag( UNSETTAG, id_user )
+    rows = dbm.db_switch_user_tag( UNSETTAG, id_user )
     if rows:
         message = _('Clear ')+rows+_(' records')
     else:
         message = _("No records")
     await event.respond(message, parse_mode='html', link_preview=0)
 
-async def query_db_info(event, id_user):
+async def query_dbm.db_info(event, id_user):
     ''' Get info about database records '''
     logging.info(f"Query info database for user {id_user}")
-    rows = db_info(id_user)
+    rows = dbm.db_info(id_user)
     message = _("All records: ") + \
         str(rows[0][0])+_("\nTagged records: ") + \
         str(rows[1][0])+_("\nEarly tagged: ")+str(rows[2][0])
@@ -351,7 +376,7 @@ async def check_user(channel, user, event):
     except:
       logging.error(f"Can not get permissions for channe={channel} user={user}. Possibly user not join to group but send request for Control")  
     
-    user_db = db_exist_user(user)
+    user_db = dbm.db_exist_user(user)
     ret = -1
     if not user_db:
       logging.debug(f"User {user} is not in db - new user")
@@ -371,7 +396,7 @@ async def check_user(channel, user, event):
 
 async def query_wait_users(event):
     ''' Get list users who submitted applications '''     
-    rows = db_list_users( id_user=None, active=USER_BLOCKED, rights=USER_NO_RIGHTS )
+    rows = dbm.db_list_users( id_user=None, active=USER_BLOCKED, rights=USER_NO_RIGHTS )
     logging.debug(f"Get users waiting approve")
     button=[]
     if rows:
@@ -388,7 +413,7 @@ async def query_wait_users(event):
 
 async def query_all_users(event, bdata_id, message):
     ''' Get list all users '''     
-    rows = db_list_users()
+    rows = dbm.db_list_users()
     logging.debug(f"Get all users result={len(rows)}")
     button=[]
     if rows:
@@ -420,12 +445,12 @@ async def query_all_users(event, bdata_id, message):
 
 async def query_user_tag_film(event, id_nnm, id_user):
     ''' User tag film '''
-    res=db_get_tag( id_nnm, id_user )
+    res=dbm.db_get_tag( id_nnm, id_user )
     if res:
        await event.answer(_('Film already in database!'), alert=True)
        logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
        return
-    res=db_add_tag( id_nnm, SETTAG, id_user )
+    res=dbm.db_add_tag( id_nnm, SETTAG, id_user )
     logging.info(f"User {id_user} tag film id_nnm={id_nnm} with result={res}")
     #bdata = 'TAG'+id_nnm
     await event.answer(_('Film added to database'), alert=True)
@@ -440,7 +465,7 @@ async def add_new_user(event):
     if name_user == None: name_user = user_ent.first_name
     logging.debug(f"Get username for id {id_user}: {name_user}")
     #await query_add_user(id_user, name_user, event)
-    res = db_add_user(id_user, name_user)
+    res = dbm.db_add_user(id_user, name_user)
     if res:
         await event.respond(_("Yoy already power user!"))
     else:
@@ -508,10 +533,10 @@ def main_bot():
         #get Id 
         if button_data.find('UPDPUBLISH', 0, 10) != -1:
             id = data.replace('PUBLISH#', '')
-            publish_new_film( id, event, 1 )
+            publish_new_film( id, event, sts.PUBL_UPD )
         elif button_data.find('PUBLISH', 0, 7) != -1:
             id = data.replace('PUBLISH#', '')
-            publish_new_film( id, event, 0 )
+            publish_new_film( id, event, sts.PUBL_NOT )
         
                 
         
@@ -582,7 +607,7 @@ def main_bot():
             send_menu = NO_MENU            
         elif button_data == '/bm_dwclear':
             # Clear all tag 
-            res=db_switch_user_tag( id_user, UNSETTAG )
+            res=dbm.db_switch_user_tag( id_user, UNSETTAG )
             await event_bot.respond(_("  Clear ")+res+_(" records  "))
             send_menu = BASIC_MENU
         elif button_data == '/bm_dwlist':
@@ -605,7 +630,7 @@ def main_bot():
             send_menu = NO_MENU
         elif button_data == '/bm_dbinfo':
             # Get info about DB
-            await query_db_info(event_bot,id_user)
+            await query_dbm.db_info(event_bot,id_user)
             send_menu =BASIC_MENU
         elif button_data == '/bm_search':
             # Search Films
@@ -633,8 +658,8 @@ def main_bot():
             id_user_approve = data.replace('ENABLE', '') #FIXME change id_user_approve id_user
             # Approve waiting users
             logging.info(f"Approve waiting users: user={id_user_approve}")
-            db_ch_rights_user(id_user_approve, USER_ACTIVE, USER_READ_WRITE)
-            user_db=db_exist_user(id_user_approve)
+            dbm.db_ch_rights_user(id_user_approve, USER_ACTIVE, USER_READ_WRITE)
+            user_db=dbm.db_exist_user(id_user_approve)
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("User: ")+user_name+_(" add to DB"))
             #Send message to user
@@ -652,10 +677,10 @@ def main_bot():
             # Get user for delete
             data = button_data
             id_user_delete = data.replace('DELETE', '') #FIXME change id_user_delete id_user
-            user_db=db_exist_user(id_user_delete)
+            user_db=dbm.db_exist_user(id_user_delete)
             user_name=dict(user_db[0]).get('name_user')
             logging.info(f"Delete users: user={id_user_delete}")
-            db_del_user(id_user_delete)
+            dbm.db_del_user(id_user_delete)
             await event_bot.respond(_("User: ")+user_name+_(" deleted from DB"))
             send_menu = CUSER_MENU   
         elif button_data == '/cu_cur':
@@ -666,7 +691,7 @@ def main_bot():
             data = button_data
             id_user = data.replace('RIGHTS', '')
             logging.info(f"Change rights for user={id_user}")
-            user_db=db_exist_user(id_user)
+            user_db=dbm.db_exist_user(id_user)
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("Change righst for user: ")+user_name)
             send_menu = CURIGHTS_MENU
@@ -674,14 +699,14 @@ def main_bot():
             #Change to RO
             data = button_data
             id_user = data.replace('/cr_ro', '')
-            db_ch_rights_user( id_user, USER_ACTIVE, USER_READ )
+            dbm.db_ch_rights_user( id_user, USER_ACTIVE, USER_READ )
             logging.info(f"Change rights RO for user={id_user}")
             send_menu = CUSER_MENU
         elif button_data.find('/cr_rw', 0, 7) != -1:
             #Change to RW
             data = button_data
             id_user = data.replace('/cr_rw', '')
-            db_ch_rights_user( id_user, USER_ACTIVE, USER_READ_WRITE )
+            dbm.db_ch_rights_user( id_user, USER_ACTIVE, USER_READ_WRITE )
             logging.info(f"Change rights RW for user={id_user}")
             send_menu = CUSER_MENU
         elif button_data == '/cu_buu':
@@ -691,17 +716,17 @@ def main_bot():
         elif button_data.find('BLOCK_UNBLOCK', 0,13 ) != -1:
             data = button_data
             id_user = data.replace('BLOCK_UNBLOCK', '')
-            user_db=db_exist_user(id_user)
+            user_db=dbm.db_exist_user(id_user)
             user_name=dict(user_db[0]).get('name_user')
             active=dict(user_db[0]).get('active')
             if active == USER_BLOCKED:
               logging.info(f"Unblock user={id_user}")
-              db_ch_rights_user( id_user, USER_ACTIVE, USER_READ_WRITE )
-              user_db=db_exist_user(id_user_approve)
+              dbm.db_ch_rights_user( id_user, USER_ACTIVE, USER_READ_WRITE )
+              user_db=dbm.db_exist_user(id_user_approve)
               await event_bot.respond(_("User: ")+user_name+_(" Unblocked"))
             else:
               logging.info(f"Block user={id_user}")
-              db_ch_rights_user( id_user, USER_BLOCKED, USER_READ_WRITE )
+              dbm.db_ch_rights_user( id_user, USER_BLOCKED, USER_READ_WRITE )
               await event_bot.respond(_("User: ")+user_name+_(" Blocked"))
             send_menu = CUSER_MENU
             #Back to user menu
@@ -736,14 +761,14 @@ else:
   logging.info(f"No locale dir for support langs: {sts.localedir} \n Use default lang: Engilsh")
   def _(message): return message
  
-sts.connection = sqlite3.connect(sts.db_name)
+sts.connection = sqlite3.connect(sts.dbm.db_name)
 sts.connection.row_factory = sqlite3.Row
 sts.cursor = sts.connection.cursor()
 
 dbm.db_init()
 
-client = main_client()
-client.run_until_disconnected()
+#client = main_client()
+#client.run_until_disconnected()
 
 sts.connection.close()
 logging.info(f"End.\n--------------------------")
