@@ -12,6 +12,7 @@
 import myconfig as cfg
 #------------------------
 import re
+import os
 
 #-----------------
 # CONSTANTS
@@ -73,10 +74,13 @@ def get_config(config=cfg):
     global connection
     global backend_user
 
+    
     try:
-        api_id = config.api_id
-        api_hash = config.api_hash
-        mybot_token = config.mybot_token
+        api_id = os.environ.get("API_ID", config.API_ID)
+        api_hash = os.environ.get("API_HASH", config.API_HASH)
+        mybot_token = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
+        ses_usr_str = os.environ.get("SESSION_STRING_USER", config.SESSION_STRING_USER)
+        ses_bot_str = os.environ.get("SESSION_STRING_BOT", config.SESSION_STRING_BOT)
         system_version = config.system_version
         session_client = config.session_client
         session_bot = config.session_bot

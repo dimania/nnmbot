@@ -33,7 +33,7 @@ import sys
 import gettext
 import io
 
-
+Channel_my_id = None
 
 async def query_all_records(event):
     ''' 
@@ -107,22 +107,28 @@ async def show_card_one_record_menu( rows=None, event=None ):
 
 async def publish_all_new_films():
     ''' Publish All films on channel which are not published '''
-
+    print(f"publish_all")
+    #Publish new Films
     rows=dbm.db_list_4_publish(sts.PUBL_NOT)
+    print(f"publish_all publ_upd rows:{rows}")
     if rows:
        for row in rows:
-         publish_new_film(id, sts.PUBL_NOT)
+         id=dict(row).get("id")
+         await publish_new_film(id, sts.PUBL_NOT)
          #set to sts.PUBL_YES
          dbm.db_update_publish(id)
-         asyncio.sleep(1)
-
+         await asyncio.sleep(1)
+         
+    #Publish updated Films
     rows=dbm.db_list_4_publish(sts.PUBL_UPD)
+    print(f"publish_all publ_upd rows:{rows}")
     if rows:
        for row in rows:
-         publish_new_film(id, sts.PUBL_UPD)
+         id=dict(row).get("id")
+         await publish_new_film(id, sts.PUBL_UPD)
          #set to sts.PUBL_YES
          dbm.db_update_publish(id)
-         asyncio.sleep(1)
+         await asyncio.sleep(1)
 
 
 async def publish_new_film( id, rec_upd ):
@@ -131,19 +137,24 @@ async def publish_new_film( id, rec_upd ):
         rec_upd - was updated exist film'''
 
     row=dbm.db_film_by_id( id )
-    film_name = f"<b>{index+1}. </b><a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
+    film_name = f"<a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
     film_section = f"🟢<b>Раздел:</b> \n{dict(row).get("section")}"
     film_genre = f"🟢<b>Жанр:</b> {dict(row).get("genre")}\n"
     film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get("rate_kpsk")}] Imdb[{dict(row).get("rate_imdb")}]\n"
     film_description = f"🟢<b>Описание:</b> \n{dict(row).get("description")}\n"
     image_nnm_url = dict(row).get("image_nnm_url")
-     
+    id_nnm = dict(row).get("id_nnm") 
     # if magnet link exist create string and href link
     mag_link = dict(row).get("mag_link")
     if mag_link:
         film_magnet_link = f"<a href='{magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
     else:
         film_magnet_link=""
+    bdata = 'XX'+id_nnm
+    buttons_film = [
+                Button.inline(_("Add Film"), bdata),
+                Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
+                ]
 
     # Create new message 
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
@@ -249,7 +260,7 @@ async def query_clear_tagged_records(id_user, event):
         message = _("No records")
     await event.respond(message, parse_mode='html', link_preview=0)
 
-async def query_dbm.db_info(event, id_user):
+async def query_db_info(event, id_user):
     ''' Get info about database records '''
     logging.info(f"Query info database for user {id_user}")
     rows = dbm.db_info(id_user)
@@ -481,27 +492,18 @@ async def home():
     logging.debug("Call home stub function")
     return 0 
 
-def main_bot():
+async def main_bot():
     ''' Loop for bot connection '''
+    
+    global Channel_my_id
 
-    # Connect to Telegram
-    if use_proxy:
-        prx = re.search('(^.*)://(.*):(.*$)', proxies.get('http'))
-        bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version, proxy=(
-            prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=mybot_token)
-    else:
-        bot = TelegramClient(session_bot, api_id, api_hash, system_version=system_version).start(bot_token=mybot_token)
+    print("MAIN BOT")
+    Channel_my_id = bot.get_peer_id(sts.Channel_my)
+    print(f"MAIN BOT: {Channel_my_id}")
 
-    bot.start()
-    try:
-        Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(Channel_my))
-    except Exception as BotMethodInvalidError:
-        logging.error("Bot can't access get channel ID  by {Cahnnel_my}.\n Please change Channel_my on digital notation!\n")
-        logging.error("Original Error is: {BotMethodInvalidError}")
-        print("Bot can't access get channel ID  by {Cahnnel_my}.\n Please change Channel_my on digital notation!\n")
-        bot.disconnect()
-        return None
-
+    # First run check db for new Films and publish in Channel
+    await publish_all_new_films()
+    
     # Get reaction user on inline Buttons in Channel
     @bot.on(events.CallbackQuery(chats=[PeerChannel(Channel_my_id)]))
     async def callback(event):
@@ -742,6 +744,16 @@ def main_bot():
             await create_rights_user_menu(menu_level, event_bot, id_user)
 
     return bot
+    #with bot:
+    #        try:
+    #            bot.loop.run_until_complete(main_bot())
+    #            #logging.debug(f"Get Channel_id: {Channel_my_id}")
+    #        except Exception as BotMethodInvalidError:
+    #            logging.error("Bot can't access get channel ID  by {sts.Cahnnel_my}.\n Please change Channel_my on digital notation!\n")
+    #            logging.error("Original Error is: {BotMethodInvalidError}")
+    #            print("Bot can't access get channel ID  by {sts.Cahnnel_my}.\n Please change Channel_my on digital notation!\n")
+    #            bot.disconnect()
+    #            return None
 
 # main()
 print('Start frontend.')
@@ -761,14 +773,25 @@ else:
   logging.info(f"No locale dir for support langs: {sts.localedir} \n Use default lang: Engilsh")
   def _(message): return message
  
-sts.connection = sqlite3.connect(sts.dbm.db_name)
+sts.connection = sqlite3.connect(sts.db_name)
 sts.connection.row_factory = sqlite3.Row
 sts.cursor = sts.connection.cursor()
 
 dbm.db_init()
 
-#client = main_client()
-#client.run_until_disconnected()
+# Connect to Telegram
+if sts.use_proxy:
+    prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
+    bot = TelegramClient(sts.session_bot, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=(
+        prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=sts.mybot_token)
+else:
+    bot = TelegramClient(sts.session_bot, sts.api_id, sts.api_hash, system_version=sts.system_version).start(bot_token=sts.mybot_token)
+
+
+bot.start()
+bot.loop.run_until_complete(main_bot())
+#main_bot()
+bot.run_until_disconnected()
 
 sts.connection.close()
 logging.info(f"End.\n--------------------------")

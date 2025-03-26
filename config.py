@@ -5,13 +5,13 @@
 # version 0.4
 
 # Api id getted from telegram from  https://my.telegram.org change to 60328456 by example
-api_id = <API_ID>
+API_ID = <API_ID>
 
 # Api hash getted from telegram from  https://my.telegram.org change to '860438hcoibwe37842y3dcnblkjh333' by example
-api_hash = <API_HASH> 
+API_HASH = <API_HASH> 
 
 # Bot token getted form FatherBot change to '234324234:sdfkehf834608hlkcn38' by example  
-mybot_token = <BOT_TOKEN>
+BOT_TOKEN = <BOT_TOKEN>
 
 # Set version client
 system_version = "0.2-yorever"

@@ -58,7 +58,6 @@ def main_client():
         client = TelegramClient(sts.session_client, sts.api_id, sts.api_hash, system_version=sts.system_version)
 
     client.start()
-    Channel_my_id = client.loop.run_until_complete(client.get_peer_id(sts.Channel_my))
     Channel_mon_id = client.loop.run_until_complete(client.get_peer_id(sts.Channel_mon))
 
     # Parse channel NNMCLUB for Films

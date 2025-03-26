@@ -102,7 +102,6 @@ def db_update_film(id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link
     logging.debug(f"SQL UPDATE FILM: id={id} result={str(sts.cursor.rowcount)}" )
     return str(sts.cursor.rowcount)
 
-
 def db_exist_Id(id_kpsk, id_imdb):
     ''' Test exist Film in database '''
     if id_kpsk == 0: 
@@ -114,7 +113,6 @@ def db_exist_Id(id_kpsk, id_imdb):
      
     return sts.cursor.fetchone()
     
-
 def db_info( id_user ):
     ''' Get Info database: all records, tagged records and tagged early records for user '''
     sts.cursor.execute("SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Ufilms \
@@ -125,9 +123,10 @@ def db_info( id_user ):
 
 def db_list_4_publish( rec_upd ):
     ''' List records for publish on Channel form database '''
-    if rec_upd == 0: 
+    print(f"rec_upd={rec_upd}")
+    if rec_upd == sts.PUBL_NOT: 
         sts.cursor.execute("SELECT id FROM Films WHERE publish = ?", (sts.PUBL_NOT,) )
-    if rec_upd == 1: 
+    if rec_upd == sts.PUBL_UPD: 
         sts.cursor.execute("SELECT id FROM Films WHERE publish = ?", (sts.PUBL_UPD,) )
     rows = sts.cursor.fetchall()
     return rows
@@ -250,7 +249,7 @@ def db_list_tagged_films_id( id_user=None, tag=sts.SETTAG ):
 
 def db_film_by_id( id=None ):
     ''' List info by id record '''
-    sts.cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url \
+    sts.cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, id_nnm \
         FROM Films WHERE id=?", (id,))
     row = sts.cursor.fetchone()
     return row
@@ -260,7 +259,6 @@ def db_add_tag( id_nnm, tag, id_user ):
     cur_date=datetime.now()
     sts.cursor.execute("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,(SELECT id FROM Films WHERE id_nnm=?),?,?)",
                   (id_user,id_nnm,cur_date,tag))
-    
     sts.connection.commit()
     return str(sts.cursor.rowcount)
 
