@@ -42,7 +42,7 @@ async def query_all_records(event):
     '''
     logging.info(f"Query all db records")
     rows = dbm.db_list_all()
-    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+    await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
 
 async def query_all_records_by_one(event):
     ''' 
@@ -59,13 +59,13 @@ async def query_search(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
     rows = dbm.db_search_old(str_search)
-    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+    await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
     
 async def query_tagged_records_list(id_user, tag, event):
     ''' Get films tagget for user '''
     logging.info(f"Query db records with set tag")
     rows = dbm.db_list_tagged_films( id_user=id_user, tag=tag )
-    await send_lists_records( rows, LIST_REC_IN_MSG, event )
+    await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
 
 async def query_tagged_records_by_one(id_user, tag, event):
     ''' Get films tagget for user '''
@@ -253,7 +253,7 @@ async def send_lists_records( rows, num_per_message, event ):
 async def query_clear_tagged_records(id_user, event):
     ''' Clear all tag for user '''
     logging.info(f"Query db for clear tag ")
-    rows = dbm.db_switch_user_tag( UNSETTAG, id_user )
+    rows = dbm.db_switch_user_tag( sts.UNSETTAG, id_user )
     if rows:
         message = _('Clear ')+rows+_(' records')
     else:
@@ -290,7 +290,7 @@ async def create_basic_menu(level, event):
         ]
     ]
 
-    if level == MENU_SUPERADMIN:
+    if level == sts.MENU_SUPERADMIN:
        # Add items for SuperUser
        keyboard.append([Button.inline(_("List All Films in DB"), b"/bm_dblist")])
        keyboard.append([Button.inline(_("Go to control users menu"), b"/bm_cum")])
@@ -373,7 +373,7 @@ async def create_choice_dialog(question, choice_buttons, event, level):
                 removed_handler=bot.remove_event_handler(callback_bot_choice)
                 logging.debug(f"Remove handler callback_bot_choice =  {removed_handler}")
                 await choice_buttons[button_press][2](*choice_buttons[button_press][3])
-                if BASIC_MENU in choice_buttons[button_press]: #FIXME BASIC_MENU in list may be or not accidentally?
+                if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
                     await create_basic_menu(level, event)
         
 async def check_user(channel, user, event):
@@ -383,7 +383,7 @@ async def check_user(channel, user, event):
     try:
       permissions = await bot.get_permissions(channel, user)
       if permissions.is_admin:
-        return USER_SUPERADMIN # Admin
+        return sts.USER_SUPERADMIN # Admin
     except:
       logging.error(f"Can not get permissions for channe={channel} user={user}. Possibly user not join to group but send request for Control")  
     
@@ -391,17 +391,17 @@ async def check_user(channel, user, event):
     ret = -1
     if not user_db:
       logging.debug(f"User {user} is not in db - new user")
-      ret = USER_NEW
+      ret = sts.USER_NEW
       return ret
-    elif dict(user_db[0]).get('active') == USER_BLOCKED:
+    elif dict(user_db[0]).get('active') == sts.USER_BLOCKED:
       logging.debug(f"User {user} is blocked in db")
-      ret = USER_BLOCKED
-    elif dict(user_db[0]).get('rights') == USER_READ:
+      ret = sts.USER_BLOCKED
+    elif dict(user_db[0]).get('rights') == sts.USER_READ:
       logging.debug(f"User {user} can only view in db")
-      ret = USER_READ
-    elif dict(user_db[0]).get('rights') == USER_READ_WRITE:
+      ret = sts.USER_READ
+    elif dict(user_db[0]).get('rights') == sts.USER_READ_WRITE:
       logging.debug(f"User {user} admin in your db")
-      ret = USER_READ_WRITE
+      ret = sts.USER_READ_WRITE
     
     return ret
 
@@ -435,13 +435,13 @@ async def query_all_users(event, bdata_id, message):
             active = dict(row).get('active')
             rights = dict(row).get('rights')
             date = dict(row).get('date')
-            if active == USER_ACTIVE:
+            if active == sts.USER_ACTIVE:
                status = status+'🇦 '
-            if active == USER_BLOCKED:
+            if active == sts.USER_BLOCKED:
                status = status+'🇧 '
-            if rights == USER_READ_WRITE:
+            if rights == sts.USER_READ_WRITE:
                status = status+'🇷 🇼 '
-            if rights == USER_READ:
+            if rights == sts.USER_READ:
                status = status+'🇷 '
             #2024-03-03 11:46:05.488155
             dt = datetime.strptime(date,'%Y-%m-%d %H:%M:%S.%f')
@@ -461,7 +461,7 @@ async def query_user_tag_film(event, id_nnm, id_user):
        await event.answer(_('Film already in database!'), alert=True)
        logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
        return
-    res=dbm.db_add_tag( id_nnm, SETTAG, id_user )
+    res=dbm.db_add_tag( id_nnm, sts.SETTAG, id_user )
     logging.info(f"User {id_user} tag film id_nnm={id_nnm} with result={res}")
     #bdata = 'TAG'+id_nnm
     await event.answer(_('Film added to database'), alert=True)
@@ -498,9 +498,8 @@ async def main_bot():
     global Channel_my_id
 
     print("MAIN BOT")
-    Channel_my_id = bot.get_peer_id(sts.Channel_my)
+    Channel_my_id = await bot.get_peer_id(sts.Channel_my)
     print(f"MAIN BOT: {Channel_my_id}")
-
     # First run check db for new Films and publish in Channel
     await publish_all_new_films()
     
@@ -511,11 +510,11 @@ async def main_bot():
         # Check user rights
         ret = await check_user(event.query.peer, event.query.user_id, event)
         
-        if ret == USER_NEW: 
+        if ret == sts.USER_NEW: 
             await event.answer(_('Sorry you are not registered user.\nYou can only set Reaction.\nYou can register, press [Control] button.'), alert=True)
             # Stop handle this event other handlers
             raise StopPropagation
-        elif ret == USER_BLOCKED:   # Blocked
+        elif ret == sts.USER_BLOCKED:   # Blocked
             await event.answer(_('Sorry You are Blocked!\n Send message to Admin this channel'), alert=True)
             # Stop handle this event other handlers
             raise StopPropagation
@@ -555,20 +554,20 @@ async def main_bot():
             print(f"Error get user: {error}")
             return
         
-        if ret == USER_NEW:     # New user
+        if ret == sts.USER_NEW:     # New user
             choice_buttons = {
             "button1": [_("Yes"), "YES_NEW_USER",add_new_user,[event_bot,event_bot.message.peer_id.user_id]],
             "button2": [_("No"), "NO_NEW_USER", event_bot.respond,[_('Goodbye! See you later...')]]
             }
             await create_choice_dialog(_('**Y realy want tag/untag films**'), choice_buttons, event_bot, menu_level)
-            send_menu = NO_MENU
+            send_menu = sts.NO_MENU
             return
-        elif ret == USER_BLOCKED:   # Blocked
+        elif ret == sts.USER_BLOCKED:   # Blocked
             await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
             return
-        elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View?
-        elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
-        elif ret == USER_SUPERADMIN: menu_level = MENU_SUPERADMIN # SuperUser
+        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ# FIXME no think # Only View?
+        elif ret == sts.USER_READ_WRITE: menu_level = sts.MENU_USER_READ_WRITE # Admin
+        elif ret == sts.USER_SUPERADMIN: menu_level = sts.MENU_SUPERADMIN # SuperUser
        
         if event_bot.message.message == '/start':
           # show admin menu
@@ -583,61 +582,61 @@ async def main_bot():
 
         button_data = event_bot.data.decode()
         await event_bot.delete()               #Delete previous message (prev menu)
-        send_menu = MENU_USER_READ
+        send_menu = sts.MENU_USER_READ
         ret = await check_user(PeerChannel(Channel_my_id), id_user, event_bot)
         #Stop handle this event other handlers
         #raise StopPropagation
        
-        if ret == USER_BLOCKED:   # Blocked
+        if ret == sts.USER_BLOCKED:   # Blocked
           #await event_bot.respond(_('Sorry You are Blocked!\nSend message to Admin this channel.'))
           return
-        elif ret == USER_READ: menu_level = MENU_USER_READ# FIXME no think # Only View
-        elif ret == USER_READ_WRITE: menu_level = MENU_USER_READ_WRITE # Admin
-        elif ret == USER_SUPERADMIN: menu_level = MENU_SUPERADMIN # SuperUser
+        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ# FIXME no think # Only View
+        elif ret == sts.USER_READ_WRITE: menu_level = sts.MENU_USER_READ_WRITE # Admin
+        elif ret == sts.USER_SUPERADMIN: menu_level = sts.MENU_SUPERADMIN # SuperUser
        
         if button_data == 'HOME_MENU':  
             # Goto basic menu
-            send_menu = BASIC_MENU
+            send_menu = sts.BASIC_MENU
         elif button_data == '/bm_dblist':  
             # Get all database, Use with carefully may be many records
             choice_buttons = {
             "button1": [_("Card"), "CARD", query_all_records_by_one,[event_bot]],
-            "button2": [_("List"), "LIST", query_all_records,[event_bot],BASIC_MENU],
+            "button2": [_("List"), "LIST", query_all_records,[event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
             await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
-            send_menu = NO_MENU            
+            send_menu = sts.NO_MENU            
         elif button_data == '/bm_dwclear':
             # Clear all tag 
-            res=dbm.db_switch_user_tag( id_user, UNSETTAG )
+            res=dbm.db_switch_user_tag( id_user, sts.UNSETTAG )
             await event_bot.respond(_("  Clear ")+res+_(" records  "))
-            send_menu = BASIC_MENU
+            send_menu = sts.BASIC_MENU
         elif button_data == '/bm_dwlist':
             # Get films tagget
             choice_buttons = {
-            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, SETTAG, event_bot]],
-            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, SETTAG, event_bot],BASIC_MENU],
+            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, sts.SETTAG, event_bot]],
+            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.SETTAG, event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
             await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
-            send_menu = NO_MENU
+            send_menu = sts.NO_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early
             choice_buttons = {
-            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, SETTAG, event_bot]],
-            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, SETTAG, event_bot],BASIC_MENU],
+            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, sts.SETTAG, event_bot]],
+            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.SETTAG, event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
             await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
-            send_menu = NO_MENU
+            send_menu = sts.NO_MENU
         elif button_data == '/bm_dbinfo':
             # Get info about DB
             await query_dbm.db_info(event_bot,id_user)
-            send_menu =BASIC_MENU
+            send_menu =sts.BASIC_MENU
         elif button_data == '/bm_search':
             # Search Films
             await event_bot.respond(_("Write and send what you search:"))
-            send_menu = NO_MENU
+            send_menu = sts.NO_MENU
             @bot.on(events.NewMessage()) 
             async def search_handler(event_search):
                 logging.info(f"Get search string: {event_search.message.message}")
@@ -647,34 +646,34 @@ async def main_bot():
                 await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_cum':
             # Go to control users menu 
-            send_menu = CUSER_MENU
+            send_menu = sts.CUSER_MENU
         elif button_data == '/cu_bbm':
             # Back to basic menu 
-            send_menu = BASIC_MENU
+            send_menu = sts.BASIC_MENU
         elif button_data == '/cu_lur':
             # Approve waiting users
             await query_wait_users(event_bot)
-            send_menu = CUSER_MENU
+            send_menu = sts.CUSER_MENU
         elif button_data.find('ENABLE', 0, 6) != -1:
             data = button_data
             id_user_approve = data.replace('ENABLE', '') #FIXME change id_user_approve id_user
             # Approve waiting users
             logging.info(f"Approve waiting users: user={id_user_approve}")
-            dbm.db_ch_rights_user(id_user_approve, USER_ACTIVE, USER_READ_WRITE)
+            dbm.db_ch_rights_user(id_user_approve, sts.USER_ACTIVE, sts.USER_READ_WRITE)
             user_db=dbm.db_exist_user(id_user_approve)
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("User: ")+user_name+_(" add to DB"))
             #Send message to user
             await bot.send_message(PeerUser(int(id_user_approve)),_("You request approved\nNow Yoy can work with films."))
-            send_menu = CUSER_MENU
+            send_menu = sts.CUSER_MENU
         elif button_data == '/cu_lar':
             # Approve waiting users
             await query_all_users(event_bot,'INFO',_('List current users:'))
-            send_menu = CUSER_MENU
+            send_menu = sts.CUSER_MENU
         elif button_data == '/cu_du':
             # List user for select 4 delete
             await query_all_users(event_bot,'DELETE',_('Select user for delete:'))
-            send_menu = CUSER_MENU   
+            send_menu = sts.CUSER_MENU   
         elif button_data.find('DELETE', 0, 6) != -1:
             # Get user for delete
             data = button_data
@@ -684,11 +683,11 @@ async def main_bot():
             logging.info(f"Delete users: user={id_user_delete}")
             dbm.db_del_user(id_user_delete)
             await event_bot.respond(_("User: ")+user_name+_(" deleted from DB"))
-            send_menu = CUSER_MENU   
+            send_menu = sts.CUSER_MENU   
         elif button_data == '/cu_cur':
             # Change rights user
             await query_all_users(event_bot,'RIGHTS',_('Select user for change rights:'))
-            send_menu = NO_MENU
+            send_menu = sts.NO_MENU
         elif button_data.find('RIGHTS', 0, 6) != -1:
             data = button_data
             id_user = data.replace('RIGHTS', '')
@@ -696,50 +695,50 @@ async def main_bot():
             user_db=dbm.db_exist_user(id_user)
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("Change righst for user: ")+user_name)
-            send_menu = CURIGHTS_MENU
+            send_menu = sts.CURIGHTS_MENU
         elif button_data.find('/cr_ro', 0, 7) != -1:
             #Change to RO
             data = button_data
             id_user = data.replace('/cr_ro', '')
-            dbm.db_ch_rights_user( id_user, USER_ACTIVE, USER_READ )
+            dbm.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ )
             logging.info(f"Change rights RO for user={id_user}")
-            send_menu = CUSER_MENU
+            send_menu = sts.CUSER_MENU
         elif button_data.find('/cr_rw', 0, 7) != -1:
             #Change to RW
             data = button_data
             id_user = data.replace('/cr_rw', '')
-            dbm.db_ch_rights_user( id_user, USER_ACTIVE, USER_READ_WRITE )
+            dbm.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE )
             logging.info(f"Change rights RW for user={id_user}")
-            send_menu = CUSER_MENU
+            send_menu = sts.CUSER_MENU
         elif button_data == '/cu_buu':
             # Block/Unblock user
             await query_all_users(event_bot,'BLOCK_UNBLOCK',_('Select user for block/unblock:'))
-            send_menu = NO_MENU
+            send_menu = sts.NO_MENU
         elif button_data.find('BLOCK_UNBLOCK', 0,13 ) != -1:
             data = button_data
             id_user = data.replace('BLOCK_UNBLOCK', '')
             user_db=dbm.db_exist_user(id_user)
             user_name=dict(user_db[0]).get('name_user')
             active=dict(user_db[0]).get('active')
-            if active == USER_BLOCKED:
+            if active == sts.USER_BLOCKED:
               logging.info(f"Unblock user={id_user}")
-              dbm.db_ch_rights_user( id_user, USER_ACTIVE, USER_READ_WRITE )
+              dbm.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE )
               user_db=dbm.db_exist_user(id_user_approve)
               await event_bot.respond(_("User: ")+user_name+_(" Unblocked"))
             else:
               logging.info(f"Block user={id_user}")
-              dbm.db_ch_rights_user( id_user, USER_BLOCKED, USER_READ_WRITE )
+              dbm.db_ch_rights_user( id_user, sts.USER_BLOCKED, sts.USER_READ_WRITE )
               await event_bot.respond(_("User: ")+user_name+_(" Blocked"))
-            send_menu = CUSER_MENU
+            send_menu = sts.CUSER_MENU
             #Back to user menu
 
-        if send_menu == BASIC_MENU:
+        if send_menu == sts.BASIC_MENU:
             #await event_bot.respond(_("🏁............Done............🏁"))
             await create_basic_menu(menu_level, event_bot)
-        elif send_menu == CUSER_MENU:
+        elif send_menu == sts.CUSER_MENU:
             #await event_bot.respond(_("🏁............Done............🏁"))
             await create_control_user_menu(menu_level, event_bot)
-        elif send_menu == CURIGHTS_MENU:
+        elif send_menu == sts.CURIGHTS_MENU:
             #await event_bot.respond(_("🏁............Done............🏁"))
             await create_rights_user_menu(menu_level, event_bot, id_user)
 
@@ -778,6 +777,8 @@ sts.connection.row_factory = sqlite3.Row
 sts.cursor = sts.connection.cursor()
 
 dbm.db_init()
+# TODO: Neeed test exist DB or no, exist tables in DB or not
+dbm.db_create()
 
 # Connect to Telegram
 if sts.use_proxy:
