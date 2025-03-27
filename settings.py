@@ -73,6 +73,8 @@ def get_config(config=cfg):
     global cursor
     global connection
     global backend_user
+    global ses_usr_str
+    global ses_bot_str
 
     
     try:
