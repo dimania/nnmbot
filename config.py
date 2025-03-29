@@ -5,13 +5,23 @@
 # version 0.4
 
 # Api id getted from telegram from  https://my.telegram.org change to 60328456 by example
+# You can use it over env vars. Use over env vars have hi priority  
 API_ID = <API_ID>
 
 # Api hash getted from telegram from  https://my.telegram.org change to '860438hcoibwe37842y3dcnblkjh333' by example
+# You can use it over env vars. Use over env vars have hi priority
 API_HASH = <API_HASH> 
 
 # Bot token getted form FatherBot change to '234324234:sdfkehf834608hlkcn38' by example  
+# You can use it over env vars. Use over env vars have hi priority
 BOT_TOKEN = <BOT_TOKEN>
+
+# Telegram sesion string for user account, use it instead of sesssio file for more secure
+# If not empty will be use, if empty will use session files below
+# By example over env vars
+SESSION_STRING_USER = ''
+# Telegram sesion string for bot account, use it instead of sesssio file for more secure
+SESSION_STRING_BOT = ''
 
 # Set version client
 system_version = "0.2-yorever"

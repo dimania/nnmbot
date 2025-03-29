@@ -34,7 +34,7 @@ import sys
 import gettext
 import io
 
-def main_client():
+async def main_backend():
     ''' Loop for client connection '''
 
     # -------------- addition info vars
@@ -49,17 +49,7 @@ def main_client():
     kpr_tmpl = re.compile('www.kinopoisk.ru/rating')
     desc_tmpl = re.compile(':$')
 
-    # Connect to Telegram
-    if sts.use_proxy:
-        prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
-        client = TelegramClient(sts.session_client, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=(
-            prx.group(1), prx.group(2), int(prx.group(3))))
-    else:
-        client = TelegramClient(sts.session_client, sts.api_id, sts.api_hash, system_version=sts.system_version)
-
-    client.start()
-    Channel_mon_id = client.loop.run_until_complete(client.get_peer_id(sts.Channel_mon))
-
+    Channel_mon_id = await client.get_peer_id(sts.Channel_mon)
     # Parse channel NNMCLUB for Films
 
     @client.on(events.NewMessage(chats=[PeerChannel(Channel_mon_id)], pattern=sts.filter))
@@ -173,11 +163,6 @@ def main_client():
            
         id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
 
-        # Comment becouse now if film exist in DB, it to be update to new release from NNM
-        #if dbm.db_exist_Id(id_kpsk, id_imdb):
-        #    logging.info(f"Film id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm={id_nnm} exist in db - end analize.")
-        #    return
-
         # Get rating film from kinopoisk if not then from imdb site
         if kpsk_url:
             rat_url = kpsk_url
@@ -225,22 +210,6 @@ def main_client():
                 Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
                 ]
 
-        #TODO: remove in future, now save only url picture
-        # get photo from nnm message and create my photo
-        #film_photo = await client.download_media(msg, bytes)
-        #film_photo_d = film_photo
-        #file_photo = io.BytesIO(film_photo_d)
-        #file_photo.name = "image.jpg" 
-        #file_photo.seek(0)  # set cursor to the beginning
-        #logging.debug(f"Message Photo:\n{film_photo_d}")
-        
-        # Create new message 
-        new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
-        logging.debug(f"New message:{new_message}")
-        
-        #trim long message ( telegramm support only 1024 byte caption )
-        if len(new_message) > 1023:
-            new_message = new_message[:1019]+'...'
         rec_upd = ""
         try:
             async with db_lock:
@@ -248,7 +217,6 @@ def main_client():
                 if rec_id:
                     rec_id=dict(rec_id).get("id")
                     # Update exist film to DB 🔄
-                    #new_message = f"🔄{new_message}"
                     dbm.db_update_film(rec_id, id_nnm, url, mydict[Id[0]], \
                         id_kpsk, id_imdb, mag_link, section, mydict.get(Id[2]), kpsk_r, imdb_r, \
                             mydict.get(Id[5]), image_nnm_url, sts.PUBL_UPD)
@@ -294,7 +262,24 @@ sts.cursor = sts.connection.cursor()
 dbm.db_init()
 dbm.db_create()
 
-client = main_client()
+# Connect to Telegram as user
+if sts.use_proxy:
+   prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
+   proxy=(prx.group(1), prx.group(2), int(prx.group(3)))
+else: 
+   proxy=None
+
+# Set type session: file or env string
+if sts.ses_bot_str == '':
+   session=sts.session_client
+else:
+   session=StringSession(sts.ses_usr_str)
+
+client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version,proxy=proxy)
+
+
+client.start()
+client.loop.run_until_complete(main_backend())
 client.run_until_disconnected()
 
 sts.connection.close()

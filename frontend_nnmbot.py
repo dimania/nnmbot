@@ -130,7 +130,6 @@ async def publish_all_new_films():
          dbm.db_update_publish(id)
          await asyncio.sleep(1)
 
-
 async def publish_new_film( id, rec_upd ):
     ''' Publish film on channel 
         id - number film in db
@@ -161,6 +160,10 @@ async def publish_new_film( id, rec_upd ):
     if rec_upd == sts.PUBL_UPD:
        new_message = f"🔄{new_message}" 
 
+    #trim long message ( telegramm support only 1024 byte caption )
+    if len(new_message) > 1023:
+        new_message = new_message[:1019]+'...'
+
     # Send new message to Channel
     try:                
         send_msg = await bot.send_file(PeerChannel(Channel_my_id), image_nnm_url, caption=new_message, \
@@ -171,7 +174,6 @@ async def publish_new_film( id, rec_upd ):
 
     logging.debug(f"Send new film Message:{send_msg}")
     
-
 async def send_card_one_record( id, index, event ):
     ''' Create card of one film and send to channel 
         id - number film in db
@@ -492,7 +494,7 @@ async def home():
     logging.debug("Call home stub function")
     return 0 
 
-async def main_bot():
+async def main_frontend():
     ''' Loop for bot connection '''
     
     global Channel_my_id
@@ -780,21 +782,26 @@ dbm.db_init()
 # TODO: Neeed test exist DB or no, exist tables in DB or not
 dbm.db_create()
 
-# Connect to Telegram
+# Connect to Telegram as bot
 if sts.use_proxy:
     prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
-    bot = TelegramClient(sts.session_bot, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=(
-        prx.group(1), prx.group(2), int(prx.group(3)))).start(bot_token=sts.mybot_token)
-else:
-    bot = TelegramClient(sts.session_bot, sts.api_id, sts.api_hash, system_version=sts.system_version).start(bot_token=sts.mybot_token)
+    proxy=(prx.group(1), prx.group(2), int(prx.group(3)))
+else: 
+    proxy=None
 
+# Set type session: file or env string
+if sts.ses_bot_str == '':
+   session=sts.session_client
+else:
+   session=StringSession(sts.ses_usr_str)
+
+
+bot = TelegramClient(sts.session_bot, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy).start(bot_token=sts.mybot_token)
 
 bot.start()
-bot.loop.run_until_complete(main_bot())
-#main_bot()
+bot.loop.run_until_complete(main_frontend())
 bot.run_until_disconnected()
 
 sts.connection.close()
 logging.info(f"End.\n--------------------------")
 print('End.')
-
