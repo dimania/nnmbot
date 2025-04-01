@@ -109,13 +109,12 @@ async def show_card_one_record_menu( rows=None, event=None ):
 
 async def publish_all_new_films():
     ''' Publish All films on channel which are not published '''
-    print(f"publish_all")
     #Publish new Films
     rows=dbm.db_list_4_publish(sts.PUBL_NOT)
-    print(f"publish_all publ_upd rows:{rows}")
     if rows:
        for row in rows:
          id=dict(row).get("id")
+         logging.debug(f"Publish new film id:{id}")
          await publish_new_film(id, sts.PUBL_NOT)
          #set to sts.PUBL_YES
          dbm.db_update_publish(id)
@@ -123,10 +122,10 @@ async def publish_all_new_films():
          
     #Publish updated Films
     rows=dbm.db_list_4_publish(sts.PUBL_UPD)
-    print(f"publish_all publ_upd rows:{rows}")
     if rows:
        for row in rows:
          id=dict(row).get("id")
+         logging.debug(f"Publish updated film id:{id}")
          await publish_new_film(id, sts.PUBL_UPD)
          #set to sts.PUBL_YES
          dbm.db_update_publish(id)
@@ -386,10 +385,16 @@ async def check_user(channel, user, event):
     
     try:
       permissions = await bot.get_permissions(channel, user)
+      logging.debug(f"Get permissions = {permissions}  for channe={channel} user={user}")
       if permissions.is_admin:
+        user_db = dbm.db_exist_user(user)
+        ret = -1
+        if not user_db:
+          logging.debug(f"User {user} is Admin and not in db!")
+          return sts.USER_ADMIN_NEW    
         return sts.USER_SUPERADMIN # Admin
     except:
-      logging.error(f"Can not get permissions for channe={channel} user={user}. Possibly user not join to group but send request for Control")  
+      logging.error(f"Can not get permissions for channel={channel} user={user}. Possibly user not join to group but send request for Control")  
     
     user_db = dbm.db_exist_user(user)
     ret = -1
@@ -499,11 +504,9 @@ async def home():
 async def main_frontend():
     ''' Loop for bot connection '''
     
+    #FIXME: Need correct get Channel_my_id without global
     global Channel_my_id
-
-    print("MAIN BOT")
     Channel_my_id = await bot.get_peer_id(sts.Channel_my)
-    print(f"MAIN BOT: {Channel_my_id}")
     # First run check db for new Films and publish in Channel
     await publish_all_new_films()
     
@@ -522,6 +525,11 @@ async def main_frontend():
             await event.answer(_('Sorry You are Blocked!\n Send message to Admin this channel'), alert=True)
             # Stop handle this event other handlers
             raise StopPropagation
+        elif ret == sts.USER_ADMIN_NEW:
+            await event.answer(_('You are Admin Channel!\n You can register, press [Control] button.'), alert=True)
+            # Stop handle this event other handlers
+            raise StopPropagation
+        
         button_data = event.data.decode()
         if button_data.find('XX', 0, 2) != -1:
            # Add to Film to DB 
@@ -543,9 +551,7 @@ async def main_frontend():
         elif button_data.find('PUBLISH', 0, 7) != -1:
             id = button_data.replace('PUBLISH#', '')
             publish_new_film( id, sts.PUBL_NOT )
-        
-                
-        
+     
     # Handle messages in bot chat
     @bot.on(events.NewMessage())
     async def bot_handler(event_bot):
