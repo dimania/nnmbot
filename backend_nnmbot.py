@@ -18,11 +18,13 @@ from telethon.tl.custom import Button
 from telethon import errors
 from telethon.errors import MessageNotModifiedError 
 from telethon.events import StopPropagation
+from telethon.sessions import StringSession
 from datetime import datetime, date, time, timezone
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util import Retry
+#from requests.packages.urllib3.util.retry import Retry
 import requests
 import re
 import sqlite3

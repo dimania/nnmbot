@@ -17,11 +17,13 @@ from telethon.tl.custom import Button
 from telethon import errors
 from telethon.errors import MessageNotModifiedError 
 from telethon.events import StopPropagation
+from telethon.sessions import StringSession
 from datetime import datetime, date, time, timezone
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util import Retry
+#from requests.packages.urllib3.util.retry import Retry
 import requests
 import re
 import sqlite3
@@ -146,7 +148,7 @@ async def publish_new_film( id, rec_upd ):
     # if magnet link exist create string and href link
     mag_link = dict(row).get("mag_link")
     if mag_link:
-        film_magnet_link = f"<a href='{magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
+        film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
     else:
         film_magnet_link=""
     bdata = 'XX'+id_nnm
@@ -188,7 +190,7 @@ async def send_card_one_record( id, index, event ):
     # if magnet link exist create string and href link
     mag_link = dict(row).get("mag_link")
     if mag_link:
-        film_magnet_link = f"<a href='{magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
+        film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
     else:
         film_magnet_link=""
     # Create buttons for message
@@ -233,7 +235,7 @@ async def send_lists_records( rows, num_per_message, event ):
             message = message + f'{i+1}. <a href="{dict(row).get("nnm_url")}">{dict(row).get("name")}</a>\n'
             mag_link_str = dict(row).get("mag_link")
             if mag_link_str:
-               message = message + f'<a href="{magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
+               message = message + f'<a href="{sts.magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
             i = i + 1
             if not i%num_per_message:
                 try:
@@ -409,7 +411,7 @@ async def check_user(channel, user, event):
 
 async def query_wait_users(event):
     ''' Get list users who submitted applications '''     
-    rows = dbm.db_list_users( id_user=None, active=USER_BLOCKED, rights=USER_NO_RIGHTS )
+    rows = dbm.db_list_users( id_user=None, active=sts.USER_BLOCKED, rights=sts.USER_NO_RIGHTS )
     logging.debug(f"Get users waiting approve")
     button=[]
     if rows:
@@ -483,7 +485,7 @@ async def add_new_user(event):
         await event.respond(_("Yoy already power user!"))
     else:
         await event.respond(_("You request send to Admins, and will be reviewed soon."))
-        user_ent = await bot.get_input_entity(admin_name)
+        user_ent = await bot.get_input_entity(sts.admin_name)
         await bot.send_message(user_ent,_("New user **")+name_user+_("** request approve."),parse_mode='md')
     return res
 
@@ -508,7 +510,7 @@ async def main_frontend():
     # Get reaction user on inline Buttons in Channel
     @bot.on(events.CallbackQuery(chats=[PeerChannel(Channel_my_id)]))
     async def callback(event):
-        logging.debug(f"Get callback event on channel {Channel_my}: {event}")
+        logging.debug(f"Get callback event on channel {sts.Channel_my}: {event}")
         # Check user rights
         ret = await check_user(event.query.peer, event.query.user_id, event)
         
@@ -533,13 +535,14 @@ async def main_frontend():
     @bot.on(events.NewMessage(from_users=sts.backend_user, pattern=r'.*PUBLISH#[:digital:]*'))
     async def bot_handler(event_publish):
         logging.debug(f"Get NewMessage event_bot: {event_publish}")
-        #get Id 
+        #get Id
+        button_data = event_publish.data.decode() 
         if button_data.find('UPDPUBLISH', 0, 10) != -1:
-            id = data.replace('PUBLISH#', '')
-            publish_new_film( id, event, sts.PUBL_UPD )
+            id = button_data.replace('PUBLISH#', '')
+            publish_new_film( id, sts.PUBL_UPD )
         elif button_data.find('PUBLISH', 0, 7) != -1:
-            id = data.replace('PUBLISH#', '')
-            publish_new_film( id, event, sts.PUBL_NOT )
+            id = button_data.replace('PUBLISH#', '')
+            publish_new_film( id, sts.PUBL_NOT )
         
                 
         
@@ -633,7 +636,7 @@ async def main_frontend():
             send_menu = sts.NO_MENU
         elif button_data == '/bm_dbinfo':
             # Get info about DB
-            await query_dbm.db_info(event_bot,id_user)
+            await query_db_info(event_bot,id_user)
             send_menu =sts.BASIC_MENU
         elif button_data == '/bm_search':
             # Search Films
