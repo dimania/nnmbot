@@ -121,7 +121,6 @@ def db_info( id_user ):
 
 def db_list_4_publish( rec_upd ):
     ''' List records for publish on Channel form database '''
-    print(f"rec_upd={rec_upd}")
     if rec_upd == sts.PUBL_NOT: 
         sts.cursor.execute("SELECT id FROM Films WHERE publish = ?", (sts.PUBL_NOT,) )
     if rec_upd == sts.PUBL_UPD: 

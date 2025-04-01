@@ -99,7 +99,7 @@ def get_config(config=cfg):
         ICU_extension_lib = config.ICU_extension_lib
         magnet_helper = config.magnet_helper
         backend_user = config.backend_user
-
+        
         if use_proxy:
             proxies = config.proxies
         else:

@@ -135,8 +135,10 @@ async def publish_new_film( id, rec_upd ):
     ''' Publish film on channel 
         id - number film in db
         rec_upd - was updated exist film'''
-
+    
+    logging.debug(f"Publish film id={id} rec_upd={rec_upd}")
     row=dbm.db_film_by_id( id )
+    logging.debug(f"Get film from db ={row}")
     film_name = f"<a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
     film_section = f"🟢<b>Раздел:</b> \n{dict(row).get("section")}"
     film_genre = f"🟢<b>Жанр:</b> {dict(row).get("genre")}\n"
@@ -146,7 +148,7 @@ async def publish_new_film( id, rec_upd ):
     id_nnm = dict(row).get("id_nnm") 
     # if magnet link exist create string and href link
     mag_link = dict(row).get("mag_link")
-    if mag_link:
+    if mag_link and sts.magnet_helper :
         film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
     else:
         film_magnet_link=""
@@ -504,9 +506,7 @@ async def home():
 async def main_frontend():
     ''' Loop for bot connection '''
     
-    #FIXME: Need correct get Channel_my_id without global
-    global Channel_my_id
-    Channel_my_id = await bot.get_peer_id(sts.Channel_my)
+    
     # First run check db for new Films and publish in Channel
     await publish_all_new_films()
     
@@ -525,10 +525,6 @@ async def main_frontend():
             await event.answer(_('Sorry You are Blocked!\n Send message to Admin this channel'), alert=True)
             # Stop handle this event other handlers
             raise StopPropagation
-        elif ret == sts.USER_ADMIN_NEW:
-            await event.answer(_('You are Admin Channel!\n You can register, press [Control] button.'), alert=True)
-            # Stop handle this event other handlers
-            raise StopPropagation
         
         button_data = event.data.decode()
         if button_data.find('XX', 0, 2) != -1:
@@ -542,16 +538,18 @@ async def main_frontend():
     # Handle messages from backend
     @bot.on(events.NewMessage(from_users=sts.backend_user, pattern=r'.*PUBLISH#[:digital:]*'))
     async def bot_handler(event_publish):
-        logging.debug(f"Get NewMessage event_bot: {event_publish}")
+        logging.debug(f"Get NewMessage event_pbl: {event_publish}")
         #get Id
-        button_data = event_publish.data.decode() 
-        if button_data.find('UPDPUBLISH', 0, 10) != -1:
-            id = button_data.replace('PUBLISH#', '')
-            publish_new_film( id, sts.PUBL_UPD )
-        elif button_data.find('PUBLISH', 0, 7) != -1:
-            id = button_data.replace('PUBLISH#', '')
-            publish_new_film( id, sts.PUBL_NOT )
-     
+        pbl_data = event_publish.message.message
+        logging.debug(f"Get message for publish:{pbl_data}")
+        if pbl_data.find('UPDPUBLISH', 0, 10) != -1:
+            id = pbl_data.replace('UPDPUBLISH#', '')
+            await publish_new_film( id, sts.PUBL_UPD )
+        elif pbl_data.find('PUBLISH', 0, 7) != -1:
+            id = pbl_data.replace('PUBLISH#', '')
+            await publish_new_film( id, sts.PUBL_NOT )
+        raise StopPropagation
+
     # Handle messages in bot chat
     @bot.on(events.NewMessage())
     async def bot_handler(event_bot):
@@ -818,6 +816,9 @@ if not dbm.db_exist_user(id_user):
   dbm.db_add_user(id_user, name_user)
   dbm.db_ch_rights_user(id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE)
 
+#FIXME: Need correct get Channel_my_id without global
+#    global Channel_my_id
+Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(sts.Channel_my))
 bot.start()
 bot.loop.run_until_complete(main_frontend())
 bot.run_until_disconnected()
