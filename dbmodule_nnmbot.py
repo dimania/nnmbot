@@ -74,8 +74,6 @@ def db_create():
 
     sts.connection.commit()
 
-
-
 def db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, publish = 0 ):
     ''' Add new Film to database '''

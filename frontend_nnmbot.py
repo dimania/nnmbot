@@ -390,8 +390,8 @@ async def check_user(channel, user, event):
         user_db = dbm.db_exist_user(user)
         ret = -1
         if not user_db:
-          logging.debug(f"User {user} is Admin and not in db!")
-          return sts.USER_ADMIN_NEW    
+          logging.debug(f"User {user} is Admin and not in db - new user!")
+          return sts.USER_NEW    
         return sts.USER_SUPERADMIN # Admin
     except:
       logging.error(f"Can not get permissions for channel={channel} user={user}. Possibly user not join to group but send request for Control")  
@@ -788,7 +788,6 @@ sts.connection.row_factory = sqlite3.Row
 sts.cursor = sts.connection.cursor()
 
 dbm.db_init()
-# TODO: Neeed test exist DB or no, exist tables in DB or not
 dbm.db_create()
 
 # Connect to Telegram as bot
@@ -806,6 +805,18 @@ else:
 
 
 bot = TelegramClient(sts.session_bot, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy).start(bot_token=sts.mybot_token)
+
+# Get data for admin user for check and add to db (initialization)
+admin_ent = bot.loop.run_until_complete(bot.get_entity(sts.admin_name))
+name_user = admin_ent.username
+id_user = admin_ent.id
+if name_user == None: name_user = user_ent.first_name
+logging.debug(f"Get Admin username for id {id_user}: {name_user}")
+
+# if not exist add admin user to DB 
+if not dbm.db_exist_user(id_user):
+  dbm.db_add_user(id_user, name_user)
+  dbm.db_ch_rights_user(id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE)
 
 bot.start()
 bot.loop.run_until_complete(main_frontend())
