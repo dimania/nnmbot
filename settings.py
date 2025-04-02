@@ -1,19 +1,20 @@
 #
 # Telegram Bot for filter films from NNMCLUB channel
 # version 0.5
-# Module settings.py Set internal variables 
+# Module settings.py Set internal variables
 # and constants, get global configs from file myconfig.py
 #
 #
-# 
+#
 #!!!!!!!! Replace with you config file here !!!!!!!
 # replace myconfig with config by example
+
+import re
+import os
+
 #------------------------
 import myconfig as cfg
 #------------------------
-import re
-import os
-import keyword
 
 #-----------------
 # CONSTANTS
@@ -64,7 +65,7 @@ def get_config(config=cfg):
     global proxies
     global logfile
     global use_proxy
-    global filter
+    global pattern_filter
     global ICU_extension_lib
     global log_level
     global Lang
@@ -88,7 +89,7 @@ def get_config(config=cfg):
         db_name = config.db_name
         logfile = config.logfile
         use_proxy = config.use_proxy
-        filter = re.compile(config.filter)
+        pattern_filter = re.compile(config.pattern_filter)
         log_level = config.log_level
         Lang = config.Lang
         backend_user = config.backend_user
@@ -106,8 +107,8 @@ def get_config(config=cfg):
             ses_bot_str = config.SESSION_STRING_BOT 
         else: ses_bot_str = os.environ.get("SESSION_STRING_BOT", None)
     
-        if ses_usr_str == None: session_client = config.session_client
-        if ses_bot_str == None: session_bot = config.session_bot 
+        if not ses_usr_str: session_client = config.session_client
+        if not ses_bot_str: session_bot = config.session_bot 
 
         if 'ICU_extension_lib' in vars(config):
             ICU_extension_lib = config.ICU_extension_lib

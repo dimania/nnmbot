@@ -18,10 +18,12 @@ BOT_TOKEN = <BOT_TOKEN>
 
 # Telegram sesion string for user account, use it instead of sesssio file for more secure
 # If not empty will be use, if empty will use session files below
+# Also if set over env vars will be use with low priority
+# Priority by SESSION_STRING if both setted
 # By example over env vars
-SESSION_STRING_USER = ''
+#SESSION_STRING_USER =  
 # Telegram sesion string for bot account, use it instead of sesssio file for more secure
-SESSION_STRING_BOT = ''
+#SESSION_STRING_BOT = 
 
 # Set version client
 system_version = "0.2-yorever"
@@ -37,11 +39,16 @@ session_bot='nnmbot_session_bot'
 Channel_mon = 't.me/******' 
 # Id chanell for filter messages 
 Channel_my  = 't.me/######'
-# Name of bot - will be to switch on you bot for control database.
-bot_name = 'control_bd_bot'
 
-#Admin name - where send messages from new user about request add to users bot
+# Name of bot in Telegram.
+bot_name = 'nnm_films_bot'
+
+#Admin name - where send messages from new user about request add to users bot 
+#Default admin user. Must be added to channel as admin 
 admin_name = 'adm_dimania'
+
+# user for run user connection when start backend_bot.py
+backend_user = 'adm_dimania'
 
 # filename database - better use full path
 db_name = 'database.db'  # database name, better set full path
@@ -60,10 +67,11 @@ logfile = 'nnmbot.log'
 use_proxy = 0 # if use proxy set to 1
 
 #Pattern for filter messages from channelId 
-filter=r'(?:.*Фильм.*)|(?:.*Новинки.*)'
+pattern_filter=r'(?:.*Фильм.*)|(?:.*Новинки.*)'
 
-#Helper for open magnet links in telegram
-magnet_helper = 'https://ivan386.github.io/#'
+#Helper for open magnet links in telegram. if commented out then 
+# magnet link not will show  
+#magnet_helper = 'https://ivan386.github.io/#'
 
 #ICU extension for case independet search  in DB if Not when set in None
 ICU_extension_lib = "/usr/lib64/sqlite3/libSqliteIcu.so"

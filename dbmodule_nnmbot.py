@@ -5,10 +5,12 @@
 #
 #
 
-import settings as sts
-from datetime import datetime, date, time, timezone
+
+from datetime import datetime
 import logging
 import os.path
+
+import settings as sts
 
 def db_init():
     ''' Initialize database '''

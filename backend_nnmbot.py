@@ -7,34 +7,27 @@
 # filter films and write to database 
 #
 #
-# --------------------------------
-import settings as sts
-import dbmodule_nnmbot as dbm
-# --------------------------------
 
-from telethon import TelegramClient, events, utils
-from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl, MessageEntityUrl
-from telethon.tl.custom import Button
-from telethon import errors
-from telethon.errors import MessageNotModifiedError 
-from telethon.events import StopPropagation
-from telethon.sessions import StringSession
-from datetime import datetime, date, time, timezone
-from bs4 import BeautifulSoup
-from collections import OrderedDict
-from requests.adapters import HTTPAdapter
-from urllib3.util import Retry
-#from requests.packages.urllib3.util.retry import Retry
-import requests
+
 import re
 import sqlite3
 import logging
-import textwrap
 import asyncio
 import os.path
 import sys
 import gettext
-import io
+import requests
+from telethon import TelegramClient, events
+from telethon.tl.types import PeerChannel, MessageEntityUrl
+from telethon.sessions import StringSession
+from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
+#from requests.packages.urllib3.util.retry import Retry
+# --------------------------------
+import settings as sts
+import dbmodule_nnmbot as dbm
+# --------------------------------
 
 async def main_backend():
     ''' Loop for client connection '''
@@ -54,26 +47,26 @@ async def main_backend():
     Channel_mon_id = await client.get_peer_id(sts.Channel_mon)
     # Parse channel NNMCLUB for Films
 
-    @client.on(events.NewMessage(chats=[PeerChannel(Channel_mon_id)], pattern=sts.filter))
+    @client.on(events.NewMessage(chats=[PeerChannel(Channel_mon_id)], pattern=sts.pattern_filter))
     async def normal_handler(event):
-        url = post_body = rating_url =  image_url = []
+        url = post_body  = []
         mydict = {}
         logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")
         msg = event.message
-              
+
         for url_entity, inner_text in msg.get_entities_text(MessageEntityUrl):
             logging.debug(f"Urls: {url_entity, inner_text}")
             if url_tmpl.search(inner_text):
                 url = inner_text
         logging.info(f"Get URL nnmclub page with Film: {url}")
        
-        # if URL not exist return 
+        # if URL not exist return
         if not url:
-           return
+            return
 
         try:
             # Конфигурируем сессию requests
-            session = requests.Session()
+            ses = requests.Session()
 
             # Устанавливаем стратегию повторных попыток
             retries = Retry(total=5,
@@ -82,8 +75,8 @@ async def main_backend():
                 allowed_methods=frozenset(['GET', 'POST']))
 
             # Связываем стратегию с сессией requests
-            session.mount('http://', HTTPAdapter(max_retries=retries))
-            session.mount('https://', HTTPAdapter(max_retries=retries))
+            ses.mount('http://', HTTPAdapter(max_retries=retries))
+            ses.mount('https://', HTTPAdapter(max_retries=retries))
 
             page = requests.get(url, timeout=30, proxies=sts.proxies)
             if page.status_code != 200:
@@ -113,10 +106,10 @@ async def main_backend():
         # Select data where class - gensmall - get magnet link
         post_body = soup.find( href=re.compile("magnet:") )
         if post_body:
-           mag_link = post_body.get('href')
-           logging.debug(f"Magnet link: {mag_link}\n")
+            mag_link = post_body.get('href')
+            logging.debug(f"Magnet link: {mag_link}\n")
         else:
-           mag_link = None  
+            mag_link = None  
 
         # Select data where class - postbody
         post_body = soup.find(class_='postbody')
@@ -168,7 +161,7 @@ async def main_backend():
         # Get rating film from kinopoisk if not then from imdb site
         if kpsk_url:
             rat_url = kpsk_url
-            page = requests.get(rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+            page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
             # Parse data
             # FIXME me be better use xml.parser ?
             soup = BeautifulSoup(page.text, 'html.parser')
@@ -181,7 +174,7 @@ async def main_backend():
                 logging.info(f"No kinopoisk rating on site")
         elif imdb_url:
             rat_url = imdb_url
-            page = requests.get(rat_url, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+            page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
             # Parse data
             soup = BeautifulSoup(page.text, 'html.parser')
             post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
@@ -193,24 +186,6 @@ async def main_backend():
         else:
             kpsk_r = "-"
             imdb_r = "-"
-
-        #logging.info(f"Add info to message")
-        #film_name = f"<a href='{url}'>{mydict.get(Id[0])}</a>\n"
-        #film_section = f"🟢<b>Раздел:</b> {section}\n"
-        #film_genre = f"🟢<b>Жанр:</b> {mydict.get(Id[2])}\n"
-        #film_rating = f"🟢<b>Рейтинг:</b> КП[{kpsk_r}] Imdb[{imdb_r}]\n"
-        #film_description = f"🟢<b>Описание:</b> \n{mydict.get(Id[5])}\n"
-        ## if magnet link exist create string and href link
-        #if mag_link:
-        #   film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
-        #else:
-        #   film_magnet_link=""
-        # Create buttons for message
-        #bdata = 'XX'+id_nnm
-        #buttons_film = [
-        #        Button.inline(_("Add Film"), bdata),
-        #        Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
-        #        ]
 
         rec_upd = ""
         try:
@@ -230,8 +205,13 @@ async def main_backend():
                         mydict.get(Id[2]), kpsk_r, imdb_r, mydict.get(Id[5]), image_nnm_url, sts.PUBL_NOT)
                     logging.info(f"Film not exist in db - add and send id={rec_id}, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
             # Send message to frondend bot for publish Film 
-            send_msg = await client.send_message(sts.bot_name,rec_upd+"PUBLISH#"+str(rec_id)),
-            logging.debug(f"Send Message:{send_msg}")
+            #send_msg = await client.send_message(sts.bot_name,rec_upd+"PUBLISH#"+str(rec_id))
+            #logging.debug(f"Send Message:{send_msg}")
+            try:
+                result = await client.inline_query(sts.bot_name,rec_upd+"PUBLISH#"+str(rec_id))
+                #logging.debug(f"Send inline_query:{result}")
+            except Exception as error:
+                logging.warning(f'Cant send inline_query to bot. Ignore this because frondend not running:\n {error}')
         except Exception as error:
             logging.error(f'Error in block db_lock: {error}')
         
@@ -250,11 +230,11 @@ logging.info(f"Start backend bot.")
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
 if os.path.isdir(localedir):
-  translate = gettext.translation('nnmbot', localedir, [sts.Lang])
-  _ = translate.gettext
+    translate = gettext.translation('nnmbot', localedir, [sts.Lang])
+    _ = translate.gettext
 else: 
-  logging.info(f"No locale dir for support langs: {sts.localedir} \n Use default lang: Engilsh")
-  def _(message): return message
+    logging.info(f"No locale dir for support langs: {localedir} \n Use default lang: Engilsh")
+    def _(message): return message
  
 db_lock = asyncio.Lock()
 sts.connection = sqlite3.connect(sts.db_name)
@@ -267,18 +247,18 @@ dbm.db_create()
 
 # Connect to Telegram as user
 if sts.use_proxy:
-   prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
-   proxy=(prx.group(1), prx.group(2), int(prx.group(3)))
-else: 
-   proxy=None
+    prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
+    proxy=(prx.group(1), prx.group(2), int(prx.group(3)))
+else:
+    proxy=None
 
 # Set type session: file or env string
-if sts.ses_usr_str == None:
-   session=sts.session_client
-   logging.info(f"Use File session mode")
+if not sts.ses_usr_str:
+    session=sts.session_client
+    logging.info(f"Use File session mode")
 else:
-   session=StringSession(sts.ses_usr_str)
-   logging.info(f"Use String session mode")
+    session=StringSession(sts.ses_usr_str)
+    logging.info(f"Use String session mode")
 
 # Init and start Telegram client as bot
 client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version,proxy=proxy)

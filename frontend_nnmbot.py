@@ -6,34 +6,27 @@
 # filter films and write to database 
 #
 #
-# --------------------------------
-import settings as sts
-import dbmodule_nnmbot as dbm
-# --------------------------------
 
-from telethon import TelegramClient, events, utils
-from telethon.tl.types import PeerChat, PeerChannel, PeerUser, MessageEntityTextUrl, MessageEntityUrl
-from telethon.tl.custom import Button
-from telethon import errors
-from telethon.errors import MessageNotModifiedError 
-from telethon.events import StopPropagation
-from telethon.sessions import StringSession
-from datetime import datetime, date, time, timezone
-from bs4 import BeautifulSoup
-from collections import OrderedDict
-from requests.adapters import HTTPAdapter
-from urllib3.util import Retry
-#from requests.packages.urllib3.util.retry import Retry
-import requests
 import re
 import sqlite3
 import logging
-import textwrap
 import asyncio
 import os.path
 import sys
 import gettext
 import io
+from datetime import datetime
+from telethon import TelegramClient, events
+from telethon.tl.types import  PeerChannel, PeerUser
+from telethon.tl.custom import Button
+from telethon import errors
+from telethon.events import StopPropagation
+from telethon.sessions import StringSession
+#from requests.packages.urllib3.util.retry import Retry
+# --------------------------------
+import settings as sts
+import dbmodule_nnmbot as dbm
+# --------------------------------
 
 Channel_my_id = None
 
@@ -52,7 +45,7 @@ async def query_all_records_by_one(event):
         one by one wint menu.
         Use with carefully may be many records 
     '''
-    logging.info(f"Query db records for  ")
+    logging.info("Query db records")
     rows = dbm.db_list_all_id()
     ret = await show_card_one_record_menu( rows, event )
     return ret
@@ -65,13 +58,13 @@ async def query_search(str_search, event):
     
 async def query_tagged_records_list(id_user, tag, event):
     ''' Get films tagget for user '''
-    logging.info(f"Query db records with set tag")
+    logging.info("Query db records with set tag")
     rows = dbm.db_list_tagged_films( id_user=id_user, tag=tag )
     await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
 
 async def query_tagged_records_by_one(id_user, tag, event):
     ''' Get films tagget for user '''
-    logging.info(f"Query db records with set tag")
+    logging.info("Query db records with set tag")
     rows = dbm.db_list_tagged_films_id( id_user=id_user, tag=tag )
     ret = await show_card_one_record_menu( rows, event )
     return ret
@@ -92,12 +85,12 @@ async def show_card_one_record_menu( rows=None, event=None ):
             if button_data.find('NEXT', 0, 4) != -1:
                 i = int(button_data.replace('NEXT', '')) + 1 
                 if i == lenrows:
-                   i = 0
+                    i = 0
                 await send_card_one_record( dict(rows[i]).get("id"), i, event )  
             if button_data.find('PREV', 0, 4) != -1:
                 i = int(button_data.replace('PREV', '')) - 1
                 if i == -1:
-                   i = lenrows-1
+                    i = lenrows-1
                 await send_card_one_record( dict(rows[i]).get("id"), i, event )
             if button_data == 'HOME_MENU':
                 removed_handler=bot.remove_event_handler(callback_bot_list)
@@ -158,7 +151,7 @@ async def publish_new_film( id, rec_upd ):
                 Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
                 ]
 
-    # Create new message 
+    # Create new message
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
     if rec_upd == sts.PUBL_UPD:
        new_message = f"🔄{new_message}" 
@@ -172,7 +165,7 @@ async def publish_new_film( id, rec_upd ):
         send_msg = await bot.send_file(PeerChannel(Channel_my_id), image_nnm_url, caption=new_message, \
                 buttons=buttons_film, parse_mode="html" )
     except errors.FloodWaitError as e:
-        logging.info('Have to sleep', e.seconds, 'seconds')
+        logging.info(f"Have to sleep {e.seconds} seconds")
         asyncio.sleep(e.seconds)
 
     logging.debug(f"Send new film Message:{send_msg}")
@@ -203,6 +196,7 @@ async def send_card_one_record( id, index, event ):
             Button.inline(_("◼"), f_curr),
             Button.inline(_("▶"), f_next)
             ]
+    #FIXME: REMOVE foto - chang to url_image
     film_photo =  dict(row).get("image_nnm_url")
     if not film_photo:
         film_photo = dict(row).get("photo")
@@ -242,14 +236,14 @@ async def send_lists_records( rows, num_per_message, event ):
                 try:
                     await event.respond(message, parse_mode='html', link_preview=0)
                 except errors.FloodWaitError as e:
-                    logging.info('Have to sleep', e.seconds, 'seconds')
+                    logging.info(f"Have to sleep {e.seconds} seconds")
                     asyncio.sleep(e.seconds)
                 message=""
         if i%num_per_message:
             try: 
                 await event.respond(message, parse_mode='html', link_preview=0) 
             except errors.FloodWaitError as e:
-                    logging.info('Have to sleep', e.seconds, 'seconds')
+                    logging.info(f"Have to sleep {e.seconds} seconds")
                     asyncio.sleep(e.seconds)
     else:
         message = _("😔 No records")
@@ -484,7 +478,7 @@ async def add_new_user(event):
     id_user = event.message.peer_id.user_id
     user_ent = await bot.get_entity(id_user)
     name_user = user_ent.username
-    if name_user == None: name_user = user_ent.first_name
+    if not name_user: name_user = user_ent.first_name
     logging.debug(f"Get username for id {id_user}: {name_user}")
     #await query_add_user(id_user, name_user, event)
     res = dbm.db_add_user(id_user, name_user)
@@ -535,6 +529,7 @@ async def main_frontend():
            await query_user_tag_film(event, data, event.query.user_id)
            raise StopPropagation
 
+    #TODO: Remove its handler in future
     # Handle messages from backend
     @bot.on(events.NewMessage(from_users=sts.backend_user, pattern=r'.*PUBLISH#[:digital:]*'))
     async def bot_handler(event_publish):
@@ -545,9 +540,34 @@ async def main_frontend():
         if pbl_data.find('UPDPUBLISH', 0, 10) != -1:
             id = pbl_data.replace('UPDPUBLISH#', '')
             await publish_new_film( id, sts.PUBL_UPD )
+            #set to sts.PUBL_YES
+            dbm.db_update_publish(id)
         elif pbl_data.find('PUBLISH', 0, 7) != -1:
             id = pbl_data.replace('PUBLISH#', '')
             await publish_new_film( id, sts.PUBL_NOT )
+            #set to sts.PUBL_YES
+            dbm.db_update_publish(id)
+        raise StopPropagation
+
+ # Handle messages from backend as inline_query
+    @bot.on(events.InlineQuery(users=sts.backend_user, pattern=r'.*PUBLISH#[:digital:]*'))
+    async def bot_handler(event_publish_iq):
+        logging.debug(f"Get NewMessage event_pbl_iq: {event_publish_iq}")
+        pbl_data = event_publish_iq.query.query
+        logging.debug(f"Get message for publish iq:{pbl_data}")
+        if pbl_data.find('UPDPUBLISH', 0, 10) != -1:
+            id = pbl_data.replace('UPDPUBLISH#', '')
+            await publish_new_film( id, sts.PUBL_UPD )
+            #set to sts.PUBL_YES
+            dbm.db_update_publish(id)
+        elif pbl_data.find('PUBLISH', 0, 7) != -1:
+            id = pbl_data.replace('PUBLISH#', '')
+            await publish_new_film( id, sts.PUBL_NOT )
+            #set to sts.PUBL_YES
+            dbm.db_update_publish(id)
+
+        builder = event_publish_iq.builder
+        await event_publish_iq.answer([builder.article('Publish', text="ok")])
         raise StopPropagation
 
     # Handle messages in bot chat
@@ -752,24 +772,14 @@ async def main_frontend():
             await create_rights_user_menu(menu_level, event_bot, id_user)
 
     return bot
-    #with bot:
-    #        try:
-    #            bot.loop.run_until_complete(main_bot())
-    #            #logging.debug(f"Get Channel_id: {Channel_my_id}")
-    #        except Exception as BotMethodInvalidError:
-    #            logging.error("Bot can't access get channel ID  by {sts.Cahnnel_my}.\n Please change Channel_my on digital notation!\n")
-    #            logging.error("Original Error is: {BotMethodInvalidError}")
-    #            print("Bot can't access get channel ID  by {sts.Cahnnel_my}.\n Please change Channel_my on digital notation!\n")
-    #            bot.disconnect()
-    #            return None
-
+    
 # main()
 print('Start frontend.')
 
 sts.get_config()
 # Enable logging
 logging.basicConfig(level=sts.log_level, filename="fronend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
-logging.info(f"Start backend bot.")
+logging.info("Start backend bot.")
 
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
@@ -796,12 +806,12 @@ else:
     proxy = None
 
 # Set type session: file or env string
-if sts.ses_bot_str == None:
-   session = sts.session_bot
-   logging.info(f"Use File session mode.")
+if not sts.ses_bot_str:
+    session = sts.session_bot
+    logging.info("Use File session mode.")
 else:
-   session = StringSession(sts.ses_bot_str)
-   logging.info(f"Use String session mode.")
+    session = StringSession(sts.ses_bot_str)
+    logging.info("Use String session mode.")
 
 # Init and start Telegram client as bot
 bot = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy).start(bot_token=sts.mybot_token)
@@ -810,7 +820,7 @@ bot = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.syste
 admin_ent = bot.loop.run_until_complete(bot.get_entity(sts.admin_name))
 name_user = admin_ent.username
 id_user = admin_ent.id
-if name_user == None: name_user = admin_ent.first_name
+if not name_user: name_user = admin_ent.first_name
 logging.debug(f"Get Admin username for id {id_user}: {name_user}")
 
 # if not exist add admin user to DB 
@@ -825,5 +835,5 @@ bot.loop.run_until_complete(main_frontend())
 bot.run_until_disconnected()
 
 sts.connection.close()
-logging.info(f"End.\n--------------------------")
+logging.info("End.\n--------------------------")
 print('End.')
