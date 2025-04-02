@@ -13,7 +13,7 @@ import os.path
 def db_init():
     ''' Initialize database '''
     # Load ICU extension in exist for case independet search  in DB
-    if os.path.isfile(sts.ICU_extension_lib):
+    if sts.ICU_extension_lib and os.path.isfile(sts.ICU_extension_lib):
         sts.connection.enable_load_extension(True)
         sts.connection.load_extension(sts.ICU_extension_lib)
 

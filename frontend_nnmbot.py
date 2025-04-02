@@ -148,7 +148,7 @@ async def publish_new_film( id, rec_upd ):
     id_nnm = dict(row).get("id_nnm") 
     # if magnet link exist create string and href link
     mag_link = dict(row).get("mag_link")
-    if mag_link and sts.magnet_helper :
+    if mag_link and sts.magnet_helper:
         film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
     else:
         film_magnet_link=""
@@ -190,7 +190,7 @@ async def send_card_one_record( id, index, event ):
     film_description = f"🟢<b>Описание:</b> \n{dict(row).get("description")}\n"
     # if magnet link exist create string and href link
     mag_link = dict(row).get("mag_link")
-    if mag_link:
+    if mag_link and sts.magnet_helper:
         film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
     else:
         film_magnet_link=""
@@ -235,7 +235,7 @@ async def send_lists_records( rows, num_per_message, event ):
         for row in rows:
             message = message + f'{i+1}. <a href="{dict(row).get("nnm_url")}">{dict(row).get("name")}</a>\n'
             mag_link_str = dict(row).get("mag_link")
-            if mag_link_str:
+            if mag_link_str and sts.magnet_helper:
                message = message + f'<a href="{sts.magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
             i = i + 1
             if not i%num_per_message:
@@ -767,7 +767,7 @@ async def main_frontend():
 print('Start frontend.')
 
 sts.get_config()
-
+exit()
 # Enable logging
 logging.basicConfig(level=sts.log_level, filename="fronend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
 logging.info(f"Start backend bot.")
@@ -796,7 +796,7 @@ else:
     proxy=None
 
 # Set type session: file or env string
-if sts.ses_bot_str == '':
+if sts.ses_bot_str == None:
    session=sts.session_client
 else:
    session=StringSession(sts.ses_usr_str)
@@ -816,8 +816,6 @@ if not dbm.db_exist_user(id_user):
   dbm.db_add_user(id_user, name_user)
   dbm.db_ch_rights_user(id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE)
 
-#FIXME: Need correct get Channel_my_id without global
-#    global Channel_my_id
 Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(sts.Channel_my))
 bot.start()
 bot.loop.run_until_complete(main_frontend())

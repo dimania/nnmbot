@@ -194,23 +194,23 @@ async def main_backend():
             kpsk_r = "-"
             imdb_r = "-"
 
-        logging.info(f"Add info to message")
-        film_name = f"<a href='{url}'>{mydict.get(Id[0])}</a>\n"
-        film_section = f"🟢<b>Раздел:</b> {section}\n"
-        film_genre = f"🟢<b>Жанр:</b> {mydict.get(Id[2])}\n"
-        film_rating = f"🟢<b>Рейтинг:</b> КП[{kpsk_r}] Imdb[{imdb_r}]\n"
-        film_description = f"🟢<b>Описание:</b> \n{mydict.get(Id[5])}\n"
-        # if magnet link exist create string and href link
-        if mag_link:
-           film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
-        else:
-           film_magnet_link=""
+        #logging.info(f"Add info to message")
+        #film_name = f"<a href='{url}'>{mydict.get(Id[0])}</a>\n"
+        #film_section = f"🟢<b>Раздел:</b> {section}\n"
+        #film_genre = f"🟢<b>Жанр:</b> {mydict.get(Id[2])}\n"
+        #film_rating = f"🟢<b>Рейтинг:</b> КП[{kpsk_r}] Imdb[{imdb_r}]\n"
+        #film_description = f"🟢<b>Описание:</b> \n{mydict.get(Id[5])}\n"
+        ## if magnet link exist create string and href link
+        #if mag_link:
+        #   film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
+        #else:
+        #   film_magnet_link=""
         # Create buttons for message
-        bdata = 'XX'+id_nnm
-        buttons_film = [
-                Button.inline(_("Add Film"), bdata),
-                Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
-                ]
+        #bdata = 'XX'+id_nnm
+        #buttons_film = [
+        #        Button.inline(_("Add Film"), bdata),
+        #        Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
+        #        ]
 
         rec_upd = ""
         try:
@@ -272,7 +272,7 @@ else:
    proxy=None
 
 # Set type session: file or env string
-if sts.ses_bot_str == '':
+if sts.ses_bot_str == None:
    session=sts.session_client
 else:
    session=StringSession(sts.ses_usr_str)

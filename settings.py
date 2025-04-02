@@ -13,6 +13,7 @@ import myconfig as cfg
 #------------------------
 import re
 import os
+import keyword
 
 #-----------------
 # CONSTANTS
@@ -47,8 +48,6 @@ NO_MENU = 0
 LIST_REC_IN_MSG = 20
 #-----------------
 
-
-
 def get_config(config=cfg):
     ''' set global variable from included config.py - import config directive'''
     global api_id
@@ -81,8 +80,7 @@ def get_config(config=cfg):
         api_id = os.environ.get("API_ID", config.API_ID)
         api_hash = os.environ.get("API_HASH", config.API_HASH)
         mybot_token = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
-        ses_usr_str = os.environ.get("SESSION_STRING_USER", config.SESSION_STRING_USER)
-        ses_bot_str = os.environ.get("SESSION_STRING_BOT", config.SESSION_STRING_BOT)
+       
         system_version = config.system_version
         session_client = config.session_client
         session_bot = config.session_bot
@@ -96,10 +94,25 @@ def get_config(config=cfg):
         filter = re.compile(config.filter)
         log_level = config.log_level
         Lang = config.Lang
-        ICU_extension_lib = config.ICU_extension_lib
-        magnet_helper = config.magnet_helper
         backend_user = config.backend_user
         
+        # Not requiried params
+        if 'magnet_helper' in vars(config):
+            magnet_helper = config.magnet_helper
+        else: magnet_helper = None
+        
+        if 'SESSION_STRING_USER' in vars(config):
+            ses_usr_str = config.SESSION_STRING_USER
+        else: ses_usr_str = os.environ.get("SESSION_STRING_USER", None) 
+           
+        if 'SESSION_STRING_BOT' in vars(config):
+            es_bot_str = config.SESSION_STRING_BOT 
+        else: ses_bot_str = os.environ.get("SESSION_STRING_BOT", None)
+
+        if 'ICU_extension_lib' in vars(config):
+            ICU_extension_lib = config.ICU_extension_lib
+        else: ICU_extension_lib = None
+
         if use_proxy:
             proxies = config.proxies
         else:
