@@ -80,10 +80,7 @@ def get_config(config=cfg):
         api_id = os.environ.get("API_ID", config.API_ID)
         api_hash = os.environ.get("API_HASH", config.API_HASH)
         mybot_token = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
-       
         system_version = config.system_version
-        session_client = config.session_client
-        session_bot = config.session_bot
         bot_name = config.bot_name
         admin_name = config.admin_name
         Channel_mon = config.Channel_mon
@@ -104,10 +101,13 @@ def get_config(config=cfg):
         if 'SESSION_STRING_USER' in vars(config):
             ses_usr_str = config.SESSION_STRING_USER
         else: ses_usr_str = os.environ.get("SESSION_STRING_USER", None) 
-           
+
         if 'SESSION_STRING_BOT' in vars(config):
-            es_bot_str = config.SESSION_STRING_BOT 
+            ses_bot_str = config.SESSION_STRING_BOT 
         else: ses_bot_str = os.environ.get("SESSION_STRING_BOT", None)
+    
+        if ses_usr_str == None: session_client = config.session_client
+        if ses_bot_str == None: session_bot = config.session_bot 
 
         if 'ICU_extension_lib' in vars(config):
             ICU_extension_lib = config.ICU_extension_lib

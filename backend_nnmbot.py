@@ -272,10 +272,12 @@ else:
    proxy=None
 
 # Set type session: file or env string
-if sts.ses_bot_str == None:
+if sts.ses_usr_str == None:
    session=sts.session_client
+   logging.info(f"Use File session mode")
 else:
    session=StringSession(sts.ses_usr_str)
+   logging.info(f"Use String session mode")
 
 client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version,proxy=proxy)
 
