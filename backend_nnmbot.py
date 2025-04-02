@@ -261,6 +261,7 @@ sts.connection = sqlite3.connect(sts.db_name)
 sts.connection.row_factory = sqlite3.Row
 sts.cursor = sts.connection.cursor()
 
+# Init database
 dbm.db_init()
 dbm.db_create()
 
@@ -279,6 +280,7 @@ else:
    session=StringSession(sts.ses_usr_str)
    logging.info(f"Use String session mode")
 
+# Init and start Telegram client as bot
 client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version,proxy=proxy)
 
 
