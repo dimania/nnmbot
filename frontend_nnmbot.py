@@ -1,10 +1,7 @@
-#!/usr/bin/python3
-#
 # Telegram Bot for filter films from NNMCLUB channel
 # version 0.5
 # Module frontend_nnmbot.py listen NNMCLUB channel,
 # filter films and write to database 
-#
 #
 
 import re
@@ -14,7 +11,6 @@ import asyncio
 import os.path
 import sys
 import gettext
-import io
 from datetime import datetime
 from telethon import TelegramClient, events
 from telethon.tl.types import  PeerChannel, PeerUser
@@ -35,7 +31,7 @@ async def query_all_records(event):
         Get and send all database records, 
         Use with carefully may be many records 
     '''
-    logging.info(f"Query all db records")
+    logging.info("Query all db records")
     rows = dbm.db_list_all()
     await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
 
@@ -55,17 +51,17 @@ async def query_search(str_search, event):
     logging.info(f"Search in database:{str_search}")
     rows = dbm.db_search_old(str_search)
     await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
-    
-async def query_tagged_records_list(id_user, tag, event):
+
+async def query_tagged_records_list(id_usr, tag, event):
     ''' Get films tagget for user '''
     logging.info("Query db records with set tag")
-    rows = dbm.db_list_tagged_films( id_user=id_user, tag=tag )
+    rows = dbm.db_list_tagged_films( id_user=id_usr, tag=tag )
     await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
 
-async def query_tagged_records_by_one(id_user, tag, event):
+async def query_tagged_records_by_one(id_usr, tag, event):
     ''' Get films tagget for user '''
     logging.info("Query db records with set tag")
-    rows = dbm.db_list_tagged_films_id( id_user=id_user, tag=tag )
+    rows = dbm.db_list_tagged_films_id( id_user=id_usr, tag=tag )
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
@@ -98,7 +94,7 @@ async def show_card_one_record_menu( rows=None, event=None ):
     else:
         message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)
-        return 0           
+        return 0
 
 async def publish_all_new_films():
     ''' Publish All films on channel which are not published '''
@@ -112,7 +108,7 @@ async def publish_all_new_films():
          #set to sts.PUBL_YES
          dbm.db_update_publish(id)
          await asyncio.sleep(1)
-         
+
     #Publish updated Films
     rows=dbm.db_list_4_publish(sts.PUBL_UPD)
     if rows:
@@ -161,7 +157,7 @@ async def publish_new_film( id, rec_upd ):
         new_message = new_message[:1019]+'...'
 
     # Send new message to Channel
-    try:                
+    try:
         send_msg = await bot.send_file(PeerChannel(Channel_my_id), image_nnm_url, caption=new_message, \
                 buttons=buttons_film, parse_mode="html" )
     except errors.FloodWaitError as e:
@@ -169,7 +165,7 @@ async def publish_new_film( id, rec_upd ):
         asyncio.sleep(e.seconds)
 
     logging.debug(f"Send new film Message:{send_msg}")
-    
+
 async def send_card_one_record( id, index, event ):
     ''' Create card of one film and send to channel 
         id - number film in db
@@ -196,26 +192,14 @@ async def send_card_one_record( id, index, event ):
             Button.inline(_("◼"), f_curr),
             Button.inline(_("▶"), f_next)
             ]
-    #FIXME: REMOVE foto - chang to url_image
-    film_photo =  dict(row).get("image_nnm_url")
-    if not film_photo:
-        film_photo = dict(row).get("photo")
-        logging.debug(f"Film_photo:{film_photo}")
-        if film_photo != None:
-            file_photo = io.BytesIO(film_photo)
-            file_photo.name = "image.jpg" 
-            file_photo.seek(0)  # set cursor to the beginning        
-        else:
-            file_photo='no_image.jpg' #FIXME
-            logging.debug(f"File_photo:{file_photo}")
-    
-    # Create new message 
+    image_nnm_url  =  dict(row).get("image_nnm_url")
+    # Create new message
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
     logging.debug(f"New message:{new_message}")
-    #FIX ME as send? as respond or as send_file message
+    #FIXME as send? as respond or as send_file message
     #await event.respond(message, parse_mode='html', link_preview=0)
     logging.debug(f"Event:{event}")
-    send_msg = await bot.send_file(event.original_update.peer, file_photo, caption=new_message, buttons=buttons_film, parse_mode="html" )
+    await bot.send_file(event.original_update.peer, image_nnm_url, caption=new_message, buttons=buttons_film, parse_mode="html" )
     
 async def send_lists_records( rows, num_per_message, event ):
     ''' Create messages from  list records and send to channel 
@@ -249,20 +233,20 @@ async def send_lists_records( rows, num_per_message, event ):
         message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)
 
-async def query_clear_tagged_records(id_user, event):
+async def query_clear_tagged_records(id_usr, event):
     ''' Clear all tag for user '''
-    logging.info(f"Query db for clear tag ")
-    rows = dbm.db_switch_user_tag( sts.UNSETTAG, id_user )
+    logging.info("Query db for clear tag ")
+    rows = dbm.db_switch_user_tag( sts.UNSETTAG, id_usr )
     if rows:
         message = _('Clear ')+rows+_(' records')
     else:
         message = _("No records")
     await event.respond(message, parse_mode='html', link_preview=0)
 
-async def query_db_info(event, id_user):
+async def query_db_info(event, id_usr):
     ''' Get info about database records '''
-    logging.info(f"Query info database for user {id_user}")
-    rows = dbm.db_info(id_user)
+    logging.info(f"Query info database for user {id_usr}")
+    rows = dbm.db_info(id_usr)
     message = _("All records: ") + \
         str(rows[0][0])+_("\nTagged records: ") + \
         str(rows[1][0])+_("\nEarly tagged: ")+str(rows[2][0])
@@ -270,7 +254,7 @@ async def query_db_info(event, id_user):
 
 async def create_basic_menu(level, event):
     ''' Create basic menu control database '''
-    logging.info(f"Create menu buttons")
+    logging.info("Create menu buttons")
     keyboard = [
         [
             Button.inline(_("List Films tagged"), b"/bm_dwlist")
@@ -293,13 +277,13 @@ async def create_basic_menu(level, event):
        # Add items for SuperUser
        keyboard.append([Button.inline(_("List All Films in DB"), b"/bm_dblist")])
        keyboard.append([Button.inline(_("Go to control users menu"), b"/bm_cum")])
-       
+
 
     await event.respond(_("**☣ Work with database:**"), parse_mode='md', buttons=keyboard)
 
 async def create_control_user_menu(level, event):
     ''' Create menu of control users '''
-    logging.info(f"Create control user menu buttons")
+    logging.info("Create control user menu buttons")
     keyboard = [
         [
             Button.inline(_("List user requests"), b"/cu_lur")
@@ -324,16 +308,16 @@ async def create_control_user_menu(level, event):
 
     await event.respond(_("**☣ Work with users:**"), parse_mode='md', buttons=keyboard)
 
-async def create_rights_user_menu(level, event, id_user):
+async def create_rights_user_menu(level, event, id_usr):
     ''' Create menu for change rights users '''
-    logging.info(f"Create menu for change rights users menu buttons")
+    logging.info("Create menu for change rights users menu buttons")
 
     keyboard = [
         [
-            Button.inline(_("Set Read only"), b"/cr_ro"+str.encode(id_user))
+            Button.inline(_("Set Read only"), b"/cr_ro"+str.encode(id_usr))
         ],
         [
-            Button.inline(_("Set Read Write"), b"/cr_rw"+str.encode(id_user))
+            Button.inline(_("Set Read Write"), b"/cr_rw"+str.encode(id_usr))
         ],
         [
             Button.inline(_("Back to users menu"), b"/cr_bum")
@@ -354,7 +338,7 @@ async def create_choice_dialog(question, choice_buttons, event, level):
         event = bot event handled id
         level = user level for show menu exxtended or no
     '''
-    logging.debug(f"Create choice buttons")
+    logging.debug("Create choice buttons")
     button = []
     # Create butons and send to channel (choice dialog)
     for button_s in choice_buttons:
@@ -374,11 +358,11 @@ async def create_choice_dialog(question, choice_buttons, event, level):
                 await choice_buttons[button_press][2](*choice_buttons[button_press][3])
                 if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
                     await create_basic_menu(level, event)
-        
+
 async def check_user(channel, user, event):
     ''' Check right of User '''
     logging.debug(f"Try Get permissions for channe={channel} user={user}")
-    
+
     try:
       permissions = await bot.get_permissions(channel, user)
       logging.debug(f"Get permissions = {permissions}  for channe={channel} user={user}")
@@ -387,11 +371,11 @@ async def check_user(channel, user, event):
         ret = -1
         if not user_db:
           logging.debug(f"User {user} is Admin and not in db - new user!")
-          return sts.USER_NEW    
+          return sts.USER_NEW
         return sts.USER_SUPERADMIN # Admin
     except:
       logging.error(f"Can not get permissions for channel={channel} user={user}. Possibly user not join to group but send request for Control")  
-    
+
     user_db = dbm.db_exist_user(user)
     ret = -1
     if not user_db:
@@ -407,7 +391,7 @@ async def check_user(channel, user, event):
     elif dict(user_db[0]).get('rights') == sts.USER_READ_WRITE:
       logging.debug(f"User {user} admin in your db")
       ret = sts.USER_READ_WRITE
-    
+
     return ret
 
 async def query_wait_users(event):
@@ -459,15 +443,15 @@ async def query_all_users(event, bdata_id, message):
         message = _(".....No records.....")
         await event.respond(message)
 
-async def query_user_tag_film(event, id_nnm, id_user):
+async def query_user_tag_film(event, id_nnm, id_usr):
     ''' User tag film '''
-    res=dbm.db_get_tag( id_nnm, id_user )
+    res=dbm.db_get_tag( id_nnm, id_usr )
     if res:
        await event.answer(_('Film already in database!'), alert=True)
        logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
        return
-    res=dbm.db_add_tag( id_nnm, sts.SETTAG, id_user )
-    logging.info(f"User {id_user} tag film id_nnm={id_nnm} with result={res}")
+    res=dbm.db_add_tag( id_nnm, sts.SETTAG, id_usr )
+    logging.info(f"User {id_usr} tag film id_nnm={id_nnm} with result={res}")
     #bdata = 'TAG'+id_nnm
     await event.answer(_('Film added to database'), alert=True)
 
@@ -529,29 +513,9 @@ async def main_frontend():
            await query_user_tag_film(event, data, event.query.user_id)
            raise StopPropagation
 
-    #TODO: Remove its handler in future
-    # Handle messages from backend
-    @bot.on(events.NewMessage(from_users=sts.backend_user, pattern=r'.*PUBLISH#[:digital:]*'))
-    async def bot_handler(event_publish):
-        logging.debug(f"Get NewMessage event_pbl: {event_publish}")
-        #get Id
-        pbl_data = event_publish.message.message
-        logging.debug(f"Get message for publish:{pbl_data}")
-        if pbl_data.find('UPDPUBLISH', 0, 10) != -1:
-            id = pbl_data.replace('UPDPUBLISH#', '')
-            await publish_new_film( id, sts.PUBL_UPD )
-            #set to sts.PUBL_YES
-            dbm.db_update_publish(id)
-        elif pbl_data.find('PUBLISH', 0, 7) != -1:
-            id = pbl_data.replace('PUBLISH#', '')
-            await publish_new_film( id, sts.PUBL_NOT )
-            #set to sts.PUBL_YES
-            dbm.db_update_publish(id)
-        raise StopPropagation
-
- # Handle messages from backend as inline_query
+    # Handle messages from backend as inline_query
     @bot.on(events.InlineQuery(users=sts.backend_user, pattern=r'.*PUBLISH#[:digital:]*'))
-    async def bot_handler(event_publish_iq):
+    async def bot_handler_iq(event_publish_iq):
         logging.debug(f"Get NewMessage event_pbl_iq: {event_publish_iq}")
         pbl_data = event_publish_iq.query.query
         logging.debug(f"Get message for publish iq:{pbl_data}")
@@ -572,7 +536,7 @@ async def main_frontend():
 
     # Handle messages in bot chat
     @bot.on(events.NewMessage())
-    async def bot_handler(event_bot):
+    async def bot_handler_nm_bot(event_bot):
         logging.debug(f"Get NewMessage event_bot: {event_bot}")
         menu_level = 0
         #user = event_bot.message.peer_id.user_id
@@ -605,7 +569,7 @@ async def main_frontend():
             
     # Handle basic Menu
     @bot.on(events.CallbackQuery())
-    async def callback_bot(event_bot):
+    async def callback_bot_cb(event_bot):
         logging.debug(f"Get callback event_bot {event_bot}")
         id_user = event_bot.query.user_id
 
@@ -615,7 +579,8 @@ async def main_frontend():
         ret = await check_user(PeerChannel(Channel_my_id), id_user, event_bot)
         #Stop handle this event other handlers
         #raise StopPropagation
-       
+        menu_level = sts.MENU_USER_READ
+
         if ret == sts.USER_BLOCKED:   # Blocked
           #await event_bot.respond(_('Sorry You are Blocked!\nSend message to Admin this channel.'))
           return
@@ -685,7 +650,7 @@ async def main_frontend():
             send_menu = sts.CUSER_MENU
         elif button_data.find('ENABLE', 0, 6) != -1:
             data = button_data
-            id_user_approve = data.replace('ENABLE', '') #FIXME change id_user_approve id_user
+            id_user_approve = data.replace('ENABLE', '') 
             # Approve waiting users
             logging.info(f"Approve waiting users: user={id_user_approve}")
             dbm.db_ch_rights_user(id_user_approve, sts.USER_ACTIVE, sts.USER_READ_WRITE)
@@ -779,7 +744,7 @@ print('Start frontend.')
 sts.get_config()
 # Enable logging
 logging.basicConfig(level=sts.log_level, filename="fronend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
-logging.info("Start backend bot.")
+logging.info("Start frontend bot.")
 
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
@@ -787,7 +752,7 @@ if os.path.isdir(localedir):
   translate = gettext.translation('nnmbot', localedir, [sts.Lang])
   _ = translate.gettext
 else: 
-  logging.info(f"No locale dir for support langs: {sts.localedir} \n Use default lang: Engilsh")
+  logging.info(f"No locale dir found for support langs: {localedir} \n Use default lang: Engilsh")
   def _(message): return message
  
 sts.connection = sqlite3.connect(sts.db_name)
