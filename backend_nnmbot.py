@@ -1,13 +1,9 @@
 
-#!/usr/bin/python3
-#
 # Telegram Bot for filter films from NNMCLUB channel
 # version 0.5
 # Module backend_nnmbot.py listen NNMCLUB channel,
-# filter films and write to database 
+# filter films and write to database
 #
-#
-
 
 import re
 import sqlite3
@@ -23,7 +19,6 @@ from telethon.sessions import StringSession
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-#from requests.packages.urllib3.util.retry import Retry
 # --------------------------------
 import settings as sts
 import dbmodule_nnmbot as dbm
@@ -33,7 +28,7 @@ async def main_backend():
     ''' Loop for client connection '''
 
     # -------------- addition info vars
-    Id = ["Название:", "Производство:", "Жанр:", "Режиссер:",
+    fileds_name = ["Название:", "Производство:", "Жанр:", "Режиссер:",
           "Актеры:", "Описание:", "Продолжительность:", "Качество видео:",
           "Перевод:", "Язык озвучки:", "Субтитры:", "Видео:", "Аудио 1:",
           "Аудио 2:", "Аудио 3:", "Скриншоты:", "Время раздачи:"]
@@ -41,13 +36,12 @@ async def main_backend():
     f_tmpl = re.compile('film/(.+?)/')
     t_tmpl = re.compile('title/(.+?)/')
     url_tmpl = re.compile(r'viewtopic.php\?t')
-    kpr_tmpl = re.compile('www.kinopoisk.ru/rating')
     desc_tmpl = re.compile(':$')
 
-    Channel_mon_id = await client.get_peer_id(sts.Channel_mon)
+    channel_mon_id = await client.get_peer_id(sts.Channel_mon)
     # Parse channel NNMCLUB for Films
 
-    @client.on(events.NewMessage(chats=[PeerChannel(Channel_mon_id)], pattern=sts.pattern_filter))
+    @client.on(events.NewMessage(chats=[PeerChannel(channel_mon_id)], pattern=sts.pattern_filter))
     async def normal_handler(event):
         url = post_body  = []
         mydict = {}
@@ -59,7 +53,7 @@ async def main_backend():
             if url_tmpl.search(inner_text):
                 url = inner_text
         logging.info(f"Get URL nnmclub page with Film: {url}")
-       
+
         # if URL not exist return
         if not url:
             return
@@ -87,11 +81,11 @@ async def main_backend():
             return
         except requests.ConnectionError as e:
             logging.error(f"Max retries exceeded Error: Can't open url:{url}, status:{e}")
-            logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
+            logging.error("May be you need use proxy? For it set use_proxy=1 in config file.")
             return
         except requests.RequestException as e:
             logging.error(f"General Error: Can't open url:{url}, status:{e}")
-            logging.error(f"May be you need use proxy? For it set use_proxy=1 in config file.")
+            logging.error("May be you need use proxy? For it set use_proxy=1 in config file.")
             client.disconnect()
             return
 
@@ -109,25 +103,20 @@ async def main_backend():
             mag_link = post_body.get('href')
             logging.debug(f"Magnet link: {mag_link}\n")
         else:
-            mag_link = None  
+            mag_link = None
 
         # Select data where class - postbody
         post_body = soup.find(class_='postbody')
         text = post_body.get_text('\n', strip='True')
 
-        # Get url picture with rating Film on Kinopoisk site
-        for a_hr in post_body.find_all(class_='postImg'):
-            rat = a_hr.get('title')
-            if kpr_tmpl.search(rat):
-                rating_url = rat
         #Get poster url
         for a_hr in post_body.find_all(class_='postImg postImgAligned img-right'):
             image_nnm_url = a_hr.get('title')
-        logging.info(f"Get image url fron nnmblub: {image_nnm_url}")
+        logging.info(f"Get image url from nnmblub: {image_nnm_url}")
 
-        k = Id[0]
+        k = fileds_name[0]
         v = ""
-        
+
         # Create Dict for data about Film
         for line in text.split("\n"):
             if not line.strip():
@@ -155,7 +144,7 @@ async def main_backend():
                 id_imdb = t_tmpl.search(rat).group(1)
                 imdb_url = rat.replace('?ref_=plg_rt_1', 'ratings/?ref_=tt_ov_rt')
                 logging.info(f"Create url rating from imdb: {imdb_url}")
-           
+
         id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
 
         # Get rating film from kinopoisk if not then from imdb site
@@ -163,15 +152,15 @@ async def main_backend():
             rat_url = kpsk_url
             page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
             # Parse data
-            # FIXME me be better use xml.parser ?
+            # FIXME: me be better use xml.parser ?
             soup = BeautifulSoup(page.text, 'html.parser')
             try:
                 rating_xml = soup.find('rating')
                 kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
                 imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
                 logging.info(f"Get rating from kinopoisk: {kpsk_url}")
-            except:
-                logging.info(f"No kinopoisk rating on site")
+            except Exception as error:
+                logging.info(f"No kinopoisk rating on site:{error}")
         elif imdb_url:
             rat_url = imdb_url
             page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
@@ -182,7 +171,7 @@ async def main_backend():
                 imdb_r = post_body.get_text('\n', strip='True')
                 logging.info(f"Get rating from imdb: {imdb_url}")
             else:
-                imdb_r = "-"  
+                imdb_r = "-"
         else:
             kpsk_r = "-"
             imdb_r = "-"
@@ -194,27 +183,28 @@ async def main_backend():
                 if rec_id:
                     rec_id=dict(rec_id).get("id")
                     # Update exist film to DB 🔄
-                    dbm.db_update_film(rec_id, id_nnm, url, mydict[Id[0]], \
-                        id_kpsk, id_imdb, mag_link, section, mydict.get(Id[2]), kpsk_r, imdb_r, \
-                            mydict.get(Id[5]), image_nnm_url, sts.PUBL_UPD)
+                    dbm.db_update_film(rec_id, id_nnm, url, mydict[fileds_name[0]], \
+                        id_kpsk, id_imdb, mag_link, section, mydict.get(fileds_name[2]), kpsk_r, imdb_r, \
+                            mydict.get(fileds_name[5]), image_nnm_url, sts.PUBL_UPD)
                     rec_upd='UPD'
                     logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
                 else:
-                    # Add new film to DB                     
-                    rec_id=dbm.db_add_film(id_nnm, url, mydict[Id[0]], id_kpsk, id_imdb, mag_link, section, \
-                        mydict.get(Id[2]), kpsk_r, imdb_r, mydict.get(Id[5]), image_nnm_url, sts.PUBL_NOT)
-                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={mydict[Id[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
-            # Send message to frondend bot for publish Film 
+                    # Add new film to DB
+                    rec_id=dbm.db_add_film(id_nnm, url, mydict[fileds_name[0]], id_kpsk, id_imdb, mag_link, section, \
+                        mydict.get(fileds_name[2]), kpsk_r, imdb_r, mydict.get(fileds_name[5]), image_nnm_url, sts.PUBL_NOT)
+                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={mydict[fileds_name[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
+            # Send message to frondend bot for publish Film
             #send_msg = await client.send_message(sts.bot_name,rec_upd+"PUBLISH#"+str(rec_id))
             #logging.debug(f"Send Message:{send_msg}")
             try:
+                # Send inline query message to frondend bot for publish Film
                 result = await client.inline_query(sts.bot_name,rec_upd+"PUBLISH#"+str(rec_id))
-                #logging.debug(f"Send inline_query:{result}")
+                logging.debug(f"Send inline_query:{result}")
             except Exception as error:
                 logging.warning(f'Cant send inline_query to bot. Ignore this because frondend not running:\n {error}')
         except Exception as error:
             logging.error(f'Error in block db_lock: {error}')
-        
+
     return client
 
 
@@ -225,17 +215,18 @@ sts.get_config()
 
 # Enable logging
 logging.basicConfig(level=sts.log_level, filename="backend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
-logging.info(f"Start backend bot.")
+logging.info("Start backend bot.")
 
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
 if os.path.isdir(localedir):
     translate = gettext.translation('nnmbot', localedir, [sts.Lang])
     _ = translate.gettext
-else: 
+else:
     logging.info(f"No locale dir for support langs: {localedir} \n Use default lang: Engilsh")
-    def _(message): return message
- 
+    def _(message):
+        return message
+
 db_lock = asyncio.Lock()
 sts.connection = sqlite3.connect(sts.db_name)
 sts.connection.row_factory = sqlite3.Row
@@ -248,26 +239,28 @@ dbm.db_create()
 # Connect to Telegram as user
 if sts.use_proxy:
     prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
-    proxy=(prx.group(1), prx.group(2), int(prx.group(3)))
+    proxy = (prx.group(1), prx.group(2), int(prx.group(3)))
 else:
-    proxy=None
+    proxy = None
 
 # Set type session: file or env string
 if not sts.ses_usr_str:
     session=sts.session_client
-    logging.info(f"Use File session mode")
+    logging.info("Use File session mode")
 else:
     session=StringSession(sts.ses_usr_str)
-    logging.info(f"Use String session mode")
+    logging.info("Use String session mode")
 
 # Init and start Telegram client as bot
-client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version,proxy=proxy)
+client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
 
+string=client.session.save()
+print(f"String session for user:\n{string}")
 
 client.start()
 client.loop.run_until_complete(main_backend())
 client.run_until_disconnected()
 
 sts.connection.close()
-logging.info(f"End.\n--------------------------")
+logging.info("End backend.\n--------------------------")
 print('End.')

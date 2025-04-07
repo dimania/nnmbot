@@ -1,4 +1,3 @@
-#
 # Telegram Bot for filter films from NNMCLUB channel
 # version 0.5
 # Module settings.py Set internal variables
@@ -76,7 +75,9 @@ def get_config(config=cfg):
     global ses_usr_str
     global ses_bot_str
 
-    
+    cursor = None
+    connection = None
+
     try:
         api_id = os.environ.get("API_ID", config.API_ID)
         api_hash = os.environ.get("API_HASH", config.API_HASH)

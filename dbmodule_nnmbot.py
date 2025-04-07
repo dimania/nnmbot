@@ -1,4 +1,3 @@
-#
 # Telegram Bot for filter films from NNMCLUB channel
 # version 0.5
 # Module dbmodule_nnmbot.py  Dbatabase functions  
@@ -27,9 +26,9 @@ def db_create():
 
     # Create basic table Films
     # remove - id_msg TEXT,
-    # remove: photo BLOB DEFAULT NULL,    
-    # add: publish INTEGER DEFAULT 0, - Flag no publish/upgrade/not publish - 1/2/0  
-    
+    # remove: photo BLOB DEFAULT NULL,
+    # add: publish INTEGER DEFAULT 0, - Flag no publish/upgrade/not publish - 1/2/0
+
     sts.cursor.execute('''
       CREATE TABLE IF NOT EXISTS Films (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -182,7 +181,7 @@ def db_add_user( id_user, name_user ):
       (id_user, name_user, cur_date,))
       sts.connection.commit()
     except Exception as IntegrityError:
-      logging.error(f"User already exist in BD\n") 
+      logging.error("User already exist in BD\n") 
       logging.error(f"Original Error is: {IntegrityError}")           
       return 1
    
