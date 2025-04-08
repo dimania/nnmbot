@@ -99,7 +99,9 @@ async def show_card_one_record_menu( rows=None, event=None ):
 async def publish_all_new_films():
     ''' Publish All films on channel which are not published '''
     #Publish new Films
+    
     rows=dbm.db_list_4_publish(sts.PUBL_NOT)
+
     if rows:
        for row in rows:
          id=dict(row).get("id")
@@ -170,7 +172,7 @@ async def send_card_one_record( id, index, event ):
     ''' Create card of one film and send to channel 
         id - number film in db
         event - descriptor channel '''
-
+    #BUG need change quotas
     row=dbm.db_film_by_id( id )
     film_name = f"<b>{index+1}. </b><a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
     film_section = f"🟢<b>Раздел:</b> \n{dict(row).get("section")}"
