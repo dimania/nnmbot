@@ -34,7 +34,7 @@ sts.get_config()
 #---------------------------user connect--------------------------------------
 if argv[1] == 'user' and argv[2] == 'gen':
     # Generate string session for user client connection
-    client = TelegramClient(StringSession(), sts.api_id, sts.api_hash, system_version=sts.system_version)
+    client = TelegramClient(StringSession(), sts.api_id, sts.api_hash, system_version=sts.system_version).start()
     string=client.session.save()
     print(f"String session for user:\n{string}")
     exit()
@@ -47,7 +47,7 @@ if argv[1] == 'user' and argv[2] == 'test':
 
     print("Set string session for client:\n----------------------------------------------")
     print(f"{sts.ses_usr_str}\n-------------------------------------------------\n")
-    client = TelegramClient(StringSession(sts.ses_usr_str), sts.api_id, sts.api_hash, system_version=sts.system_version)
+    client = TelegramClient(StringSession(sts.ses_usr_str), sts.api_id, sts.api_hash, system_version=sts.system_version).start()
     client.send_message(sts.admin_name, 'Hi')
     string=client.session.save()
     print("Current String session for client:\n----------------------------------------------")
