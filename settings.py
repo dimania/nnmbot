@@ -79,9 +79,6 @@ def get_config(config=cfg):
     connection = None
 
     try:
-        api_id = os.environ.get("API_ID", config.API_ID)
-        api_hash = os.environ.get("API_HASH", config.API_HASH)
-        mybot_token = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
         system_version = config.system_version
         bot_name = config.bot_name
         admin_name = config.admin_name
@@ -95,11 +92,19 @@ def get_config(config=cfg):
         Lang = config.Lang
         backend_user = config.backend_user
         
-        # Not requiried params
-        if 'magnet_helper' in vars(config):
-            magnet_helper = config.magnet_helper
-        else: magnet_helper = None
-        
+        # May be comment out in config.py
+        if 'API_ID' in vars(config):
+            api_id = config.API_ID
+        else: api_id = os.environ.get("API_ID", None)
+
+        if 'API_HASH' in vars(config):
+            api_hash = config.API_HASH
+        else: api_hash = os.environ.get("API_HASH", None)
+
+        if 'BOT_TOKEN' in vars(config):
+            mybot_token = config.BOT_TOKEN
+        else: mybot_token = os.environ.get("BOT_TOKEN", None)
+
         if 'SESSION_STRING_USER' in vars(config):
             ses_usr_str = config.SESSION_STRING_USER
         else: ses_usr_str = os.environ.get("SESSION_STRING_USER", None) 
@@ -111,6 +116,10 @@ def get_config(config=cfg):
         if not ses_usr_str: session_client = config.session_client
         if not ses_bot_str: session_bot = config.session_bot 
 
+        if 'magnet_helper' in vars(config):
+            magnet_helper = config.magnet_helper
+        else: magnet_helper = None
+    
         if 'ICU_extension_lib' in vars(config):
             ICU_extension_lib = config.ICU_extension_lib
         else: ICU_extension_lib = None
