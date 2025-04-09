@@ -104,7 +104,7 @@ async def publish_all_new_films():
 
     if rows:
        for row in rows:
-         id=dict(row).get("id")
+         id=dict(row).get('id')
          logging.debug(f"Publish new film id:{id}")
          await publish_new_film(id, sts.PUBL_NOT)
          #set to sts.PUBL_YES
@@ -115,7 +115,7 @@ async def publish_all_new_films():
     rows=dbm.db_list_4_publish(sts.PUBL_UPD)
     if rows:
        for row in rows:
-         id=dict(row).get("id")
+         id=dict(row).get('id')
          logging.debug(f"Publish updated film id:{id}")
          await publish_new_film(id, sts.PUBL_UPD)
          #set to sts.PUBL_YES
@@ -130,15 +130,15 @@ async def publish_new_film( id, rec_upd ):
     logging.debug(f"Publish film id={id} rec_upd={rec_upd}")
     row=dbm.db_film_by_id( id )
     logging.debug(f"Get film from db ={row}")
-    film_name = f"<a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
-    film_section = f"🟢<b>Раздел:</b> \n{dict(row).get("section")}"
-    film_genre = f"🟢<b>Жанр:</b> {dict(row).get("genre")}\n"
-    film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get("rate_kpsk")}] Imdb[{dict(row).get("rate_imdb")}]\n"
-    film_description = f"🟢<b>Описание:</b> \n{dict(row).get("description")}\n"
-    image_nnm_url = dict(row).get("image_nnm_url")
-    id_nnm = dict(row).get("id_nnm") 
+    film_name = f"<a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
+    film_section = f"🟢<b>Раздел:</b> \n{dict(row).get('section')}"
+    film_genre = f"🟢<b>Жанр:</b> {dict(row).get('genre')}\n"
+    film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get('rate_kpsk')}] Imdb[{dict(row).get('rate_imdb')}]\n"
+    film_description = f"🟢<b>Описание:</b> \n{dict(row).get('description')}\n"
+    image_nnm_url = dict(row).get('image_nnm_url')
+    id_nnm = dict(row).get('id_nnm') 
     # if magnet link exist create string and href link
-    mag_link = dict(row).get("mag_link")
+    mag_link = dict(row).get('mag_link')
     if mag_link and sts.magnet_helper:
         film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
     else:
@@ -174,13 +174,13 @@ async def send_card_one_record( id, index, event ):
         event - descriptor channel '''
     #BUG need change quotas
     row=dbm.db_film_by_id( id )
-    film_name = f"<b>{index+1}. </b><a href='{dict(row).get("nnm_url")}'>{dict(row).get("name")}</a>\n"
-    film_section = f"🟢<b>Раздел:</b> \n{dict(row).get("section")}"
-    film_genre = f"🟢<b>Жанр:</b> {dict(row).get("genre")}\n"
-    film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get("rate_kpsk")}] Imdb[{dict(row).get("rate_imdb")}]\n"
-    film_description = f"🟢<b>Описание:</b> \n{dict(row).get("description")}\n"
+    film_name = f"<b>{index+1}. </b><a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
+    film_section = f"🟢<b>Раздел:</b> \n{dict(row).get('section')}"
+    film_genre = f"🟢<b>Жанр:</b> {dict(row).get('genre')}\n"
+    film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get('rate_kpsk')}] Imdb[{dict(row).get('rate_imdb')}]\n"
+    film_description = f"🟢<b>Описание:</b> \n{dict(row).get('description')}\n"
     # if magnet link exist create string and href link
-    mag_link = dict(row).get("mag_link")
+    mag_link = dict(row).get('mag_link')
     if mag_link and sts.magnet_helper:
         film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
     else:
@@ -194,7 +194,7 @@ async def send_card_one_record( id, index, event ):
             Button.inline(_("◼"), f_curr),
             Button.inline(_("▶"), f_next)
             ]
-    image_nnm_url  =  dict(row).get("image_nnm_url")
+    image_nnm_url  =  dict(row).get('image_nnm_url')
     # Create new message
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
     logging.debug(f"New message:{new_message}")
@@ -213,8 +213,8 @@ async def send_lists_records( rows, num_per_message, event ):
         i = 0
         message=""
         for row in rows:
-            message = message + f'{i+1}. <a href="{dict(row).get("nnm_url")}">{dict(row).get("name")}</a>\n'
-            mag_link_str = dict(row).get("mag_link")
+            message = message + f'{i+1}. <a href="{dict(row).get('nnm_url')}">{dict(row).get('name')}</a>\n'
+            mag_link_str = dict(row).get('mag_link')
             if mag_link_str and sts.magnet_helper:
                message = message + f'<a href="{sts.magnet_helper}+{mag_link_str}">🧲Примагнититься</a>\n'
             i = i + 1
@@ -779,7 +779,7 @@ if not sts.ses_bot_str:
 else:
     session = StringSession(sts.ses_bot_str)
     logging.info("Use String session mode.")
-
+    
 # Init and start Telegram client as bot
 bot = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy).start(bot_token=sts.mybot_token)
 
