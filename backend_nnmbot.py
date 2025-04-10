@@ -171,13 +171,15 @@ async def main_backend():
         id_kpsk=film_ids.get('id_kpsk')
         id_imdb=film_ids.get('id_imdb')
         id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
+        
         # Get film info from unofficial kinopoisk API 
         ukp_info=get_ukp_film_info(id_kpsk)
-        image_nnm_url=film_ids.get('image_nnm_urlb')
-        film_name=film_ids.get('film_name')
-        kpsk_r=film_ids.get('kpsk_r')
-        imdb_r=film_ids.get('imdb_r')
-        genres=film_ids.get('genres')
+        image_nnm_url=ukp_info.get('image_nnm_urlb')
+        film_name=ukp_info.get('film_name')
+        description=ukp_info.get('description')
+        kpsk_r=ukp_info.get('kpsk_r')
+        imdb_r=ukp_info.get('imdb_r')
+        genres=ukp_info.get('genres')
 
         # Select data where class - nav - info about tracker section
         post_body = soup.findAll('a', {'class': 'nav'})
@@ -217,40 +219,52 @@ async def main_backend():
                     v = v+line
                     mydict[k] = v
 
-        kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
-        imdb_url = 'https://www.imdb.com/title/'+id_imdb+'/ratings/?ref_=tt_ov_rt'
+        #kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+        #imdb_url = 'https://www.imdb.com/title/'+id_imdb+'/ratings/?ref_=tt_ov_rt'
         
         # Get rating film from kinopoisk if not then from imdb site
-        if not kpsk_r or not imdb_r:
-            if  kpsk_url:
-                rat_url = kpsk_url
-                page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
-                # Parse data
-                # FIXME: me be better use xml.parser ?
-                soup = BeautifulSoup(page.text, 'html.parser')
-                try:
-                    rating_xml = soup.find('rating')
-                    kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
-                    imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
-                    logging.info(f"Get rating from kinopoisk: {kpsk_url}")
-                except Exception as error:
-                    logging.info(f"No kinopoisk rating on site:{error}")
-            elif imdb_url:
-                rat_url = imdb_url
-                page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
-                # Parse data
-                soup = BeautifulSoup(page.text, 'html.parser')
-                post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
-                if post_body:
-                    imdb_r = post_body.get_text('\n', strip='True')
-                    logging.info(f"Get rating from imdb: {imdb_url}")
-                else:
-                    imdb_r = "-"
-            else:
-                kpsk_r = "-"
-                imdb_r = "-"
+    
+        #if not kpsk_r:
+        #    rat_url = kpsk_url
+        #    page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+        #    # Parse data
+        #    # FIXME: me be better use xml.parser ?
+        #    soup = BeautifulSoup(page.text, 'html.parser')
+        #    try:
+        #        rating_xml = soup.find('rating')
+        #        kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
+        #        imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
+        #        logging.info(f"Get rating from kinopoisk: {kpsk_url}")
+        #    except Exception as error:
+        #        logging.info(f"No kinopoisk rating on site:{error}")
+        #elif not imdb_r:
+        #    rat_url = imdb_url
+        #    page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+        #    # Parse data
+        #    soup = BeautifulSoup(page.text, 'html.parser')
+        #    post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
+        #    if post_body:
+        #        imdb_r = post_body.get_text('\n', strip='True')
+        #        logging.info(f"Get rating from imdb: {imdb_url}")
+        #    else:
+        #        imdb_r = "-"
+        #else:
+        #    kpsk_r = "-"
+        #    imdb_r = "-"
 
-            rec_upd = ""
+        rec_upd = ""
+
+        if not film_name:
+            film_name=mydict[fileds_name[0]]
+        if not description:
+            description=mydict[fileds_name[5]]
+        if not kpsk_r:
+            kpsk_r='-'
+        if not imdb_r:
+            imdb_r='-'
+        if not genres:
+            genres=mydict.get(fileds_name[2])   
+
 
         try:
             async with db_lock:
@@ -258,19 +272,16 @@ async def main_backend():
                 if rec_id:
                     rec_id=dict(rec_id).get("id")
                     # Update exist film to DB 🔄
-                    dbm.db_update_film(rec_id, id_nnm, url, mydict[fileds_name[0]], \
-                        id_kpsk, id_imdb, mag_link, section, mydict.get(fileds_name[2]), kpsk_r, imdb_r, \
-                            mydict.get(fileds_name[5]), image_nnm_url, sts.PUBL_UPD)
+                    dbm.db_update_film(rec_id, id_nnm, url, film_name, \
+                        id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
+                        description, image_nnm_url, sts.PUBL_UPD)
                     rec_upd='UPD'
                     logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
                 else:
                     # Add new film to DB
-                    rec_id=dbm.db_add_film(id_nnm, url, mydict[fileds_name[0]], id_kpsk, id_imdb, mag_link, section, \
-                        mydict.get(fileds_name[2]), kpsk_r, imdb_r, mydict.get(fileds_name[5]), image_nnm_url, sts.PUBL_NOT)
-                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={mydict[fileds_name[0]]} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
-            # Send message to frondend bot for publish Film
-            #send_msg = await client.send_message(sts.bot_name,rec_upd+"PUBLISH#"+str(rec_id))
-            #logging.debug(f"Send Message:{send_msg}")
+                    rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
+                        genres, kpsk_r, imdb_r, description, image_nnm_url, sts.PUBL_NOT)
+                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
             try:
                 # Send inline query message to frondend bot for publish Film
                 result = await client.inline_query(sts.bot_name,rec_upd+"PUBLISH#"+str(rec_id))
