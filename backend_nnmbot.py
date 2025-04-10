@@ -17,21 +17,25 @@ from telethon import TelegramClient, events
 from telethon.tl.types import PeerChannel, MessageEntityUrl
 from telethon.sessions import StringSession
 from bs4 import BeautifulSoup
-from requests.adapters import HTTPAdapter
-from urllib3.util import Retry
+#from requests.adapters import HTTPAdapter
+#from urllib3.util import Retry
 # --------------------------------
 import settings as sts
 import dbmodule_nnmbot as dbm
 # --------------------------------
 
-async def get_film_id( soup ):
+def get_film_id( soup ):
     ''' Get Kinopoisk id of Film'''
-
+    
      # Select data where class - postbody
     post_body = soup.find(class_='postbody')
     f_tmpl = re.compile('film/(.+?)/')
+    t_tmpl = re.compile('title/(.+?)/')
+
     for a_hr in post_body.find_all('a'):
         rat = a_hr.get('href')
+        if not rat:
+            return None
         if rat.find('https://www.kinopoisk.ru/film/') != -1:
             id_kpsk = f_tmpl.search(rat).group(1)
             logging.info(f"Get film id on kinopoisk: {id_kpsk}")
@@ -41,25 +45,25 @@ async def get_film_id( soup ):
 
     return { 'id_kpsk':id_kpsk,'id_imdb':id_imdb  }
 
-async def get_ukp_film_info( id_kpsk ):
+def get_ukp_film_info( id_kpsk ):
     ''' Get film info from unofficial kinopoisk api'''
-    #7530289
+
     if not sts.ukp_api_key or not sts.ukp_api_url:
         return None
 
     try:
-        response = requests.get(sts.ukp_api_url+str(id_kpsk), headers={'accept': 'application/json', 'X-API-KEY': sts.ukp_api_key}, proxies=sts.proxies)
-        if (response.status_code == 401): 
-            logging.info(f"Token Error!")
+        response = requests.get(sts.ukp_api_url+str(id_kpsk), timeout=30, headers={'accept': 'application/json', 'X-API-KEY': sts.ukp_api_key}, proxies=sts.proxies)
+        if response.status_code == 401: 
+            logging.info(f"Resposse status={response.status_code}:Token Error!")
             return None
-        if (response.status_code == 402):
-            logging.info(f"Limit over! Need wait in 24h.")
+        if response.status_code == 402:
+            logging.info(f"Resposse status={response.status_code}:Limit over! Need wait in 24h.")
             return None        
-        if (response.status_code == 404):
-            logging.info(f"No film found!")
+        if response.status_code == 404:
+            logging.info(f"Resposse status={response.status_code}:No film found!")
             return None        
-        if (response.status_code == 429):
-            logging.info(f"Too many requests per sec (>20)!")
+        if response.status_code == 429:
+            logging.info(f"Resposse status={response.status_code}:Too many requests per sec (>20)!")
             return None                      
         # Convert json into dictionary 
         response_dict = response.json()
@@ -69,24 +73,17 @@ async def get_ukp_film_info( id_kpsk ):
         kpsk_r_vk=response_dict.get('ratingKinopoiskVoteCount')
         imdb_r=response_dict.get('ratingImdb')
         imdb_r_vk=response_dict.get('ratingImdbVoteCount')
-        genres=response_dict.get('genres')
         image_nnm_url=response_dict.get('posterUrlPreview')
-        glen=len(genres)
-        gi=0
-        genres_out=""
-        for genre in genres:
-            g=genre.get('genre')
-            gi=gi+1
-            if gi == glen:
-                genres_out=genres_out+g  
-                break
-            else:
-                genres_out=genres_out+g+','
+        genres=response_dict.get('genres')
+        genre=''
+        for gen in genres:
+            genre=genre+gen.get('genre')+','
+        genre=genre[:-1]
 
-        #print(f"Genres_out={genres_out}")
-    except Exception as ConnectionError:
-        logging.error(f"Can't open url:{sts.ukp_api_url}, Error:{ConnectionError}")
+    except Exception as error:
+        logging.error(f"Can't open url:{sts.ukp_api_url}, Error:{error}")
         return None
+
     return { 'film_name':film_name,
             'description':description, 
             'kpsk_r':kpsk_r, 
@@ -94,8 +91,39 @@ async def get_ukp_film_info( id_kpsk ):
             'imdb_r':imdb_r, 
             'imdb_r_vk':imdb_r_vk, 
             'image_nnm_url':image_nnm_url,
-            'genres':genres_out }        
+            'genres':genre }        
 
+def get_rating_kp_imdb(id_kpsk, id_imdb):
+    '''Get raiting film from kinopoisk site or immdb site'''
+    
+    kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+    imdb_url = 'https://www.imdb.com/title/'+id_imdb+'/ratings/?ref_=tt_ov_rt'
+    kpsk_r=None
+    imdb_r=None
+    # Get rating film from kinopoisk if not then from imdb site
+
+    page = requests.get(kpsk_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+    # Parse data
+    # FIXME: me be better use xml.parser ?
+    soup = BeautifulSoup(page.text, 'html.parser')
+    try:
+        rating_xml = soup.find('rating')
+        kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
+        imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
+        logging.info(f"Get rating from kinopoisk: {kpsk_url}")
+    except Exception as error:
+        logging.info(f"No kinopoisk rating on site:{error}")
+
+    if not imdb_r:
+        page = requests.get(imdb_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+        # Parse data
+        soup = BeautifulSoup(page.text, 'html.parser')
+        post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
+        if post_body:
+            imdb_r = post_body.get_text('\n', strip='True')
+            logging.info(f"Get rating from imdb: {imdb_url}")
+    
+    return { 'kpsk_r':kpsk_r,'imdb_r':imdb_r  }
 
 async def main_backend():
     ''' Loop for client connection '''
@@ -106,11 +134,7 @@ async def main_backend():
           "Перевод:", "Язык озвучки:", "Субтитры:", "Видео:", "Аудио 1:",
           "Аудио 2:", "Аудио 3:", "Скриншоты:", "Время раздачи:"]
 
-    f_tmpl = re.compile('film/(.+?)/')
-    t_tmpl = re.compile('title/(.+?)/')
-    url_tmpl = re.compile(r'viewtopic.php\?t')
-    desc_tmpl = re.compile(':$')
-
+    
     channel_mon_id = await client.get_peer_id(sts.Channel_mon)
     # Parse channel NNMCLUB for Films
 
@@ -122,14 +146,16 @@ async def main_backend():
         msg = event.message
 
         # Get URL of nnmclub film page
+        url_tmpl = re.compile(r'viewtopic.php\?t')
         for url_entity, inner_text in msg.get_entities_text(MessageEntityUrl):
             logging.debug(f"Urls: {url_entity, inner_text}")
             if url_tmpl.search(inner_text):
                 url = inner_text
-        logging.info(f"Get URL nnmclub page with Film: {url}")
+        logging.info(f"Try Get URL nnmclub page with Film: {url}")
 
         # if URL not exist return
         if not url:
+            logging.info(f"Cannot get URL nnmclub page with Film: {url}")
             return
 
         try:
@@ -168,13 +194,18 @@ async def main_backend():
         soup = BeautifulSoup(page.text, 'html.parser')
 
         film_ids=get_film_id(soup)
+        
+        if not film_ids:
+            logging.info(f"No info for film (possible in archive): {url}")
+            return
+
         id_kpsk=film_ids.get('id_kpsk')
         id_imdb=film_ids.get('id_imdb')
         id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
         
         # Get film info from unofficial kinopoisk API 
         ukp_info=get_ukp_film_info(id_kpsk)
-        image_nnm_url=ukp_info.get('image_nnm_urlb')
+        image_nnm_url=ukp_info.get('image_nnm_url')
         film_name=ukp_info.get('film_name')
         description=ukp_info.get('description')
         kpsk_r=ukp_info.get('kpsk_r')
@@ -196,63 +227,34 @@ async def main_backend():
 
         # Select data where class - postbody
         post_body = soup.find(class_='postbody')
-        text = post_body.get_text('\n', strip='True')
-
+        
         #Get poster url
         if not image_nnm_url:
             for a_hr in post_body.find_all(class_='postImg postImgAligned img-right'):
                 image_nnm_url = a_hr.get('title')
             logging.info(f"Get image url from nnmblub: {image_nnm_url}")
 
+        if not kpsk_r and not imdb_r:
+            rating=get_rating_kp_imdb(id_kpsk, id_imdb)
+            kpsk_r=rating.get('kpsk_r')
+            imdb_r=rating.get('imdb_r')
+
         k = fileds_name[0]
-        v = ""
+        v = ''
 
         # Create Dict for data about Film
+        text = post_body.get_text('\n', strip='True')
+        desc_tmpl = re.compile(':$')
         for line in text.split("\n"):
             if not line.strip():
                 continue
             else:
                 if desc_tmpl.search(line):
                     k = line
-                    v = ""
-                elif k != "":
+                    v = ''
+                elif k != '':
                     v = v+line
                     mydict[k] = v
-
-        #kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
-        #imdb_url = 'https://www.imdb.com/title/'+id_imdb+'/ratings/?ref_=tt_ov_rt'
-        
-        # Get rating film from kinopoisk if not then from imdb site
-    
-        #if not kpsk_r:
-        #    rat_url = kpsk_url
-        #    page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
-        #    # Parse data
-        #    # FIXME: me be better use xml.parser ?
-        #    soup = BeautifulSoup(page.text, 'html.parser')
-        #    try:
-        #        rating_xml = soup.find('rating')
-        #        kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
-        #        imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
-        #        logging.info(f"Get rating from kinopoisk: {kpsk_url}")
-        #    except Exception as error:
-        #        logging.info(f"No kinopoisk rating on site:{error}")
-        #elif not imdb_r:
-        #    rat_url = imdb_url
-        #    page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
-        #    # Parse data
-        #    soup = BeautifulSoup(page.text, 'html.parser')
-        #    post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
-        #    if post_body:
-        #        imdb_r = post_body.get_text('\n', strip='True')
-        #        logging.info(f"Get rating from imdb: {imdb_url}")
-        #    else:
-        #        imdb_r = "-"
-        #else:
-        #    kpsk_r = "-"
-        #    imdb_r = "-"
-
-        rec_upd = ""
 
         if not film_name:
             film_name=mydict[fileds_name[0]]
@@ -265,7 +267,7 @@ async def main_backend():
         if not genres:
             genres=mydict.get(fileds_name[2])   
 
-
+        rec_upd = ''
         try:
             async with db_lock:
                 rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
@@ -339,9 +341,6 @@ else:
 
 # Init and start Telegram client as bot
 client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
-
-string=client.session.save()
-print(f"String session for user:\n{string}")
 
 client.start()
 client.loop.run_until_complete(main_backend())
