@@ -74,6 +74,8 @@ def get_config(config=cfg):
     global backend_user
     global ses_usr_str
     global ses_bot_str
+    global ukp_api_key
+    global ukp_api_url 
 
     cursor = None
     connection = None
@@ -112,9 +114,17 @@ def get_config(config=cfg):
         if 'SESSION_STRING_BOT' in vars(config):
             ses_bot_str = config.SESSION_STRING_BOT 
         else: ses_bot_str = os.environ.get("SESSION_STRING_BOT", None)
+
+        if 'UKP_API_KEY' in vars(config):
+            ukp_api_key = config.UKP_API_KEY
+        else: ukp_api_key = os.environ.get("UKP_API_KEY", None)
     
         if not ses_usr_str: session_client = config.session_client
         if not ses_bot_str: session_bot = config.session_bot 
+
+        if 'ukp_api_url' in vars(config):
+            ukp_api_url = config.ukp_api_url
+        else: ukp_api_url = None
 
         if 'magnet_helper' in vars(config):
             magnet_helper = config.magnet_helper

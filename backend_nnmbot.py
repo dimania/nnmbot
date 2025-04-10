@@ -24,6 +24,79 @@ import settings as sts
 import dbmodule_nnmbot as dbm
 # --------------------------------
 
+async def get_film_id( soup ):
+    ''' Get Kinopoisk id of Film'''
+
+     # Select data where class - postbody
+    post_body = soup.find(class_='postbody')
+    f_tmpl = re.compile('film/(.+?)/')
+    for a_hr in post_body.find_all('a'):
+        rat = a_hr.get('href')
+        if rat.find('https://www.kinopoisk.ru/film/') != -1:
+            id_kpsk = f_tmpl.search(rat).group(1)
+            logging.info(f"Get film id on kinopoisk: {id_kpsk}")
+        elif rat.find('https://www.imdb.com/title/') != -1:
+            id_imdb = t_tmpl.search(rat).group(1)
+            logging.info(f"Get film id on imdb: {id_imdb}")
+
+    return { 'id_kpsk':id_kpsk,'id_imdb':id_imdb  }
+
+async def get_ukp_film_info( id_kpsk ):
+    ''' Get film info from unofficial kinopoisk api'''
+    #7530289
+    if not sts.ukp_api_key or not sts.ukp_api_url:
+        return None
+
+    try:
+        response = requests.get(sts.ukp_api_url+str(id_kpsk), headers={'accept': 'application/json', 'X-API-KEY': sts.ukp_api_key}, proxies=sts.proxies)
+        if (response.status_code == 401): 
+            logging.info(f"Token Error!")
+            return None
+        if (response.status_code == 402):
+            logging.info(f"Limit over! Need wait in 24h.")
+            return None        
+        if (response.status_code == 404):
+            logging.info(f"No film found!")
+            return None        
+        if (response.status_code == 429):
+            logging.info(f"Too many requests per sec (>20)!")
+            return None                      
+        # Convert json into dictionary 
+        response_dict = response.json()
+        film_name=response_dict.get('nameRu')
+        description=response_dict.get('description')
+        kpsk_r=response_dict.get('ratingKinopoisk')
+        kpsk_r_vk=response_dict.get('ratingKinopoiskVoteCount')
+        imdb_r=response_dict.get('ratingImdb')
+        imdb_r_vk=response_dict.get('ratingImdbVoteCount')
+        genres=response_dict.get('genres')
+        image_nnm_url=response_dict.get('posterUrlPreview')
+        glen=len(genres)
+        gi=0
+        genres_out=""
+        for genre in genres:
+            g=genre.get('genre')
+            gi=gi+1
+            if gi == glen:
+                genres_out=genres_out+g  
+                break
+            else:
+                genres_out=genres_out+g+','
+
+        #print(f"Genres_out={genres_out}")
+    except Exception as ConnectionError:
+        logging.error(f"Can't open url:{sts.ukp_api_url}, Error:{ConnectionError}")
+        return None
+    return { 'film_name':film_name,
+            'description':description, 
+            'kpsk_r':kpsk_r, 
+            'kpsk_r_vk':kpsk_r_vk, 
+            'imdb_r':imdb_r, 
+            'imdb_r_vk':imdb_r_vk, 
+            'image_nnm_url':image_nnm_url,
+            'genres':genres_out }        
+
+
 async def main_backend():
     ''' Loop for client connection '''
 
@@ -48,6 +121,7 @@ async def main_backend():
         logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")
         msg = event.message
 
+        # Get URL of nnmclub film page
         for url_entity, inner_text in msg.get_entities_text(MessageEntityUrl):
             logging.debug(f"Urls: {url_entity, inner_text}")
             if url_tmpl.search(inner_text):
@@ -59,19 +133,20 @@ async def main_backend():
             return
 
         try:
-            # Конфигурируем сессию requests
-            ses = requests.Session()
+            # Configure session requests
+            #ses = requests.Session()
 
-            # Устанавливаем стратегию повторных попыток
-            retries = Retry(total=5,
-                backoff_factor=0.1,
-                status_forcelist=[500, 502, 503, 504],
-                allowed_methods=frozenset(['GET', 'POST']))
+            # Set retry strategy
+            #retries = Retry(total=5,
+            #    backoff_factor=0.1,
+            #    status_forcelist=[500, 502, 503, 504],
+            #    allowed_methods=frozenset(['GET', 'POST']))
 
-            # Связываем стратегию с сессией requests
-            ses.mount('http://', HTTPAdapter(max_retries=retries))
-            ses.mount('https://', HTTPAdapter(max_retries=retries))
+            # Link strategy with session
+            #ses.mount('http://', HTTPAdapter(max_retries=retries))
+            #ses.mount('https://', HTTPAdapter(max_retries=retries))
 
+            # Get html page film
             page = requests.get(url, timeout=30, proxies=sts.proxies)
             if page.status_code != 200:
                 logging.error(f"Can't open url:{url}, status:{page.status_code}")
@@ -92,6 +167,18 @@ async def main_backend():
         logging.debug(f"Getted URL nnmclub page with status code: {page.status_code}")
         soup = BeautifulSoup(page.text, 'html.parser')
 
+        film_ids=get_film_id(soup)
+        id_kpsk=film_ids.get('id_kpsk')
+        id_imdb=film_ids.get('id_imdb')
+        id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
+        # Get film info from unofficial kinopoisk API 
+        ukp_info=get_ukp_film_info(id_kpsk)
+        image_nnm_url=film_ids.get('image_nnm_urlb')
+        film_name=film_ids.get('film_name')
+        kpsk_r=film_ids.get('kpsk_r')
+        imdb_r=film_ids.get('imdb_r')
+        genres=film_ids.get('genres')
+
         # Select data where class - nav - info about tracker section
         post_body = soup.findAll('a', {'class': 'nav'})
         section = post_body[-1].get_text('\n', strip='True')
@@ -110,9 +197,10 @@ async def main_backend():
         text = post_body.get_text('\n', strip='True')
 
         #Get poster url
-        for a_hr in post_body.find_all(class_='postImg postImgAligned img-right'):
-            image_nnm_url = a_hr.get('title')
-        logging.info(f"Get image url from nnmblub: {image_nnm_url}")
+        if not image_nnm_url:
+            for a_hr in post_body.find_all(class_='postImg postImgAligned img-right'):
+                image_nnm_url = a_hr.get('title')
+            logging.info(f"Get image url from nnmblub: {image_nnm_url}")
 
         k = fileds_name[0]
         v = ""
@@ -129,54 +217,41 @@ async def main_backend():
                     v = v+line
                     mydict[k] = v
 
-        kpsk_r = imdb_r = "-"
-        kpsk_url = imdb_url = rat_url = ""
-        id_kpsk = id_imdb = id_nnm = 0
-
-        # Get rating urls and id film on kinopoisk and iddb
-        for a_hr in post_body.find_all('a'):
-            rat = a_hr.get('href')
-            if rat.find('https://www.kinopoisk.ru/film/') != -1:
-                id_kpsk = f_tmpl.search(rat).group(1)
-                kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
-                logging.info(f"Create url rating from kinopoisk: {kpsk_url}")
-            elif rat.find('https://www.imdb.com/title/') != -1:
-                id_imdb = t_tmpl.search(rat).group(1)
-                imdb_url = rat.replace('?ref_=plg_rt_1', 'ratings/?ref_=tt_ov_rt')
-                logging.info(f"Create url rating from imdb: {imdb_url}")
-
-        id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
-
+        kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+        imdb_url = 'https://www.imdb.com/title/'+id_imdb+'/ratings/?ref_=tt_ov_rt'
+        
         # Get rating film from kinopoisk if not then from imdb site
-        if kpsk_url:
-            rat_url = kpsk_url
-            page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
-            # Parse data
-            # FIXME: me be better use xml.parser ?
-            soup = BeautifulSoup(page.text, 'html.parser')
-            try:
-                rating_xml = soup.find('rating')
-                kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
-                imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
-                logging.info(f"Get rating from kinopoisk: {kpsk_url}")
-            except Exception as error:
-                logging.info(f"No kinopoisk rating on site:{error}")
-        elif imdb_url:
-            rat_url = imdb_url
-            page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
-            # Parse data
-            soup = BeautifulSoup(page.text, 'html.parser')
-            post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
-            if post_body:
-                imdb_r = post_body.get_text('\n', strip='True')
-                logging.info(f"Get rating from imdb: {imdb_url}")
+        if not kpsk_r or not imdb_r:
+            if  kpsk_url:
+                rat_url = kpsk_url
+                page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+                # Parse data
+                # FIXME: me be better use xml.parser ?
+                soup = BeautifulSoup(page.text, 'html.parser')
+                try:
+                    rating_xml = soup.find('rating')
+                    kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
+                    imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
+                    logging.info(f"Get rating from kinopoisk: {kpsk_url}")
+                except Exception as error:
+                    logging.info(f"No kinopoisk rating on site:{error}")
+            elif imdb_url:
+                rat_url = imdb_url
+                page = requests.get(rat_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+                # Parse data
+                soup = BeautifulSoup(page.text, 'html.parser')
+                post_body = soup.find(class_='sc-5931bdee-1 gVydpF')
+                if post_body:
+                    imdb_r = post_body.get_text('\n', strip='True')
+                    logging.info(f"Get rating from imdb: {imdb_url}")
+                else:
+                    imdb_r = "-"
             else:
+                kpsk_r = "-"
                 imdb_r = "-"
-        else:
-            kpsk_r = "-"
-            imdb_r = "-"
 
-        rec_upd = ""
+            rec_upd = ""
+
         try:
             async with db_lock:
                 rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
@@ -203,8 +278,8 @@ async def main_backend():
             except Exception as error:
                 logging.warning(f'Cant send inline_query to bot. Ignore this because frondend not running:\n {error}')
         except Exception as error:
-            logging.error(f'Error in block db_lock: {error}')
-
+            logging.error(f'Error in block db_lock: {error}') 
+    
     return client
 
 
