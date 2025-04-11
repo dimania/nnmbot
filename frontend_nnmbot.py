@@ -154,7 +154,7 @@ async def prep_message_film( id ):
         id - number film in db
         rec_upd - was updated exist film'''
     
-    logging.debug(f"Publish film id={id} rec_upd={rec_upd}")
+    logging.debug(f"Publish film id={id}")
     row=dbm.db_film_by_id( id )
     logging.debug(f"Get film from db ={row}")
     film_name = f"<a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
@@ -522,21 +522,26 @@ async def main_frontend():
            raise StopPropagation
 
     # Handle messages from backend as inline_query
-    @bot.on(events.InlineQuery(users=sts.backend_user, pattern=r'.*PUBLISH#[:digital:]*'))
+    @bot.on(events.InlineQuery(users=sts.backend_user, pattern=r'PUBLISH#[:digital:]*'))
     async def bot_handler_iq(event_publish_iq):
         logging.debug(f"Get NewMessage event_pbl_iq: {event_publish_iq}")
         pbl_data = event_publish_iq.query.query
         logging.debug(f"Get message for publish iq:{pbl_data}")
-        if pbl_data.find('UPDPUBLISH', 0, 10) != -1:
-            id = pbl_data.replace('UPDPUBLISH#', '')
-            await publish_new_film( id, sts.PUBL_UPD )
-            #set to sts.PUBL_YES
-            dbm.db_update_publish(id)
-        elif pbl_data.find('PUBLISH', 0, 7) != -1:
-            id = pbl_data.replace('PUBLISH#', '')
-            await publish_new_film( id, sts.PUBL_NOT )
-            #set to sts.PUBL_YES
-            dbm.db_update_publish(id)
+        id = pbl_data.replace('PUBLISH#', '')
+        await publish_new_film(id)
+        #set to sts.PUBL_YES
+        dbm.db_update_publish(id)
+
+        #if pbl_data.find('UPDPUBLISH', 0, 10) != -1:
+        #    id = pbl_data.replace('UPDPUBLISH#', '')
+        #    await publish_new_film(id)
+        #    #set to sts.PUBL_YES
+        #    dbm.db_update_publish(id)
+        #elif pbl_data.find('PUBLISH', 0, 7) != -1:
+        #    id = pbl_data.replace('PUBLISH#', '')
+        #    await publish_new_film(id)
+        #    #set to sts.PUBL_YES
+        #    dbm.db_update_publish(id)
 
         builder = event_publish_iq.builder
         await event_publish_iq.answer([builder.article('Publish', text="ok")])
