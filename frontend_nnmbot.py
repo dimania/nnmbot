@@ -4,6 +4,7 @@
 # filter films and write to database 
 #
 
+import io
 import re
 import sqlite3
 import logging
@@ -25,6 +26,19 @@ import dbmodule_nnmbot as dbm
 # --------------------------------
 
 Channel_my_id = None
+
+def set_image(film_photo):
+    '''Create poster for public in channel'''
+    
+    if not film_photo:
+        file_photo = io.BytesIO(film_photo)
+        file_photo.name = "image.jpg" 
+        file_photo.seek(0)  # set cursor to the beginning        
+    else:
+        file_photo='no_image.jpg' #FIXME A needed?
+    logging.debug(f"File_photo:{file_photo}")
+
+    return file_photo 
 
 async def query_all_records(event):
     ''' 
@@ -100,30 +114,43 @@ async def publish_all_new_films():
     ''' Publish All films on channel which are not published '''
     #Publish new Films
     
-    rows=dbm.db_list_4_publish(sts.PUBL_NOT)
+    rows=dbm.db_list_4_publish()
 
     if rows:
        for row in rows:
          id=dict(row).get('id')
          logging.debug(f"Publish new film id:{id}")
-         await publish_new_film(id, sts.PUBL_NOT)
+         await publish_new_film(id)
          #set to sts.PUBL_YES
          dbm.db_update_publish(id)
          await asyncio.sleep(1)
 
-    #Publish updated Films
-    rows=dbm.db_list_4_publish(sts.PUBL_UPD)
-    if rows:
-       for row in rows:
-         id=dict(row).get('id')
-         logging.debug(f"Publish updated film id:{id}")
-         await publish_new_film(id, sts.PUBL_UPD)
-         #set to sts.PUBL_YES
-         dbm.db_update_publish(id)
-         await asyncio.sleep(1)
-
-async def publish_new_film( id, rec_upd ):
+async def publish_new_film( id ):
     ''' Publish film on channel 
+        id - number film in db
+        rec_upd - was updated exist film'''
+    
+    msg=prep_message_film( id )
+    
+    bdata = 'XX'+ dict(msg).get('id_nnm')
+    buttons_film = [
+                Button.inline(_("Add Film"), bdata),
+                Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
+                ]
+
+        
+    # Send new message to Channel
+    try:
+        send_msg = await bot.send_file(PeerChannel(Channel_my_id), dict(msg).get('file'), caption=dict(msg).get('message'), \
+                buttons=buttons_film, parse_mode="html" )
+    except errors.FloodWaitError as e:
+        logging.info(f"Have to sleep {e.seconds} seconds")
+        asyncio.sleep(e.seconds)
+
+    logging.debug(f"Send new film Message:{send_msg}")
+
+async def prep_message_film( id ):
+    ''' Prepare message and file for publish in channel 
         id - number film in db
         rec_upd - was updated exist film'''
     
@@ -136,19 +163,15 @@ async def publish_new_film( id, rec_upd ):
     film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get('rate_kpsk')}] Imdb[{dict(row).get('rate_imdb')}]\n"
     film_description = f"🟢<b>Описание:</b> \n{dict(row).get('description')}\n"
     image_nnm_url = dict(row).get('image_nnm_url')
+    image_nnm = set_image(dict(row).get("image_nnm"))
+    rec_upd = dict(row).get('publish')
     id_nnm = dict(row).get('id_nnm') 
     # if magnet link exist create string and href link
     mag_link = dict(row).get('mag_link')
     if mag_link and sts.magnet_helper:
         film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
     else:
-        film_magnet_link=""
-    bdata = 'XX'+id_nnm
-    buttons_film = [
-                Button.inline(_("Add Film"), bdata),
-                Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
-                ]
-
+        film_magnet_link=""    
     # Create new message
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
     if rec_upd == sts.PUBL_UPD:
@@ -157,34 +180,20 @@ async def publish_new_film( id, rec_upd ):
     #trim long message ( telegramm support only 1024 byte caption )
     if len(new_message) > 1023:
         new_message = new_message[:1019]+'...'
-
-    # Send new message to Channel
-    try:
-        send_msg = await bot.send_file(PeerChannel(Channel_my_id), image_nnm_url, caption=new_message, \
-                buttons=buttons_film, parse_mode="html" )
-    except errors.FloodWaitError as e:
-        logging.info(f"Have to sleep {e.seconds} seconds")
-        asyncio.sleep(e.seconds)
-
-    logging.debug(f"Send new film Message:{send_msg}")
+    
+    file_send=image_nnm
+    if not image_nnm:
+        file_send=image_nnm_url
+        
+    return { 'message':new_message, 'file':file_send, 'id_nnm':id_nnm }
 
 async def send_card_one_record( id, index, event ):
     ''' Create card of one film and send to channel 
         id - number film in db
         event - descriptor channel '''
-    #BUG need change quotas
-    row=dbm.db_film_by_id( id )
-    film_name = f"<b>{index+1}. </b><a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
-    film_section = f"🟢<b>Раздел:</b> \n{dict(row).get('section')}"
-    film_genre = f"🟢<b>Жанр:</b> {dict(row).get('genre')}\n"
-    film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get('rate_kpsk')}] Imdb[{dict(row).get('rate_imdb')}]\n"
-    film_description = f"🟢<b>Описание:</b> \n{dict(row).get('description')}\n"
-    # if magnet link exist create string and href link
-    mag_link = dict(row).get('mag_link')
-    if mag_link and sts.magnet_helper:
-        film_magnet_link = f"<a href='{sts.magnet_helper+mag_link}'>🧲Примагнититься</a>\n" 
-    else:
-        film_magnet_link=""
+    
+    msg=prep_message_film( id )
+    
     # Create buttons for message
     f_prev = 'PREV'+f'{index}'
     f_next = 'NEXT'+f'{index}'
@@ -194,14 +203,11 @@ async def send_card_one_record( id, index, event ):
             Button.inline(_("◼"), f_curr),
             Button.inline(_("▶"), f_next)
             ]
-    image_nnm_url  =  dict(row).get('image_nnm_url')
-    # Create new message
-    new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
-    logging.debug(f"New message:{new_message}")
+        
     #FIXME as send? as respond or as send_file message
     #await event.respond(message, parse_mode='html', link_preview=0)
     logging.debug(f"Event:{event}")
-    await bot.send_file(event.original_update.peer, image_nnm_url, caption=new_message, buttons=buttons_film, parse_mode="html" )
+    await bot.send_file(event.original_update.peer, dict(msg).get('file'), caption=dict(msg).get('message'), buttons=buttons_film, parse_mode="html" )
     
 async def send_lists_records( rows, num_per_message, event ):
     ''' Create messages from  list records and send to channel 

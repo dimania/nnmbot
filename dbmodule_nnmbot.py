@@ -44,6 +44,7 @@ def db_create():
       rating_imdb TEXT DEFAULT NULL,
       description TEXT DEFAULT NULL,
       image_nnm_url TEXT NULL,
+      image_nnm BLOB DEFAULT NULL,
       publish INTEGER DEFAULT 0,
       date TEXT
       )
@@ -76,27 +77,27 @@ def db_create():
     sts.connection.commit()
 
 def db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, publish = 0 ):
+    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
     ''' Add new Film to database '''
     cur_date = datetime.now()
     sts.cursor.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
-        mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, publish, date) \
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
+        mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, publish, date) \
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
                    (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, publish, cur_date ))
+                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish, cur_date ))
     sts.connection.commit()
     return str(sts.cursor.lastrowid)
 
 def db_update_film(id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, publish = 2 ):
+    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
     ''' Update Film in database '''
     cur_date = datetime.now()
     sts.cursor.execute("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
         mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, \
-            description=?, image_nnm_url=?, publish=?, date=? WHERE id = ?", \
+            description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
                 (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, \
                     film_section, film_genre, film_rating_kpsk, film_rating_imdb, \
-                        film_description, image_nnm_url, publish, cur_date, id ))
+                        film_description, image_nnm_url, image_nnm, publish, cur_date, id ))
     sts.connection.commit()
     logging.debug(f"SQL UPDATE FILM: id={id} result={str(sts.cursor.rowcount)}" )
     return str(sts.cursor.rowcount)
@@ -120,12 +121,10 @@ def db_info( id_user ):
     rows = sts.cursor.fetchall()
     return rows
 
-def db_list_4_publish( rec_upd ):
+def db_list_4_publish():
     ''' List records for publish on Channel form database '''
-    if rec_upd == sts.PUBL_NOT: 
-        sts.cursor.execute("SELECT id FROM Films WHERE publish = ?", (sts.PUBL_NOT,) )
-    if rec_upd == sts.PUBL_UPD: 
-        sts.cursor.execute("SELECT id FROM Films WHERE publish = ?", (sts.PUBL_UPD,) )
+   
+    sts.cursor.execute("SELECT id FROM Films WHERE publish = ? OR publish = ?", (sts.PUBL_NOT, sts.PUBL_UPD) )
     rows = sts.cursor.fetchall()
     return rows
 
@@ -246,8 +245,8 @@ def db_list_tagged_films_id( id_user=None, tag=sts.SETTAG ):
 
 def db_film_by_id( id=None ):
     ''' List info by id record '''
-    sts.cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, id_nnm \
-        FROM Films WHERE id=?", (id,))
+    sts.cursor.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url,\
+                        image_nnm, publish, id_nnm FROM Films WHERE id=?", (id,))
     row = sts.cursor.fetchone()
     return row
 

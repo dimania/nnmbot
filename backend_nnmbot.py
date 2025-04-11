@@ -5,6 +5,7 @@
 # filter films and write to database
 #
 
+import io
 import re
 import sqlite3
 import logging
@@ -23,6 +24,18 @@ from bs4 import BeautifulSoup
 import settings as sts
 import dbmodule_nnmbot as dbm
 # --------------------------------
+
+async def get_image(msg):
+    '''Get image poster form message'''
+    # get photo from nnm message and create my photo
+
+    film_photo = await client.download_media(msg, bytes)
+    film_photo_d = film_photo
+    file_photo = io.BytesIO(film_photo_d)
+    file_photo.name = "image.jpg" 
+    file_photo.seek(0)  # set cursor to the beginning
+    logging.debug(f"Message Photo{film_photo_d}")
+    return file_photo
 
 def get_film_id( soup ):
     ''' Get Kinopoisk id of Film'''
@@ -265,7 +278,9 @@ async def main_backend():
         if not imdb_r:
             imdb_r='-'
         if not genres:
-            genres=mydict.get(fileds_name[2])   
+            genres=mydict.get(fileds_name[2])
+
+        image_nnm = await get_image(msg)
 
         rec_upd = ''
         try:
@@ -276,13 +291,13 @@ async def main_backend():
                     # Update exist film to DB 🔄
                     dbm.db_update_film(rec_id, id_nnm, url, film_name, \
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
-                        description, image_nnm_url, sts.PUBL_UPD)
+                        description, image_nnm_url, image_nnm, sts.PUBL_UPD)
                     rec_upd='UPD'
                     logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
                 else:
                     # Add new film to DB
                     rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
-                        genres, kpsk_r, imdb_r, description, image_nnm_url, sts.PUBL_NOT)
+                        genres, kpsk_r, imdb_r, description, image_nnm_url, image_nnm, sts.PUBL_NOT)
                     logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
             try:
                 # Send inline query message to frondend bot for publish Film
