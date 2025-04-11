@@ -35,7 +35,8 @@ async def get_image(msg):
     file_photo.name = "image.jpg" 
     file_photo.seek(0)  # set cursor to the beginning
     logging.debug(f"Message Photo{film_photo_d}")
-    return file_photo
+
+    return { 'image_nnm': file_photo, 'image_msg':film_photo}
 
 def get_film_id( soup ):
     ''' Get Kinopoisk id of Film'''
@@ -226,7 +227,7 @@ async def main_backend():
         genres=ukp_info.get('genres')
 
         # Select data where class - nav - info about tracker section
-        post_body = soup.findAll('a', {'class': 'nav'})
+        post_body = soup.find_all('a', {'class': 'nav'}) 
         section = post_body[-1].get_text('\n', strip='True')
         logging.debug(f"Section nnm tracker: {section}")
 
@@ -280,8 +281,11 @@ async def main_backend():
         if not genres:
             genres=mydict.get(fileds_name[2])
 
-        image_nnm = await get_image(msg)
+        image = await get_image(msg)
 
+        image_nnm=image.get('image_nnm')
+        image_msg=image.get('image_msg')
+       
         rec_upd = ''
         try:
             async with db_lock:
@@ -291,13 +295,13 @@ async def main_backend():
                     # Update exist film to DB 🔄
                     dbm.db_update_film(rec_id, id_nnm, url, film_name, \
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
-                        description, image_nnm_url, image_nnm, sts.PUBL_UPD)
+                        description, image_nnm_url, image_msg, sts.PUBL_UPD)
                     rec_upd='UPD'
                     logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
                 else:
                     # Add new film to DB
                     rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
-                        genres, kpsk_r, imdb_r, description, image_nnm_url, image_nnm, sts.PUBL_NOT)
+                        genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
                     logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
             try:
                 # Send inline query message to frondend bot for publish Film
