@@ -30,7 +30,7 @@ Channel_my_id = None
 def set_image(film_photo):
     '''Create poster for public in channel'''
     
-    if not film_photo:
+    if film_photo:
         file_photo = io.BytesIO(film_photo)
         file_photo.name = "image.jpg" 
         file_photo.seek(0)  # set cursor to the beginning        
@@ -119,11 +119,11 @@ async def publish_all_new_films():
     if rows:
        for row in rows:
          id=dict(row).get('id')
-         logging.debug(f"Publish new film id:{id}")
+         logging.info(f"ALL FILMS:Publish new film id:{id}")
          await publish_new_film(id)
          #set to sts.PUBL_YES
          dbm.db_update_publish(id)
-         await asyncio.sleep(1)
+         await asyncio.sleep(5)
 
 async def publish_new_film( id ):
     ''' Publish film on channel 
@@ -137,8 +137,6 @@ async def publish_new_film( id ):
                 Button.inline(_("Add Film"), bdata),
                 Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
                 ]
-
-        
     # Send new message to Channel
     try:
         send_msg = await bot.send_file(PeerChannel(Channel_my_id), dict(msg).get('file'), caption=dict(msg).get('message'), \
@@ -158,9 +156,9 @@ def prep_message_film( id ):
     row=dbm.db_film_by_id( id )
     logging.debug(f"Get film from db ={row}")
     film_name = f"<a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
-    film_section = f"🟢<b>Раздел:</b> \n{dict(row).get('section')}"
+    film_section = f"🟢<b>Раздел:</b> \n{dict(row).get('section')}\n"
     film_genre = f"🟢<b>Жанр:</b> {dict(row).get('genre')}\n"
-    film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get('rate_kpsk')}] Imdb[{dict(row).get('rate_imdb')}]\n"
+    film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get('rating_kpsk')}] Imdb[{dict(row).get('rating_imdb')}]\n"
     film_description = f"🟢<b>Описание:</b> \n{dict(row).get('description')}\n"
     image_nnm_url = dict(row).get('image_nnm_url')
     image_nnm = set_image(dict(row).get("image_nnm"))
