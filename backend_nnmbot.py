@@ -25,7 +25,7 @@ import settings as sts
 import dbmodule_nnmbot as dbm
 # --------------------------------
 
-async def get_image(msg):
+async def get_image(msg): #TODO NO NEED I think
     '''Get image poster form message'''
     # get photo from nnm message and create my photo
 
@@ -263,19 +263,22 @@ async def main_backend():
         # Create Dict for data about Film
         text = post_body.get_text('\n', strip='True')
         desc_tmpl = re.compile(':$')
+    
         for line in text.split("\n"):
-            if not line.strip():
-                continue
-            else:
+            if line := line.strip():
                 if desc_tmpl.search(line):
-                    k = line
-                    v = ''
-                elif k != '':
-                    v = v+line
-                    mydict[k] = v
+                    k=line
+                    v=''
+                elif k:
+                    v=v+line
+                    mydict[k]=v
+        
+        #if not film_name:
+        #    film_name=mydict[fileds_name[0]]
 
-        if not film_name:
-            film_name=mydict[fileds_name[0]]
+        # Alwais select film name from nnmclub
+        film_name=mydict[fileds_name[0]]
+
         if not description:
             description=mydict[fileds_name[5]]
         if not kpsk_r:
@@ -285,12 +288,8 @@ async def main_backend():
         if not genres:
             genres=mydict.get(fileds_name[2])
 
-        image = await get_image(msg)
-
-        image_nnm=image.get('image_nnm')
-        image_msg=image.get('image_msg')
+        image_msg = await client.download_media(msg, bytes)
        
-        #rec_upd = ''
         try:
             async with db_lock:
                 rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
