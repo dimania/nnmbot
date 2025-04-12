@@ -45,7 +45,8 @@ def get_film_id( soup ):
     post_body = soup.find(class_='postbody')
     f_tmpl = re.compile('film/(.+?)/')
     t_tmpl = re.compile('title/(.+?)/')
-
+    id_kpsk = None
+    id_imdb = None
     for a_hr in post_body.find_all('a'):
         rat = a_hr.get('href')
         if not rat:
@@ -111,7 +112,10 @@ def get_rating_kp_imdb(id_kpsk, id_imdb):
     '''Get raiting film from kinopoisk site or immdb site'''
     
     kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
-    imdb_url = 'https://www.imdb.com/title/'+id_imdb+'/ratings/?ref_=tt_ov_rt'
+    if id_imdb: 
+        imdb_url = 'https://www.imdb.com/title/'+id_imdb+'/ratings/?ref_=tt_ov_rt'
+    else: 
+        imdb_url = None
     kpsk_r=None
     imdb_r=None
     # Get rating film from kinopoisk if not then from imdb site
@@ -128,7 +132,7 @@ def get_rating_kp_imdb(id_kpsk, id_imdb):
     except Exception as error:
         logging.info(f"No kinopoisk rating on site:{error}")
 
-    if not imdb_r:
+    if not imdb_r and id_imdb:
         page = requests.get(imdb_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
         # Parse data
         soup = BeautifulSoup(page.text, 'html.parser')
