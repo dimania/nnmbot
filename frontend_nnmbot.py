@@ -132,7 +132,7 @@ async def publish_new_film( id ):
     
     msg=prep_message_film( id )
     
-    bdata = 'XX'+ dict(msg).get('id_nnm')
+    bdata = 'XX'+dict(msg).get('id_nnm')
     buttons_film = [
                 Button.inline(_("Add Film"), bdata),
                 Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
@@ -149,7 +149,7 @@ async def publish_new_film( id ):
 
     logging.debug(f"Send new film Message:{send_msg}")
 
-async def prep_message_film( id ):
+def prep_message_film( id ):
     ''' Prepare message and file for publish in channel 
         id - number film in db
         rec_upd - was updated exist film'''
