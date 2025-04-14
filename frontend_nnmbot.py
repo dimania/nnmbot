@@ -350,6 +350,7 @@ async def create_choice_dialog(question, choice_buttons, event, level):
     for button_s in choice_buttons:
         button.append(Button.inline(choice_buttons[button_s][0], choice_buttons[button_s][1]))
     await event.respond(question, parse_mode='md', buttons=button)
+
     # Run hundler for dialog
     @bot.on(events.CallbackQuery())
     async def callback_bot_choice(event_bot_choice):
@@ -403,7 +404,7 @@ async def check_user(channel, user, event):
 async def query_wait_users(event):
     ''' Get list users who submitted applications '''     
     rows = dbm.db_list_users( id_user=None, active=sts.USER_BLOCKED, rights=sts.USER_NO_RIGHTS )
-    logging.debug(f"Get users waiting approve")
+    logging.debug("Get users waiting approve")
     button=[]
     if rows:
         #await event.respond('List awaiting users:')
@@ -551,7 +552,7 @@ async def main_frontend():
         logging.debug(f"Get NewMessage event_bot: {event_bot}")
         menu_level = 0
         #user = event_bot.message.peer_id.user_id
-        #logging.info(f"USER_ID:{event_bot.message.peer_id.user_id}")
+        logging.info(f"LOGIN USER_ID:{event_bot.message.peer_id.user_id}")
         try:
             ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
         except Exception as error:
@@ -560,7 +561,7 @@ async def main_frontend():
         
         if ret == sts.USER_NEW:     # New user
             choice_buttons = {
-            "button1": [_("Yes"), "YES_NEW_USER",add_new_user,[event_bot,event_bot.message.peer_id.user_id]],
+            "button1": [_("Yes"), "YES_NEW_USER",add_new_user,[event_bot]],
             "button2": [_("No"), "NO_NEW_USER", event_bot.respond,[_('Goodbye! See you later...')]]
             }
             await create_choice_dialog(_('**Y realy want tag/untag films**'), choice_buttons, event_bot, menu_level)
@@ -595,7 +596,7 @@ async def main_frontend():
         if ret == sts.USER_BLOCKED:   # Blocked
           #await event_bot.respond(_('Sorry You are Blocked!\nSend message to Admin this channel.'))
           return
-        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ# FIXME no think # Only View
+        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ  # Only View
         elif ret == sts.USER_READ_WRITE: menu_level = sts.MENU_USER_READ_WRITE # Admin
         elif ret == sts.USER_SUPERADMIN: menu_level = sts.MENU_SUPERADMIN # SuperUser
        
