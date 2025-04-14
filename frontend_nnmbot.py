@@ -118,19 +118,19 @@ async def publish_all_new_films():
 
     if rows:
        for row in rows:
-         id=dict(row).get('id')
-         logging.info(f"ALL FILMS:Publish new film id:{id}")
-         await publish_new_film(id)
+         idf=dict(row).get('id')
+         logging.info(f"ALL FILMS:Publish new film id:{idf}")
+         await publish_new_film(idf)
          #set to sts.PUBL_YES
-         dbm.db_update_publish(id)
+         dbm.db_update_publish(idf)
          await asyncio.sleep(5)
 
-async def publish_new_film( id ):
+async def publish_new_film( idf ):
     ''' Publish film on channel 
-        id - number film in db
+        idf - number film in db
         rec_upd - was updated exist film'''
     
-    msg=prep_message_film( id )
+    msg=prep_message_film( idf )
     
     bdata = 'XX'+dict(msg).get('id_nnm')
     buttons_film = [
@@ -147,13 +147,13 @@ async def publish_new_film( id ):
 
     logging.debug(f"Send new film Message:{send_msg}")
 
-def prep_message_film( id ):
+def prep_message_film( idf ):
     ''' Prepare message and file for publish in channel 
-        id - number film in db
+        idf - number film in db
         rec_upd - was updated exist film'''
     
-    logging.debug(f"Publish film id={id}")
-    row=dbm.db_film_by_id( id )
+    logging.debug(f"Publish film id={idf}")
+    row=dbm.db_film_by_id( idf )
     logging.debug(f"Get film from db ={row}")
     film_name = f"<a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
     film_section = f"🟢<b>Раздел:</b> \n{dict(row).get('section')}\n"
@@ -185,12 +185,12 @@ def prep_message_film( id ):
         
     return { 'message':new_message, 'file':file_send, 'id_nnm':id_nnm }
 
-async def send_card_one_record( id, index, event ):
+async def send_card_one_record( idf, index, event ):
     ''' Create card of one film and send to channel 
-        id - number film in db
+        idf - number film in db
         event - descriptor channel '''
     
-    msg=prep_message_film( id )
+    msg=prep_message_film( idf )
     
     # Create buttons for message
     f_prev = 'PREV'+f'{index}'
@@ -526,22 +526,10 @@ async def main_frontend():
         logging.debug(f"Get NewMessage event_pbl_iq: {event_publish_iq}")
         pbl_data = event_publish_iq.query.query
         logging.debug(f"Get message for publish iq:{pbl_data}")
-        id = pbl_data.replace('PUBLISH#', '')
-        await publish_new_film(id)
+        idf = pbl_data.replace('PUBLISH#', '')
+        await publish_new_film(idf)
         #set to sts.PUBL_YES
-        dbm.db_update_publish(id)
-
-        #if pbl_data.find('UPDPUBLISH', 0, 10) != -1:
-        #    id = pbl_data.replace('UPDPUBLISH#', '')
-        #    await publish_new_film(id)
-        #    #set to sts.PUBL_YES
-        #    dbm.db_update_publish(id)
-        #elif pbl_data.find('PUBLISH', 0, 7) != -1:
-        #    id = pbl_data.replace('PUBLISH#', '')
-        #    await publish_new_film(id)
-        #    #set to sts.PUBL_YES
-        #    dbm.db_update_publish(id)
-
+        dbm.db_update_publish(idf)
         builder = event_publish_iq.builder
         await event_publish_iq.answer([builder.article('Publish', text="ok")])
         raise StopPropagation
