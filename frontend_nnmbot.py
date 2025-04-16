@@ -388,7 +388,6 @@ async def create_select_user_dialog(event , level):
             "user_is_bot": False,
             "request_name": True,
             "request_username": True, 
-            "title": _("Select user for share you list"), 
         }
     }
     ]
