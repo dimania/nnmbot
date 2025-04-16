@@ -371,7 +371,7 @@ async def create_choice_dialog(question, choice_buttons, event, level):
                 if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
                     await create_basic_menu(level, event)
 
-async def create_select_user_dialog(question, choice_buttons, event, level):
+async def create_select_user_dialog(question, choice_buttons, event , level):
     ''' Create dialog for choice buttons with text question
         and run function when choice was 
         question = "Text message for choice"
@@ -384,15 +384,18 @@ async def create_select_user_dialog(question, choice_buttons, event, level):
         level = user level for show menu exxtended or no
     '''
     logging.debug("Create select user dialog")
-
-    user = event.message.peer_id.user_id
+    id_user = event.query.user_id
 
     buttons = [
     {
         "text": _("Select Users"),
-        "request_chat": {
-            "request_id": 1, # button id
-            "chat_is_channel": True, # What is? may be need enather flag
+        "request_users": {
+            "request_id": 1,# button id
+            "max_quantity": 5,
+            "user_is_bot": False,
+            "request_name": True,
+            "request_username": True, 
+            #"chat_is_user": True, # WAS chat_is_channel.  What is? may be need enather flag
             "title": _("Select user for share you list"), 
         }
     }
@@ -400,50 +403,34 @@ async def create_select_user_dialog(question, choice_buttons, event, level):
     reply_markup = {"keyboard": [buttons],"resize_keyboard": True, "one_time_keyboard": True}
 
     payload = {
-    "chat_id": user, # Id user to
-    "text": _("Click in the button and users"),
+    "chat_id": id_user, # Id user to
+    "text": _("Click on 'Select' for choose with who share "),
     "reply_markup": json.dumps(reply_markup)
     }
 
     # Send selection user Button 
     url = f"https://api.telegram.org/bot{sts.mybot_token}/sendMessage"
     response = requests.post(url, data=payload)
-    logging.debug(f"Rsponse Select user button post:{response}\n Event:{event}")
+    logging.debug(f"Rsponse Select user button post:{response}\n")
 
     # hanled answer
     @bot.on(events.Raw(types=UpdateNewMessage))
     async def on_requested_peer_user(event_select):
+        logging.debug(f"Get select user event:{event_select}")
         try:
-            if event.message.action.peers[0].__class__.__name__ == "RequestedPeerChannel":
+            if event_select.message.action.peers[0].__class__.__name__ == "RequestedPeerUser":
                 button_id = event_select.message.action.button_id
                 if button_id == 1: # button id
                     peer = event_select.message.action.peers[0]
-                    channel_id = peer.channel_id
-                    title = peer.title
+                    user_id = peer.user_id
+                    username = peer.username
                     bot.remove_event_handler(on_requested_peer_user)
                     logging.debug(f"Get select user event:{event_select}")
-                    await create_basic_menu(level, event)
+                    #await create_basic_menu(level, event) # FIXME - note here event
                     return peer
-        except:
-            logging.debug(f"Error get select user on on_requested_peer_user!")
+        except Exception as error :
+            logging.debug(f"Error get select user on on_requested_peer_user!:{error}")
             return None
-
-      
-
-    # Run hundler for dialog
-    @bot.on(events.CallbackQuery())
-    async def callback_bot_choice(event_bot_choice):
-        logging.debug(f"Get callback event_bot_list {event_bot_choice}")  
-        button_data = event_bot_choice.data.decode()
-        await event.delete()
-        #Get reaction and run some function from dict choice_buttons
-        for button_press in choice_buttons:
-            if button_data == choice_buttons[button_press][1]:
-                removed_handler=bot.remove_event_handler(callback_bot_choice)
-                logging.debug(f"Remove handler callback_bot_choice =  {removed_handler}")
-                await choice_buttons[button_press][2](*choice_buttons[button_press][3])
-                if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
-                    await create_basic_menu(level, event)
 
 async def check_user(channel, user, event):
     ''' Check right of User '''
@@ -719,7 +706,7 @@ async def main_frontend():
                 await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_share':
             # Share list
-            create_select_user_dialog(question=None, choice_buttons=None, event_bot, level=None)
+            await create_select_user_dialog(question=None, choice_buttons=None, event=event_bot , level=None)
             send_menu =sts.BASIC_MENU
         elif button_data == '/bm_cum':
             # Go to control users menu 
