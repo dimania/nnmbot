@@ -12,9 +12,11 @@ import asyncio
 import os.path
 import sys
 import gettext
+import requests
+import json
 from datetime import datetime
 from telethon import TelegramClient, events
-from telethon.tl.types import  PeerChannel, PeerUser
+from telethon.tl.types import  PeerChannel, PeerUser, UpdateNewMessage
 from telethon.tl.custom import Button
 from telethon import errors
 from telethon.events import StopPropagation
@@ -276,6 +278,9 @@ async def create_basic_menu(level, event):
         ],
         [
             Button.inline(_("Search Films in database "), b"/bm_search")
+        ],
+        [
+            Button.inline(_("Share you tagget Films "), b"/bm_share")
         ]
     ]
 
@@ -350,6 +355,80 @@ async def create_choice_dialog(question, choice_buttons, event, level):
     for button_s in choice_buttons:
         button.append(Button.inline(choice_buttons[button_s][0], choice_buttons[button_s][1]))
     await event.respond(question, parse_mode='md', buttons=button)
+
+    # Run hundler for dialog
+    @bot.on(events.CallbackQuery())
+    async def callback_bot_choice(event_bot_choice):
+        logging.debug(f"Get callback event_bot_list {event_bot_choice}")  
+        button_data = event_bot_choice.data.decode()
+        await event.delete()
+        #Get reaction and run some function from dict choice_buttons
+        for button_press in choice_buttons:
+            if button_data == choice_buttons[button_press][1]:
+                removed_handler=bot.remove_event_handler(callback_bot_choice)
+                logging.debug(f"Remove handler callback_bot_choice =  {removed_handler}")
+                await choice_buttons[button_press][2](*choice_buttons[button_press][3])
+                if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
+                    await create_basic_menu(level, event)
+
+async def create_select_user_dialog(question, choice_buttons, event, level):
+    ''' Create dialog for choice buttons with text question
+        and run function when choice was 
+        question = "Text message for choice"
+        dict choice_buttons = {
+            "button1": ["Yes", "_yes",func_show_sombody0,[arg1,arg2...], SHOW_OR_NOT_MENU (optional) ],
+            "button2": ["No", "_no", func_show_sombody1,[arg1,arg2...]],
+            "button3": ["Cancel", "_cancel", func_show_sombody0,[arg1,arg2...]]
+        }
+        event = bot event handled id
+        level = user level for show menu exxtended or no
+    '''
+    logging.debug("Create select user dialog")
+
+    user = event.message.peer_id.user_id
+
+    buttons = [
+    {
+        "text": _("Select Users"),
+        "request_chat": {
+            "request_id": 1, # button id
+            "chat_is_channel": True, # What is? may be need enather flag
+            "title": _("Select user for share you list"), 
+        }
+    }
+    ]
+    reply_markup = {"keyboard": [buttons],"resize_keyboard": True, "one_time_keyboard": True}
+
+    payload = {
+    "chat_id": user, # Id user to
+    "text": _("Click in the button and users"),
+    "reply_markup": json.dumps(reply_markup)
+    }
+
+    # Send selection user Button 
+    url = f"https://api.telegram.org/bot{sts.mybot_token}/sendMessage"
+    response = requests.post(url, data=payload)
+    logging.debug(f"Rsponse Select user button post:{response}\n Event:{event}")
+
+    # hanled answer
+    @bot.on(events.Raw(types=UpdateNewMessage))
+    async def on_requested_peer_user(event_select):
+        try:
+            if event.message.action.peers[0].__class__.__name__ == "RequestedPeerChannel":
+                button_id = event_select.message.action.button_id
+                if button_id == 1: # button id
+                    peer = event_select.message.action.peers[0]
+                    channel_id = peer.channel_id
+                    title = peer.title
+                    bot.remove_event_handler(on_requested_peer_user)
+                    logging.debug(f"Get select user event:{event_select}")
+                    await create_basic_menu(level, event)
+                    return peer
+        except:
+            logging.debug(f"Error get select user on on_requested_peer_user!")
+            return None
+
+      
 
     # Run hundler for dialog
     @bot.on(events.CallbackQuery())
@@ -638,6 +717,10 @@ async def main_frontend():
                 await event_bot.respond(_("🏁............Done............🏁"))
                 bot.remove_event_handler(search_handler)
                 await create_basic_menu(menu_level, event_bot)
+        elif button_data == '/bm_share':
+            # Share list
+            create_select_user_dialog(question=None, choice_buttons=None, event_bot, level=None)
+            send_menu =sts.BASIC_MENU
         elif button_data == '/bm_cum':
             # Go to control users menu 
             send_menu = sts.CUSER_MENU

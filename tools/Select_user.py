@@ -26,7 +26,7 @@ def test():
     response = requests.post(url, data=payload)
     logging.debug(f"Rsponse Select user button post:{response}\n Event:{event}")
 
-# hanled answer
+    # hanled answer
     @bot.on(events.Raw(types=UpdateNewMessage))
     async def on_requested_peer_channel(event):
     try:
