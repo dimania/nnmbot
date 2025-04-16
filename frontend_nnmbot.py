@@ -12,9 +12,9 @@ import asyncio
 import os.path
 import sys
 import gettext
-import requests
 import json
 from datetime import datetime
+import requests
 from telethon import TelegramClient, events
 from telethon.tl.types import  PeerChannel, PeerUser, UpdateNewMessage
 from telethon.tl.custom import Button
@@ -371,65 +371,68 @@ async def create_choice_dialog(question, choice_buttons, event, level):
                 if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
                     await create_basic_menu(level, event)
 
-async def create_select_user_dialog(question, choice_buttons, event , level):
-    ''' Create dialog for choice buttons with text question
-        and run function when choice was 
-        question = "Text message for choice"
-        dict choice_buttons = {
-            "button1": ["Yes", "_yes",func_show_sombody0,[arg1,arg2...], SHOW_OR_NOT_MENU (optional) ],
-            "button2": ["No", "_no", func_show_sombody1,[arg1,arg2...]],
-            "button3": ["Cancel", "_cancel", func_show_sombody0,[arg1,arg2...]]
-        }
+async def create_select_user_dialog(event , level):
+    ''' Select users for share list films
         event = bot event handled id
         level = user level for show menu exxtended or no
     '''
-    logging.debug("Create select user dialog")
     id_user = event.query.user_id
-
+    logging.debug(f"Create select user dialog for user {id_user}")
+    
     buttons = [
     {
-        "text": _("Select Users"),
+        "text": _("👥  Select Users"),
         "request_users": {
             "request_id": 1,# button id
             "max_quantity": 5,
             "user_is_bot": False,
             "request_name": True,
             "request_username": True, 
-            #"chat_is_user": True, # WAS chat_is_channel.  What is? may be need enather flag
             "title": _("Select user for share you list"), 
         }
     }
     ]
-    reply_markup = {"keyboard": [buttons],"resize_keyboard": True, "one_time_keyboard": True}
-
+    reply_markup = {"keyboard": [buttons], "resize_keyboard": True, "one_time_keyboard": True }
     payload = {
     "chat_id": id_user, # Id user to
-    "text": _("Click on 'Select' for choose with who share "),
+    "text": _("Click on the ")+_("'Select Users' ")+_("button to share your movie list"), #Нажмите на кнопку "выбор пользователя" чтобы поделиться своим списком фильмов
     "reply_markup": json.dumps(reply_markup)
     }
 
     # Send selection user Button 
     url = f"https://api.telegram.org/bot{sts.mybot_token}/sendMessage"
-    response = requests.post(url, data=payload)
+
+    response = requests.post(url, data=payload, timeout = 30)
     logging.debug(f"Rsponse Select user button post:{response}\n")
 
     # hanled answer
     @bot.on(events.Raw(types=UpdateNewMessage))
     async def on_requested_peer_user(event_select):
         logging.debug(f"Get select user event:{event_select}")
+        users_id=[] 
+        usernames=[]
         try:
             if event_select.message.action.peers[0].__class__.__name__ == "RequestedPeerUser":
                 button_id = event_select.message.action.button_id
-                if button_id == 1: # button id
-                    peer = event_select.message.action.peers[0]
-                    user_id = peer.user_id
-                    username = peer.username
+                if button_id == 1:
+                    for peer in event_select.message.action.peers:
+                        usernames.append(peer.first_name)
+                        users_id.append(peer.user_id)
                     bot.remove_event_handler(on_requested_peer_user)
-                    logging.debug(f"Get select user event:{event_select}")
-                    #await create_basic_menu(level, event) # FIXME - note here event
-                    return peer
+                    logging.debug(f"Get selected users:{users_id}")
+                    reply_markup = { "remove_keyboard": True }
+                    payload_remove_kb = {
+                    "chat_id": id_user, # Id user to
+                    "text": _("🏁............Done............🏁"), 
+                    "reply_markup": json.dumps(reply_markup)
+                    }
+                    response = requests.post(url, data=payload_remove_kb, timeout = 30)
+                    logging.debug(f"Rsponse Remove keyboard:{response}\n")
+                    await create_basic_menu(level, event) 
+                    #TODO Add to db users_id
+                    return 
         except Exception as error :
-            logging.debug(f"Error get select user on on_requested_peer_user!:{error}")
+            logging.debug(f"It is not RequestedPeerUser message:{error}")
             return None
 
 async def check_user(channel, user, event):
@@ -446,8 +449,8 @@ async def check_user(channel, user, event):
           logging.debug(f"User {user} is Admin and not in db - new user!")
           return sts.USER_NEW
         return sts.USER_SUPERADMIN # Admin
-    except:
-      logging.error(f"Can not get permissions for channel={channel} user={user}. Possibly user not join to group but send request for Control")  
+    except Exception as error :
+      logging.error(f"Can not get permissions for channel={channel} user={user} Error {error}. Possibly user not join to group but send request for Control")  
 
     user_db = dbm.db_exist_user(user)
     ret = -1
@@ -624,7 +627,7 @@ async def main_frontend():
         elif ret == sts.USER_BLOCKED:   # Blocked
             await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
             return
-        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ# FIXME no think # Only View?
+        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ  #Not used now
         elif ret == sts.USER_READ_WRITE: menu_level = sts.MENU_USER_READ_WRITE # Admin
         elif ret == sts.USER_SUPERADMIN: menu_level = sts.MENU_SUPERADMIN # SuperUser
        
@@ -706,8 +709,8 @@ async def main_frontend():
                 await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_share':
             # Share list
-            await create_select_user_dialog(question=None, choice_buttons=None, event=event_bot , level=None)
-            send_menu =sts.BASIC_MENU
+            await create_select_user_dialog(event_bot, menu_level)
+            send_menu = sts.NO_MENU
         elif button_data == '/bm_cum':
             # Go to control users menu 
             send_menu = sts.CUSER_MENU
@@ -853,15 +856,15 @@ bot = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.syste
 
 # Get data for admin user for check and add to db (initialization)
 admin_ent = bot.loop.run_until_complete(bot.get_entity(sts.admin_name))
-name_user = admin_ent.username
-id_user = admin_ent.id
-if not name_user: name_user = admin_ent.first_name
-logging.debug(f"Get Admin username for id {id_user}: {name_user}")
+admin_name_user = admin_ent.username
+admin_id_user = admin_ent.id
+if not admin_name_user: admin_name_user = admin_ent.first_name
+logging.debug(f"Get Admin username for id {admin_id_user}: {admin_name_user}")
 
 # if not exist add admin user to DB 
-if not dbm.db_exist_user(id_user):
-  dbm.db_add_user(id_user, name_user)
-  dbm.db_ch_rights_user(id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE)
+if not dbm.db_exist_user(admin_id_user):
+  dbm.db_add_user(admin_id_user, admin_name_user)
+  dbm.db_ch_rights_user(admin_id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE)
 
 Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(sts.Channel_my))
 
