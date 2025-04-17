@@ -347,9 +347,7 @@ def db_get_share( field, id_user ):
 
     sts.cursor.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
     result = sts.cursor.fetchone()
-
-    logging.error(f"Result list: {result}\n")
-    
+       
     if not result or not result[0]:
         return False
 
