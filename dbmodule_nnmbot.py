@@ -8,6 +8,7 @@
 from datetime import datetime
 import logging
 import os.path
+import json
 
 import settings as sts
 
@@ -57,7 +58,9 @@ def db_create():
       date TEXT NOT NULL,
       active INTEGER DEFAULT 0,
       rights INTEGER DEFAULT 0,
-      setings TEXT DEFAULT NULL
+      setings TEXT DEFAULT NULL,
+      share2users TEXT DEFAULT NULL, 
+      users4share TEXT DEFAULT NULL                 
       )
       ''')
     # Create table Ufilms - films tagged users
@@ -278,3 +281,60 @@ def db_get_tag( id_nnm, id_user ):
     rows = sts.cursor.fetchall()
     return rows
 
+def db_add_share( field, share2users, id_user ):
+    ''' Add to user table users to whom share lists '''
+    
+    # From deepseeek
+    try:
+        # Получаем текущий JSON
+        sts.cursor.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+        result = sts.cursor.fetchone()
+        
+        # Десериализация или создание нового списка
+        current_list = json.loads(result[0]) if result and result[0] else []
+        
+        # Добавляем новые элементы (поддерживает как одиночные, так и множественные значения)
+        if isinstance(share2users, list):
+            current_list.extend(share2users)
+        else:
+            current_list.append(share2users)
+        
+        # Обновляем запись в базе
+        sts.cursor.execute( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
+            (json.dumps(current_list, ensure_ascii=False), id_user) )
+        sts.connection.commit()
+        
+    except json.JSONDecodeError:
+        logging.error(f"Error in format data: {share2users}\n")   
+    finally:
+        return None
+        #sts.connection.close()
+
+#def remove_from_list(db_path, record_id, value_to_remove, remove_all=False)
+def db_del_share( field, users_to_remove, id_user ):
+    '''Delete users from table to whom share lists '''
+
+    try:
+        # Получаем текущие данные
+        sts.cursor.execute(f"SELECT {field} FROM Users WHERE id = ?", (id_user,))
+        result = sts.cursor.fetchone()
+        
+        if not result or not result[0]:
+            return False
+
+        current_list = json.loads(result[0])
+        
+        new_list = [item for item in current_list if item != users_to_remove]
+  
+        # Обновляем запись
+        sts.cursor.execute( f"UPDATE Users SET {field} = ? WHERE id = ?",
+            (json.dumps(new_list, ensure_ascii=False), id_user)
+        )
+        sts.connection.commit()
+        return True
+
+    except json.JSONDecodeError:
+        logging.error(f"Error in format data: {users_to_remove}\n") 
+        return False
+    finally:
+        return None
