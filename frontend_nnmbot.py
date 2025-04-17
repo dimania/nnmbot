@@ -834,7 +834,18 @@ sts.cursor = sts.connection.cursor()
 # Init database
 dbm.db_init()
 dbm.db_create()
+# Test Sharing
+share2users=['7113450139']
+id_user='1033339697'
+id_user_del='7113450139'
+#dbm.db_del_share( 'share2users', id_user_del, id_user )
+dbm.db_add_share( 'share2users', share2users, id_user )
+dbm.db_add_share( 'users4share', id_user, id_user_del )
+result1=dbm.db_get_share( 'share2users', id_user )
+result2=dbm.db_get_share( 'users4share', id_user_del )
+print(f"Result 1:{result1[0]}\nResult 2:{result2[0]}\n")
 
+exit(0)
 # Connect to Telegram as bot
 if sts.use_proxy:
     prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))

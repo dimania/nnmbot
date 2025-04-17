@@ -4,12 +4,6 @@
         {
             "previewLimit": 50,
             "driver": "SQLite",
-            "name": "nnbot01",
-            "database": "file:///home/dima/src/nnmbot/mm_database.db"
-        },
-        {
-            "previewLimit": 50,
-            "driver": "SQLite",
             "name": "gh_db",
             "database": "${workspaceFolder:nnmbot}/database_nfb.db"
         }

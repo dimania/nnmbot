@@ -307,7 +307,7 @@ def db_add_share( field, share2users, id_user ):
     except json.JSONDecodeError:
         logging.error(f"Error in format data: {share2users}\n")   
     finally:
-        return None
+        return True
         #sts.connection.close()
 
 #def remove_from_list(db_path, record_id, value_to_remove, remove_all=False)
@@ -316,18 +316,21 @@ def db_del_share( field, users_to_remove, id_user ):
 
     try:
         # Получаем текущие данные
-        sts.cursor.execute(f"SELECT {field} FROM Users WHERE id = ?", (id_user,))
+        #logging.error(f"Run del: {users_to_remove}/{field}/{id_user} \n")
+        sts.cursor.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
         result = sts.cursor.fetchone()
-        
+        logging.error(f"Result list: {result}\n")
         if not result or not result[0]:
             return False
 
         current_list = json.loads(result[0])
-        
+        #logging.error(f"Current list: {current_list}\n")
+
         new_list = [item for item in current_list if item != users_to_remove]
-  
+        #logging.error(f"New list: {new_list}\n")
+
         # Обновляем запись
-        sts.cursor.execute( f"UPDATE Users SET {field} = ? WHERE id = ?",
+        sts.cursor.execute( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
             (json.dumps(new_list, ensure_ascii=False), id_user)
         )
         sts.connection.commit()
@@ -337,4 +340,20 @@ def db_del_share( field, users_to_remove, id_user ):
         logging.error(f"Error in format data: {users_to_remove}\n") 
         return False
     finally:
-        return None
+        return True
+
+def db_get_share( field, id_user ):
+    '''Get share users '''
+
+    sts.cursor.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+    result = sts.cursor.fetchone()
+
+    logging.error(f"Result list: {result}\n")
+    
+    if not result or not result[0]:
+        return False
+
+    current_list = json.loads(result[0])
+    #logging.error(f"Current list: {current_list}\n")
+    return current_list
+    

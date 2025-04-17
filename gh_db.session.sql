@@ -1,0 +1,1 @@
+ALTER TABLE Users ADD users4share TEXT DEFAULT NULL;
