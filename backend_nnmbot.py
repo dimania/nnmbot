@@ -338,7 +338,7 @@ else:
         return message
 
 db_lock = asyncio.Lock()
-sts.connection = sqlite3.connect(sts.db_name)
+sts.connection = sqlite3.connect(sts.db_name, timeout=10)
 sts.connection.row_factory = sqlite3.Row
 sts.cursor = sts.connection.cursor()
 

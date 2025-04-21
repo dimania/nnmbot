@@ -19,6 +19,7 @@ def db_init():
         sts.connection.load_extension(sts.ICU_extension_lib)
 
     sts.cursor.execute('''PRAGMA foreign_keys = ON''')
+    sts.cursor.execute('''PRAGMA journal_mode=WAL''')  # Активация WAL
     sts.connection.commit()
 
 def db_create():
