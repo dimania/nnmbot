@@ -96,7 +96,7 @@ def get_ukp_film_info( id_kpsk ):
         genre=genre[:-1]
 
     except Exception as error:
-        logging.error(f"Can't open url:{sts.ukp_api_url}, Error:{error}")
+        logging.error(f"Can't open url:{sts.ukp_api_url}")
         return None
 
     return { 'film_name':film_name,
@@ -223,12 +223,13 @@ async def main_backend():
         
         # Get film info from unofficial kinopoisk API 
         ukp_info=get_ukp_film_info(id_kpsk)
-        image_nnm_url=ukp_info.get('image_nnm_url')
-        film_name=ukp_info.get('film_name')
-        description=ukp_info.get('description')
-        kpsk_r=ukp_info.get('kpsk_r')
-        imdb_r=ukp_info.get('imdb_r')
-        genres=ukp_info.get('genres')
+        if ukp_info:
+            image_nnm_url=ukp_info.get('image_nnm_url')
+            film_name=ukp_info.get('film_name')
+            description=ukp_info.get('description')
+            kpsk_r=ukp_info.get('kpsk_r')
+            imdb_r=ukp_info.get('imdb_r')
+            genres=ukp_info.get('genres')
 
         # Select data where class - nav - info about tracker section
         post_body = soup.find_all('a', {'class': 'nav'}) 
