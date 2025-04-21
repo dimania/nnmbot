@@ -36,7 +36,7 @@ async def get_image(msg): #TODO NO NEED I think
     file_photo.seek(0)  # set cursor to the beginning
     logging.debug(f"Message Photo{film_photo_d}")
 
-    return { 'image_nnm': file_photo, 'image_msg':film_photo}
+    return { 'image_nnm': file_photo, 'image_msg': film_photo}
 
 def get_film_id( soup ):
     ''' Get Kinopoisk id of Film'''

@@ -6,6 +6,7 @@
 
 
 from datetime import datetime
+import sqlite3
 import logging
 import os.path
 
@@ -21,6 +22,22 @@ def db_init():
     sts.cursor.execute('''PRAGMA foreign_keys = ON''')
     sts.cursor.execute('''PRAGMA journal_mode=WAL''')  # Активация WAL
     sts.connection.commit()
+
+def db_init_atom( database ):
+    ''' Initialize and open database '''
+    con = sqlite3.connect(database, timeout=10)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+    # Load ICU extension in exist for case independet search  in DB
+    if sts.ICU_extension_lib and os.path.isfile(sts.ICU_extension_lib):
+        con.enable_load_extension(True)
+        con.load_extension(sts.ICU_extension_lib)
+
+    cur.execute('''PRAGMA foreign_keys = ON''')
+    cur.execute('''PRAGMA journal_mode=WAL''')  # Активация WAL   
+    con.commit()
+
+    return { 'cursor': cur, 'connection': con }
 
 def db_create():
     ''' Creta DB if not exist '''
@@ -81,6 +98,7 @@ def db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_
     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
     ''' Add new Film to database '''
     cur_date = datetime.now()
+    sts.cursor.execute("BEGIN EXCLUSIVE")
     sts.cursor.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
         mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, publish, date) \
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
@@ -94,6 +112,7 @@ def db_update_film(id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link
     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
     ''' Update Film in database '''
     cur_date = datetime.now()
+    sts.cursor.execute("BEGIN EXCLUSIVE")
     sts.cursor.execute("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
         mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, \
             description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
