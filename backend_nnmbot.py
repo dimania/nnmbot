@@ -161,6 +161,9 @@ async def main_backend():
         url = post_body  = []
         mydict = {}
         image_nnm_url = None
+        kpsk_r = None
+        imdb_r = None
+
         logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")
         msg = event.message
 
