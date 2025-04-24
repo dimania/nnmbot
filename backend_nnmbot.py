@@ -14,6 +14,7 @@ import os.path
 import sys
 import gettext
 import requests
+import threading
 from telethon import TelegramClient, events
 from telethon.tl.types import PeerChannel, MessageEntityUrl
 from telethon.sessions import StringSession
@@ -306,7 +307,7 @@ async def main_backend():
         if rec_id:
             rec_id=dict(rec_id).get("id")
             try:
-                async with db_lock:
+                with db_lock_sl:
                     # Update exist film to DB 🔄
                     dbm.db_update_film(rec_id, id_nnm, url, film_name, \
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
@@ -317,7 +318,7 @@ async def main_backend():
             logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
         else:
             try:
-                async with db_lock:
+                with db_lock_sl:
                     # Add new film to DB
                     rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
                         genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
@@ -356,6 +357,8 @@ else:
         return message
 
 db_lock = asyncio.Lock()
+db_lock_sl = threading.Lock()
+
 sts.connection = sqlite3.connect(sts.db_name, timeout=10)
 sts.connection.row_factory = sqlite3.Row
 sts.cursor = sts.connection.cursor()
