@@ -101,7 +101,7 @@ def db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_
     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
     ''' Add new Film to database '''
     cur_date = datetime.now()
-    sts.cursor.execute("BEGIN EXCLUSIVE")
+    ##sts.cursor.execute("BEGIN EXCLUSIVE")
     sts.cursor.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
         mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, publish, date) \
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
@@ -115,7 +115,7 @@ def db_update_film(id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link
     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
     ''' Update Film in database '''
     cur_date = datetime.now()
-    sts.cursor.execute("BEGIN EXCLUSIVE")
+    #sts.cursor.execute("BEGIN EXCLUSIVE")
     sts.cursor.execute("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
         mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, \
             description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
@@ -154,7 +154,7 @@ def db_list_4_publish():
 
 def db_update_publish( id ):
     ''' Update record to PUBL_YES when publish on Channel  '''
-    sts.cursor.execute("BEGIN EXCLUSIVE")
+    #sts.cursor.execute("BEGIN EXCLUSIVE")
     sts.cursor.execute("UPDATE Films SET publish = ? WHERE id = ?", (sts.PUBL_YES, id,))
     sts.connection.commit()
     logging.debug(f"SQL UPDATE: id={id} publish={sts.PUBL_YES} result={str(sts.cursor.rowcount)}" )
@@ -201,7 +201,7 @@ def db_add_user( id_user, name_user ):
     ''' Add new user to database '''
     cur_date=datetime.now()
     try:
-      sts.cursor.execute("BEGIN EXCLUSIVE")
+      #sts.cursor.execute("BEGIN EXCLUSIVE")
       sts.cursor.execute("INSERT INTO Users (id_user, name_user, date) VALUES(?, ?, ?)",\
       (id_user, name_user, cur_date,))
       sts.connection.commit()
@@ -226,7 +226,7 @@ def db_exist_user( id_user ):
 
 def db_ch_rights_user( id_user, active, rights ):
     ''' Change rights and status (active or blocked) for user '''
-    sts.cursor.execute("BEGIN EXCLUSIVE")
+    #sts.cursor.execute("BEGIN EXCLUSIVE")
     sts.cursor.execute("UPDATE Users SET active=?, rights=? WHERE id_user = ?", (active,rights,id_user))
     sts.connection.commit()
     logging.info(f"SQL UPDATE: id_user={id_user} active={active}, rights={rights} result={str(sts.cursor.rowcount)}" )
@@ -280,7 +280,7 @@ def db_film_by_id( id=None ):
 def db_add_tag( id_nnm, tag, id_user ):
     ''' User first Tag film in database '''
     cur_date=datetime.now()
-    sts.cursor.execute("BEGIN EXCLUSIVE")
+    #sts.cursor.execute("BEGIN EXCLUSIVE")
     sts.cursor.execute("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,(SELECT id FROM Films WHERE id_nnm=?),?,?)",
                   (id_user,id_nnm,cur_date,tag))
     sts.connection.commit()
@@ -288,7 +288,7 @@ def db_add_tag( id_nnm, tag, id_user ):
 
 def db_switch_film_tag( id_nnm, tag, id_user ):
     ''' Update user tagging in database for films  '''
-    sts.cursor.execute("BEGIN EXCLUSIVE")
+    #sts.cursor.execute("BEGIN EXCLUSIVE")
     sts.cursor.execute("UPDATE Ufilms SET tag=? WHERE id_user = ? AND id_Films = (SELECT id FROM Films WHERE id_nnm=?)",
                   (tag,id_user,id_nnm))
     sts.connection.commit()
@@ -296,7 +296,7 @@ def db_switch_film_tag( id_nnm, tag, id_user ):
 
 def db_switch_user_tag( id_user, tag ):
     ''' Update tag in database for user '''
-    sts.cursor.execute("BEGIN EXCLUSIVE")
+    #sts.cursor.execute("BEGIN EXCLUSIVE")
     sts.cursor.execute("UPDATE Ufilms SET tag=? WHERE id_user = ?", (tag,id_user))
     sts.connection.commit()
     return str(sts.cursor.rowcount)    
