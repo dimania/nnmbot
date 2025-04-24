@@ -312,14 +312,13 @@ async def main_backend():
                     dbm.db_update_film(rec_id, id_nnm, url, film_name, \
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
                         description, image_nnm_url, image_msg, sts.PUBL_UPD)
+                    logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
                     break
                 except sqlite3.OperationalError:
                     await asyncio.sleep(0.1)  # Пауза перед повтором
-                    logging.info(f"Retry write in db:{i}")
-                finally:
-                    logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
-            if i == retries: 
-                logging.error("Error UPDATE data to db!")
+                    logging.info(f"Retry write in db:{i}")                                   
+            else: 
+                logging.error("Error UPDATE data in DB!")
                 return            
         else:
             for i in range(retries):
@@ -327,13 +326,13 @@ async def main_backend():
                     # Add new film to DB
                     rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
                         genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
+                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} \
+                        id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                 except sqlite3.OperationalError:
                     await asyncio.sleep(0.1)  # Пауза перед повтором
-                    logging.info(f"Retry write in db:{i}")
-                finally:
-                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
-            if i == retries: 
-                logging.error("Error INSERT data to db!")
+                    logging.info(f"Retry write in db:{i}")                                   
+            else: 
+                logging.error("Error INSERT data to DB!")
                 return
         try:
             # Send inline query message to frondend bot for publish Film
