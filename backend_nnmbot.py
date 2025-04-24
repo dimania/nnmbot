@@ -306,34 +306,30 @@ async def main_backend():
         rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
         if rec_id:
             rec_id=dict(rec_id).get("id")
-            for i in range(retries):
-                try:
+            
+        # Work with DB insert/update records    
+        for i in range(retries):
+            try:
+                if rec_id:                    
                     # Update exist film to DB 🔄
                     dbm.db_update_film(rec_id, id_nnm, url, film_name, \
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
                         description, image_nnm_url, image_msg, sts.PUBL_UPD)
                     logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
                     break
-                except sqlite3.OperationalError as error:
-                    await asyncio.sleep(0.1)  # Пауза перед повтором
-                    logging.info(f"Retry write in db:{i} Error:{error}")                                   
-            else: 
-                logging.error("Error UPDATE data in DB!")
-                return            
-        else:
-            for i in range(retries):
-                try:
+                else:
                     # Add new film to DB
                     rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
                         genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
                     logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     break
-                except sqlite3.OperationalError as error:
-                    await asyncio.sleep(0.1)  # Пауза перед повтором
-                    logging.info(f"Retry write in db:{i} Error:{error} ")                                   
-            else: 
-                logging.error("Error INSERT data to DB!")
-                return
+            except sqlite3.OperationalError as error:
+                await asyncio.sleep(0.1)  
+                logging.info(f"Retry write in db:{i} Error:{error}")                                   
+        else: 
+            logging.error("Error UPDATE data in DB!")
+            return            
+        
         try:
             # Send inline query message to frondend bot for publish Film
             result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
