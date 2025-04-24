@@ -301,30 +301,37 @@ async def main_backend():
 
         image_msg = await client.download_media(msg, bytes)
        
-        try:
-            async with db_lock:
-                rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
-                if rec_id:
-                    rec_id=dict(rec_id).get("id")
+        
+        rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
+        if rec_id:
+            rec_id=dict(rec_id).get("id")
+            try:
+                async with db_lock:
                     # Update exist film to DB 🔄
                     dbm.db_update_film(rec_id, id_nnm, url, film_name, \
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
                         description, image_nnm_url, image_msg, sts.PUBL_UPD)
-                    #rec_upd='UPD'
-                    logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
-                else:
+            except Exception as error:
+                logging.error(f'Error in block db_lock: {error}')
+                return
+            logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
+        else:
+            try:
+                async with db_lock:
                     # Add new film to DB
                     rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
                         genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
-                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
-            try:
-                # Send inline query message to frondend bot for publish Film
-                result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
-                logging.debug(f"Send inline_query:{result}")
             except Exception as error:
-                logging.warning(f'Cant send inline_query to bot. Ignore this because frondend not running:\n {error}')
+                logging.error(f'Error in block db_lock: {error}')
+                return
+            logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
+        try:
+            # Send inline query message to frondend bot for publish Film
+            result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
+            logging.debug(f"Send inline_query:{result}")
         except Exception as error:
-            logging.error(f'Error in block db_lock: {error}') 
+            logging.warning(f'Cant send inline_query to bot. Ignore this because frondend not running:\n {error}')
+       
     
     return client
 
