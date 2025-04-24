@@ -111,7 +111,11 @@ def get_ukp_film_info( id_kpsk ):
 def get_rating_kp_imdb(id_kpsk, id_imdb):
     '''Get raiting film from kinopoisk site or immdb site'''
     
-    kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+    if id_kpsk:
+        kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+    else: 
+        kpsk_url = None
+
     if id_imdb: 
         imdb_url = 'https://www.imdb.com/title/'+id_imdb+'/ratings/?ref_=tt_ov_rt'
     else: 
@@ -120,17 +124,18 @@ def get_rating_kp_imdb(id_kpsk, id_imdb):
     imdb_r=None
     # Get rating film from kinopoisk if not then from imdb site
 
-    page = requests.get(kpsk_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
-    # Parse data
-    # FIXME: me be better use xml.parser ?
-    soup = BeautifulSoup(page.text, 'html.parser')
-    try:
-        rating_xml = soup.find('rating')
-        kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
-        imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
-        logging.info(f"Get rating from kinopoisk: {kpsk_url}")
-    except Exception as error:
-        logging.info(f"No kinopoisk rating on site:{error}")
+    if kpsk_url:
+        page = requests.get(kpsk_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+        # Parse data
+        # FIXME: me be better use xml.parser ?
+        soup = BeautifulSoup(page.text, 'html.parser')
+        try:
+            rating_xml = soup.find('rating')
+            kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
+            imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
+            logging.info(f"Get rating from kinopoisk: {kpsk_url}")
+        except Exception as error:
+            logging.info(f"No kinopoisk rating on site:{error}")
 
     if not imdb_r and id_imdb:
         page = requests.get(imdb_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
@@ -226,14 +231,15 @@ async def main_backend():
         id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
         
         # Get film info from unofficial kinopoisk API 
-        ukp_info=get_ukp_film_info(id_kpsk)
-        if ukp_info:
-            image_nnm_url=ukp_info.get('image_nnm_url')
-            film_name=ukp_info.get('film_name')
-            description=ukp_info.get('description')
-            kpsk_r=ukp_info.get('kpsk_r')
-            imdb_r=ukp_info.get('imdb_r')
-            genres=ukp_info.get('genres')
+        if id_kpsk: 
+            ukp_info=get_ukp_film_info(id_kpsk)
+            if ukp_info:
+                image_nnm_url=ukp_info.get('image_nnm_url')
+                film_name=ukp_info.get('film_name')
+                description=ukp_info.get('description')
+                kpsk_r=ukp_info.get('kpsk_r')
+                imdb_r=ukp_info.get('imdb_r')
+                genres=ukp_info.get('genres')
 
         # Select data where class - nav - info about tracker section
         post_body = soup.find_all('a', {'class': 'nav'}) 
@@ -257,7 +263,7 @@ async def main_backend():
                 image_nnm_url = a_hr.get('title')
             logging.info(f"Get image url from nnmblub: {image_nnm_url}")
 
-        if not kpsk_r and not imdb_r:
+        if not kpsk_r and not imdb_r and id_kpsk:
             rating=get_rating_kp_imdb(id_kpsk, id_imdb)
             kpsk_r=rating.get('kpsk_r')
             imdb_r=rating.get('imdb_r')
