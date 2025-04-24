@@ -326,8 +326,7 @@ async def main_backend():
                     # Add new film to DB
                     rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
                         genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
-                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} \
-                        id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
+                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
                     break
                 except sqlite3.OperationalError as error:
                     await asyncio.sleep(0.1)  # Пауза перед повтором
