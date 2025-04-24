@@ -302,30 +302,39 @@ async def main_backend():
 
         image_msg = await client.download_media(msg, bytes)
        
-        
+        retries = 5
         rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
         if rec_id:
             rec_id=dict(rec_id).get("id")
-            try:
-                with db_lock_sl:
+            for i in range(retries):
+                try:
                     # Update exist film to DB 🔄
                     dbm.db_update_film(rec_id, id_nnm, url, film_name, \
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
                         description, image_nnm_url, image_msg, sts.PUBL_UPD)
-            except Exception as error:
-                logging.error(f'Error in block db_lock: {error}')
-                return
-            logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
+                    break
+                except sqlite3.OperationalError:
+                    await asyncio.sleep(0.1)  # Пауза перед повтором
+                    logging.info(f"Retry write in db:{i}")
+                finally:
+                    logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
+            if i == retries: 
+                logging.error("Error UPDATE data to db!")
+                return            
         else:
-            try:
-                with db_lock_sl:
+            for i in range(retries):
+                try:
                     # Add new film to DB
                     rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
                         genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
-            except Exception as error:
-                logging.error(f'Error in block db_lock: {error}')
+                except sqlite3.OperationalError:
+                    await asyncio.sleep(0.1)  # Пауза перед повтором
+                    logging.info(f"Retry write in db:{i}")
+                finally:
+                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
+            if i == retries: 
+                logging.error("Error INSERT data to db!")
                 return
-            logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
         try:
             # Send inline query message to frondend bot for publish Film
             result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
