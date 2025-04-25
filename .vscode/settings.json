@@ -12,6 +12,12 @@
             "driver": "SQLite",
             "name": "gh_db",
             "database": "${workspaceFolder:nnmbot}/database_nfb.db"
+        },
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "test.db",
+            "database": "test.db"
         }
     ],
     "python.testing.unittestArgs": [
