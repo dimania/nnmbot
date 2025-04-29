@@ -4,12 +4,12 @@
 #
 #
 
-import asyncio
-import aiosqlite
+
 from datetime import datetime
 import logging
 import os.path
-
+import asyncio
+import aiosqlite
 
 import settings as sts
 
@@ -295,11 +295,7 @@ async def main():
     logging.info("--------------------------------------\nStart db_module_aio.")
 
     
-    #async with DatabaseBot(sts.db_name) as db:
-    #    await db.db_create()
-    #    res = await db.db_exist_Id(1, 1)
-    #    print(f"Res:{res}")
-    
+      
     id_nnm='12345'
     nnm_url='http://test.ru'
     name='Test film'
@@ -412,6 +408,6 @@ async def main():
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_get_tag( id_nnm, id_user )
     print(f'rec_id={rec_id}')
-    
+
 if __name__ == "__main__":
     asyncio.run(main())
