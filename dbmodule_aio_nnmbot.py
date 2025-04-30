@@ -143,12 +143,12 @@ class DatabaseBot:
         cursor = await self.dbm.execute("SELECT id FROM Films WHERE publish = ? OR publish = ?", (sts.PUBL_NOT, sts.PUBL_UPD) )
         return await cursor.fetchall()
 
-    async def db_update_publish(self, id ):
+    async def db_update_publish(self, idf ):
         ''' Update record to PUBL_YES when publish on Channel  '''
         #sts.cursor.execute("BEGIN EXCLUSIVE")
-        cursor = await self.dbm.execute("UPDATE Films SET publish = ? WHERE id = ?", (sts.PUBL_YES, id,))
+        cursor = await self.dbm.execute("UPDATE Films SET publish = ? WHERE id = ?", (sts.PUBL_YES, idf,))
         await self.dbm.commit()
-        logging.debug(f"SQL UPDATE: id={id} publish={sts.PUBL_YES} result={str(cursor.rowcount)}" )
+        logging.debug(f"SQL UPDATE: id={idf} publish={sts.PUBL_YES} result={str(cursor.rowcount)}" )
         return str(cursor.rowcount)
 
     async def db_list_all(self):

@@ -152,12 +152,12 @@ def db_list_4_publish():
     rows = sts.cursor.fetchall()
     return rows
 
-def db_update_publish( id ):
+def db_update_publish( idf ):
     ''' Update record to PUBL_YES when publish on Channel  '''
     #sts.cursor.execute("BEGIN EXCLUSIVE")
-    sts.cursor.execute("UPDATE Films SET publish = ? WHERE id = ?", (sts.PUBL_YES, id,))
+    sts.cursor.execute("UPDATE Films SET publish = ? WHERE id = ?", (sts.PUBL_YES, idf,))
     sts.connection.commit()
-    logging.debug(f"SQL UPDATE: id={id} publish={sts.PUBL_YES} result={str(sts.cursor.rowcount)}" )
+    logging.debug(f"SQL UPDATE: id={idf} publish={sts.PUBL_YES} result={str(sts.cursor.rowcount)}" )
     return str(sts.cursor.rowcount)  
 
 def db_list_all():
