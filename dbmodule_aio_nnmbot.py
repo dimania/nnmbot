@@ -93,30 +93,32 @@ class DatabaseBot:
                 film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
         ''' Add new Film to database '''
         cur_date = datetime.now()
-        ##sts.cursor.execute("BEGIN EXCLUSIVE")
-        cursor = await self.dbm.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
-            mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, publish, date) \
-                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
-                    (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-                        film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish, cur_date ))
-        await self.dbm.commit()
-        logging.debug(f"SQL INSERT FILM: id={id_nnm} result={str(cursor.rowcount)}" )
-        return str(cursor.lastrowid)
+
+        async with self.lock:
+            async with self.dbm.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
+                mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, \
+                    publish, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
+                        (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                            film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url,\
+                                  image_nnm, publish, cur_date )) as cursor:
+                await self.dbm.commit()
+                logging.debug(f"SQL INSERT FILM: id={id_nnm} result={str(cursor.rowcount)}" )
+                return str(cursor.lastrowid)
 
     async def db_update_film(self, idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                 film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
         ''' Update Film in database '''
         cur_date = datetime.now()
-        #sts.cursor.execute("BEGIN EXCLUSIVE")
-        cursor = await self.dbm.execute("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
-            mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, \
-                description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
+        async with self.lock:
+            async with self.dbm.execute("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
+                 mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, \
+                    description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
                     (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, \
                         film_section, film_genre, film_rating_kpsk, film_rating_imdb, \
-                            film_description, image_nnm_url, image_nnm, publish, cur_date, idf ))
-        await self.dbm.commit()
-        logging.debug(f"SQL UPDATE FILM: id={idf} result={str(cursor.rowcount)}" )
-        return str(cursor.rowcount)
+                            film_description, image_nnm_url, image_nnm, publish, cur_date, idf )) as cursor:
+                await self.dbm.commit()
+                logging.debug(f"SQL UPDATE FILM: id={idf} result={str(cursor.rowcount)}" )
+                return str(cursor.rowcount)
 
     async def db_exist_Id(self, id_kpsk, id_imdb):
         ''' Test exist Film in database '''
@@ -315,6 +317,10 @@ async def main():
     active=1
     rights=0
 
+
+    async with DatabaseBot(sts.db_name) as db:
+        await db.db_create()
+
     async with DatabaseBot(sts.db_name) as db:    
         rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
@@ -324,6 +330,8 @@ async def main():
         rec_id = await db.db_update_film(rec_id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
     print(f'rec_id={rec_id}')
+    
+    exit()
 
     async with DatabaseBot(sts.db_name) as db:    
         rec_id = await db.db_exist_Id(id_kpsk, id_imdb)
