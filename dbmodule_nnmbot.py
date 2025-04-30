@@ -108,7 +108,7 @@ def db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_
                    (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish, cur_date ))
     sts.connection.commit()
-    logging.debug(f"SQL INSERT FILM: id={id} result={str(sts.cursor.rowcount)}" )
+    logging.debug(f"SQL INSERT FILM: id={id_nnm} result={str(sts.cursor.rowcount)}" )
     return str(sts.cursor.lastrowid)
 
 def db_update_film(id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \

@@ -100,10 +100,10 @@ class DatabaseBot:
                     (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                         film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish, cur_date ))
         await self.dbm.commit()
-        logging.debug(f"SQL INSERT FILM: id={id} result={str(cursor.rowcount)}" )
+        logging.debug(f"SQL INSERT FILM: id={id_nnm} result={str(cursor.rowcount)}" )
         return str(cursor.lastrowid)
 
-    async def db_update_film(self, id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+    async def db_update_film(self, idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                 film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
         ''' Update Film in database '''
         cur_date = datetime.now()
@@ -113,9 +113,9 @@ class DatabaseBot:
                 description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
                     (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, \
                         film_section, film_genre, film_rating_kpsk, film_rating_imdb, \
-                            film_description, image_nnm_url, image_nnm, publish, cur_date, id ))
+                            film_description, image_nnm_url, image_nnm, publish, cur_date, idf ))
         await self.dbm.commit()
-        logging.debug(f"SQL UPDATE FILM: id={id} result={str(cursor.rowcount)}" )
+        logging.debug(f"SQL UPDATE FILM: id={idf} result={str(cursor.rowcount)}" )
         return str(cursor.rowcount)
 
     async def db_exist_Id(self, id_kpsk, id_imdb):
