@@ -47,6 +47,9 @@ NO_MENU = 0
 
 LIST_REC_IN_MSG = 20
 #-----------------
+RETRIES_DB_LOCK = 3 
+
+
 
 def get_config(config=cfg):
     ''' set global variable from included config.py - import config directive'''

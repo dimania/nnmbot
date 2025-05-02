@@ -10,6 +10,7 @@ import logging
 import os.path
 import asyncio
 import aiosqlite
+import sqlite3
 
 import settings as sts
 
@@ -93,32 +94,52 @@ class DatabaseBot:
                 film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
         ''' Add new Film to database '''
         cur_date = datetime.now()
-
-        async with self.lock:
-            async with self.dbm.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
-                mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, \
-                    publish, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
-                        (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-                            film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url,\
-                                  image_nnm, publish, cur_date )) as cursor:
-                await self.dbm.commit()
-                logging.debug(f"SQL INSERT FILM: id={id_nnm} result={str(cursor.rowcount)}" )
-                return str(cursor.lastrowid)
+        global FAIL_INSERT
+        for i in range(sts.RETRIES_DB_LOCK):
+            try:
+                async with self.lock:
+                    async with self.dbm.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
+                        mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, \
+                            publish, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
+                                (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url,\
+                                        image_nnm, publish, cur_date )) as cursor:
+                        await self.dbm.commit()
+                        logging.debug(f"SQL INSERT FILM: id={id_nnm} result={str(cursor.rowcount)}" )
+                        return str(cursor.lastrowid)
+            except aiosqlite.OperationalError as error:        
+                await asyncio.sleep(0.1)  
+                logging.info(f"Retry add in db:{i} Error:{error}")
+                FAIL_INSERT = FAIL_INSERT+1   
+        else: 
+            logging.error(f"Error INSERT data in DB! pass {i}")
+            return            
+            
 
     async def db_update_film(self, idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                 film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
         ''' Update Film in database '''
         cur_date = datetime.now()
-        async with self.lock:
-            async with self.dbm.execute("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
-                 mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, \
-                    description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
-                    (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, \
-                        film_section, film_genre, film_rating_kpsk, film_rating_imdb, \
-                            film_description, image_nnm_url, image_nnm, publish, cur_date, idf )) as cursor:
-                await self.dbm.commit()
-                logging.debug(f"SQL UPDATE FILM: id={idf} result={str(cursor.rowcount)}" )
-                return str(cursor.rowcount)
+        global FAIL_UPDATE
+        for i in range(sts.RETRIES_DB_LOCK):
+            try:        
+                async with self.lock:
+                    async with self.dbm.execute("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
+                        mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, \
+                            description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
+                            (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, \
+                                film_section, film_genre, film_rating_kpsk, film_rating_imdb, \
+                                    film_description, image_nnm_url, image_nnm, publish, cur_date, idf )) as cursor:
+                        await self.dbm.commit()
+                        logging.debug(f"SQL UPDATE FILM: id={idf} result={str(cursor.rowcount)}" )
+                        return str(cursor.rowcount)
+            except aiosqlite.OperationalError as error:        
+                await asyncio.sleep(0.1)  
+                logging.info(f"Retry add in db:{i} Error:{error}")
+                FAIL_UPDATE = FAIL_UPDATE+1   
+        else: 
+            logging.error(f"Error INSERT data in DB! pass {i}")
+            return            
 
     async def db_exist_Id(self, id_kpsk, id_imdb):
         ''' Test exist Film in database '''
@@ -282,6 +303,36 @@ class DatabaseBot:
         return await cursor.fetchall()
 
 
+# For test block task
+async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                        film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0):
+    ''' Test dblock'''
+   
+    async with DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                        film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    print(f'rec_id={rec_id}')
+             
+        
+async def test_db_update(idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
+    '''Test dblock update db'''
+   
+    async with DatabaseBot(sts.db_name) as db:    
+        rec_id = await db.db_update_film(idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    print(f'rec_id={rec_id}')
+      
+async def test_db_list_all():
+    '''Test dblock list all rec'''
+    async with DatabaseBot(sts.db_name) as db:   
+            rec_id = await db.db_list_all_id()
+    #print(f'rec_id={rec_id}')
+    print(f'------------------------------rec_id={len(rec_id)}-------------------------------------')
+        
+
+FAIL_INSERT=0
+FAIL_UPDATE=0
 async def main():
     """
     This is the main entry point for the program
@@ -317,19 +368,53 @@ async def main():
     active=1
     rights=0
 
-
+    
     async with DatabaseBot(sts.db_name) as db:
         await db.db_create()
 
-    async with DatabaseBot(sts.db_name) as db:    
-        rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    #async with DatabaseBot(sts.db_name) as db:    
+    #    rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+    #                film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    #print(f'rec_id={rec_id}')
+
+    #async with DatabaseBot(sts.db_name) as db:    
+    #    rec_id = await db.db_update_film(rec_id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+    #                film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    #print(f'rec_id={rec_id}')
+    
+    count=10
+    tasks=[]
+    for i in range(1, count+1):
+        # создаем задачи
+        task = test_db_add(id_nnm+str(1), nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                        film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0)
+        # складываем задачи в список
+        tasks.append(task)
+        
+        task=test_db_list_all()
+
+        # складываем задачи в список
+        tasks.append(task)
+        
+        # создаем задачи
+        task = test_db_update(i,id_nnm+str(1), nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                        film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0)
+        # складываем задачи в список
+        tasks.append(task)
+        
+    # планируем одновременные вызовы
+    await asyncio.gather(*tasks)
+    
+    print(f'--------------INFO--------------')
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_info( id_user )
     print(f'rec_id={rec_id}')
 
-    async with DatabaseBot(sts.db_name) as db:    
-        rec_id = await db.db_update_film(rec_id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
-    print(f'rec_id={rec_id}')
+    print(f'--------------INFO--------------')
+
+    print(f'FAIL_INSERT={FAIL_INSERT}  FAIL_UPDATE={FAIL_UPDATE}')
+
     
     exit()
 
