@@ -170,6 +170,7 @@ async def main_backend():
         kpsk_r = None
         imdb_r = None
         description = None
+        genres = None
 
         logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")
         msg = event.message
