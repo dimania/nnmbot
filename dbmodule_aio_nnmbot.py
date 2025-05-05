@@ -90,6 +90,46 @@ class DatabaseBot:
 
         return None
 
+    async def db_modify(self, *args):
+        ''' Update or insert data in db - common function'''
+
+        global FAIL_INSERT #  for test raice condition - remove in prod
+        for i in range(sts.RETRIES_DB_LOCK):
+            try:
+                async with self.lock:
+                    async with self.dbm.execute(args[0],args[1]) as cursor:
+                        await self.dbm.commit()
+                        logging.debug(f"SQL MODIFY: result={str(cursor.rowcount)}" )
+                        return cursor
+            except aiosqlite.OperationalError as error:        
+                await asyncio.sleep(0.1)  
+                logging.info(f"Retry add in db:{i} Error:{error}")
+                FAIL_INSERT = FAIL_INSERT+1  #  for test raice condition - remove in prod 
+            except aiosqlite.IntegrityError as error:               
+                logging.error(f"DB Modify Error is: {error}")
+                #FIXME 
+                return 1            
+        else: 
+            logging.error(f"Error INSERT data in DB! Retries pass:{i}")
+            return None           
+            
+    async def db_add_film_new(self, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
+        ''' Add new Film to database '''
+        cur_date = datetime.now()
+
+        cursor = await self.db_modify("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
+                              mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, \
+                              publish, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
+                                (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url,\
+                                        image_nnm, publish, cur_date ))
+        if cursor: 
+            return str(cursor.lastrowid)
+        else:
+            return None
+            
+
     async def db_add_film(self, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                 film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
         ''' Add new Film to database '''
@@ -425,15 +465,20 @@ async def main():
     name_user='test_user'
     active=1
     rights=0
+    publish=0
+    cur_date=datetime.now()
 
-    
+
+
     async with DatabaseBot(sts.db_name) as db:
         await db.db_create()
 
     async with DatabaseBot(sts.db_name) as db:    
-        rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+        rec_id = await db.db_add_film_new(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
     print(f'rec_id={rec_id}')
+
+    exit()
 
     async with DatabaseBot(sts.db_name) as db:    
         rec_id = await db.db_update_film(rec_id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
