@@ -93,7 +93,7 @@ class DatabaseBot:
     async def db_modify(self, *args):
         ''' Update or insert data in db - common function'''
 
-        global FAIL_INSERT #  for test raice condition - remove in prod
+        global FAIL_MODIFY #  for test raice condition - remove in prod
         for i in range(sts.RETRIES_DB_LOCK):
             try:
                 async with self.lock:
@@ -104,16 +104,16 @@ class DatabaseBot:
             except aiosqlite.OperationalError as error:        
                 await asyncio.sleep(0.1)  
                 logging.info(f"Retry add in db:{i} Error:{error}")
-                FAIL_INSERT = FAIL_INSERT+1  #  for test raice condition - remove in prod 
+                FAIL_MODIFY = FAIL_MODIFY + 1  #  for test raice condition - remove in prod 
             except aiosqlite.IntegrityError as error:               
                 logging.error(f"DB Modify Error is: {error}")
                 #FIXME 
-                return 1            
+                return -1            
         else: 
             logging.error(f"Error INSERT data in DB! Retries pass:{i}")
             return None           
             
-    async def db_add_film_new(self, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+    async def db_add_film(self, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                 film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
         ''' Add new Film to database '''
         cur_date = datetime.now()
@@ -128,58 +128,23 @@ class DatabaseBot:
             return str(cursor.lastrowid)
         else:
             return None
-            
-
-    async def db_add_film(self, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-                film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
-        ''' Add new Film to database '''
-        cur_date = datetime.now()
-        global FAIL_INSERT
-        for i in range(sts.RETRIES_DB_LOCK):
-            try:
-                async with self.lock:
-                    async with self.dbm.execute("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
-                        mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, \
-                            publish, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
-                                (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-                                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url,\
-                                        image_nnm, publish, cur_date )) as cursor:
-                        await self.dbm.commit()
-                        logging.debug(f"SQL INSERT FILM: id={id_nnm} result={str(cursor.rowcount)}" )
-                        return str(cursor.lastrowid)
-            except aiosqlite.OperationalError as error:        
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry add in db:{i} Error:{error}")
-                FAIL_INSERT = FAIL_INSERT+1   
-        else: 
-            logging.error(f"Error INSERT data in DB! pass {i}")
-            return None           
-            
-
+                        
     async def db_update_film(self, idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                 film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
         ''' Update Film in database '''
         cur_date = datetime.now()
-        global FAIL_UPDATE
-        for i in range(sts.RETRIES_DB_LOCK):
-            try:        
-                async with self.lock:
-                    async with self.dbm.execute("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
+      
+        cursor = await self.db_modify("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
                         mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, \
                             description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
                             (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, \
                                 film_section, film_genre, film_rating_kpsk, film_rating_imdb, \
-                                    film_description, image_nnm_url, image_nnm, publish, cur_date, idf )) as cursor:
-                        await self.dbm.commit()
-                        logging.debug(f"SQL UPDATE FILM: id={idf} result={str(cursor.rowcount)}" )
-                        return str(cursor.rowcount)
-            except aiosqlite.OperationalError as error:        
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry add in db:{i} Error:{error}")
-                FAIL_UPDATE = FAIL_UPDATE+1   
-        else: 
-            logging.error(f"Error INSERT data in DB! pass {i}")
-            return None           
+                                    film_description, image_nnm_url, image_nnm, publish, cur_date, idf ))
+        if cursor:              
+            logging.debug(f"SQL UPDATE FILM: id={idf} result={str(cursor.rowcount)}" )
+            return str(cursor.rowcount)
+        else:
+            return None
 
     async def db_exist_Id(self, id_kpsk, id_imdb):
         ''' Test exist Film in database '''
@@ -208,20 +173,11 @@ class DatabaseBot:
 
     async def db_update_publish(self, idf ):
         ''' Update record to PUBL_YES when publish on Channel  '''
-        #sts.cursor.execute("BEGIN EXCLUSIVE")
-        for i in range(sts.RETRIES_DB_LOCK):
-            try:
-                async with self.lock:
-                    async with self.dbm.execute("UPDATE Films SET publish = ? WHERE id = ?", (sts.PUBL_YES, idf,)) as cursor:
-                        await self.dbm.commit()
-                        logging.debug(f"SQL UPDATE: id={idf} publish={sts.PUBL_YES} result={str(cursor.rowcount)}" )
-                        return str(cursor.rowcount)
-            except aiosqlite.OperationalError as error:        
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry add in db:{i} Error:{error}")
-                   
-        else: 
-            logging.error(f"Error INSERT data in DB! pass {i}")
+        
+        cursor = await self.db_modify("UPDATE Films SET publish = ? WHERE id = ?", (sts.PUBL_YES, idf,))
+        if cursor:                          
+            return str(cursor.rowcount)
+        else:
             return None
         
     async def db_list_all(self):
@@ -252,23 +208,17 @@ class DatabaseBot:
     async def db_add_user(self, id_user, name_user):
         ''' Add new user to database '''
         cur_date=datetime.now()
-        for i in range(sts.RETRIES_DB_LOCK):
-            try:                
-                async with self.lock:
-                    async with self.dbm.execute("INSERT INTO Users (id_user, name_user, date) VALUES(?, ?, ?)",\
-                     (id_user, name_user, cur_date,)) as cursor:
-                        await self.dbm.commit()
-                        return 0
-            except aiosqlite.IntegrityError as error:
-                logging.error("User already exist in BD\n")
-                logging.error(f"Original Error is: {error}")
-                return 1
-            except aiosqlite.OperationalError as error:        
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry add in db:{i} Error:{error}")
-        else: 
+        #FIXME neet another analize return values
+        cursor = await self.db_modify("INSERT INTO Users (id_user, name_user, date) VALUES(?, ?, ?)",\
+            (id_user, name_user, cur_date,))
+        if cursor == -1:           
+            logging.error("User already exist in BD\n")
+            logging.error(f"Original Error is: {error}")
+            return 1
+        if cursor == None: 
             logging.error(f"Error INSERT data in DB! pass {i}")
-            return None           
+            return None
+        return 0           
 
 
     async def db_del_user(self, id_user):
@@ -285,21 +235,15 @@ class DatabaseBot:
     async def db_ch_rights_user(self, id_user, active, rights):
         ''' Change rights and status (active or blocked) for user '''
         
-        for i in range(sts.RETRIES_DB_LOCK):
-            try:
-                async with self.lock:
-                    async with self.dbm.execute("UPDATE Users SET active=?, rights=? WHERE id_user = ?", (active,rights,id_user)) as cursor:
-                        await self.dbm.commit()
-                        logging.info(f"SQL UPDATE: id_user={id_user} active={active}, rights={rights} result={str(cursor.rowcount)}" )
-                        return str(cursor.rowcount)
-            except aiosqlite.OperationalError as error:        
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry add in db:{i} Error:{error}")
-                   
-        else: 
-            logging.error(f"Error INSERT data in DB! pass {i}")
-            return None      
-
+        cursor = await self.db_modify("UPDATE Users SET active=?, rights=? WHERE id_user = ?", (active,rights,id_user))
+        if cursor:    
+            logging.info(f"SQL UPDATE: id_user={id_user} active={active}, rights={rights} result={str(cursor.rowcount)}" )                      
+            return str(cursor.rowcount)
+        else:
+            return None
+        
+        
+        
     async def db_list_users(self, id_user=None, active=None, rights=None ):
         '''List users in database '''
         
@@ -343,57 +287,32 @@ class DatabaseBot:
 
     async def db_add_tag(self, id_nnm, tag, id_user):
         ''' User first Tag film in database '''
-        cur_date=datetime.now()
-        
-        for i in range(sts.RETRIES_DB_LOCK):
-            try:
-                async with self.lock:
-                    async with self.dbm.execute("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,(SELECT id FROM Films WHERE id_nnm=?),?,?)",
-                    (id_user,id_nnm,cur_date,tag)) as cursor:
-                        await self.dbm.commit()
-                        return str(cursor.rowcount)
-            except aiosqlite.OperationalError as error:        
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry add in db:{i} Error:{error}")
-                   
-        else: 
-            logging.error(f"Error INSERT data in DB! pass {i}")
+        cur_date=datetime.now()        
+        cursor = await self.db_modify("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,(SELECT id FROM Films WHERE id_nnm=?),?,?)",
+                    (id_user,id_nnm,cur_date,tag))
+        if cursor:                                    
+            return str(cursor.rowcount)
+        else:
             return None
 
     async def db_switch_film_tag(self, id_nnm, tag, id_user):
         ''' Update user tagging in database for films  '''
         
-        for i in range(sts.RETRIES_DB_LOCK):
-            try:
-                async with self.lock:
-                    async with self.dbm.execute("UPDATE Ufilms SET tag=? WHERE id_user = ? AND id_Films = (SELECT id FROM Films WHERE id_nnm=?)",
-                    (tag,id_user,id_nnm)) as cursor:
-                        await self.dbm.commit()
-                        return str(cursor.rowcount)
-            except aiosqlite.OperationalError as error:        
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry add in db:{i} Error:{error}")
-                   
-        else: 
-            logging.error(f"Error INSERT data in DB! pass {i}")
+        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ? AND id_Films = (SELECT id FROM Films WHERE id_nnm=?)",
+                    (tag,id_user,id_nnm)) 
+        if cursor:                                    
+            return str(cursor.rowcount)
+        else:
             return None
 
     async def db_switch_user_tag(self, id_user, tag):
         ''' Update tag in database for user '''
         
-        for i in range(sts.RETRIES_DB_LOCK):
-            try:
-                async with self.lock:
-                    async with self.dbm.execute("UPDATE Ufilms SET tag=? WHERE id_user = ?", (tag,id_user)) as cursor:
-                        await self.dbm.commit()
-                        return str(cursor.rowcount)
-            except aiosqlite.OperationalError as error:        
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry add in db:{i} Error:{error}")
-                   
-        else: 
-            logging.error(f"Error INSERT data in DB! pass {i}")
-            return None     
+        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ?", (tag,id_user))
+        if cursor:                                    
+            return str(cursor.rowcount)
+        else:
+            return None               
 
     async def db_get_tag(self, id_nnm, id_user ):
         ''' Get if exist current tag for user '''
@@ -429,8 +348,8 @@ async def test_db_list_all():
     print(f'------------------------------rec_id={len(rec_id)}-------------------------------------')
         
 
-FAIL_INSERT=0
-FAIL_UPDATE=0
+FAIL_MODIFY=0
+
 async def main():
     """
     This is the main entry point for the program
@@ -474,12 +393,10 @@ async def main():
         await db.db_create()
 
     async with DatabaseBot(sts.db_name) as db:    
-        rec_id = await db.db_add_film_new(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+        rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
     print(f'rec_id={rec_id}')
-
-    exit()
-
+   
     async with DatabaseBot(sts.db_name) as db:    
         rec_id = await db.db_update_film(rec_id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
@@ -517,7 +434,7 @@ async def main():
 
     print(f'--------------INFO--------------')
 
-    print(f'FAIL_INSERT={FAIL_INSERT}  FAIL_UPDATE={FAIL_UPDATE}')
+    print(f'FAIL_MODIFY={FAIL_MODIFY} ')
 
     
     #exit()
