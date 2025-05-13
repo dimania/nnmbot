@@ -212,11 +212,9 @@ class DatabaseBot:
         cursor = await self.db_modify("INSERT INTO Users (id_user, name_user, date) VALUES(?, ?, ?)",\
             (id_user, name_user, cur_date,))
         if cursor == -1:           
-            logging.error("User already exist in BD\n")
-            logging.error(f"Original Error is: {error}")
+            logging.error("User already exist in BD\n")            
             return 1
-        if cursor == None: 
-            logging.error(f"Error INSERT data in DB! pass {i}")
+        if cursor == None:             
             return None
         return 0           
 
