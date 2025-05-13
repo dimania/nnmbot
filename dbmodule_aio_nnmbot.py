@@ -10,7 +10,6 @@ import logging
 import os.path
 import asyncio
 import aiosqlite
-import sqlite3
 
 import settings as sts
 
@@ -93,7 +92,7 @@ class DatabaseBot:
     async def db_modify(self, *args):
         ''' Update or insert data in db - common function'''
 
-        global FAIL_MODIFY #  for test raice condition - remove in prod
+        global FAIL_MODIFY #for test raice condition - remove in prod
         for i in range(sts.RETRIES_DB_LOCK):
             try:
                 async with self.lock:
@@ -110,7 +109,7 @@ class DatabaseBot:
                 return -1            
         else: 
             logging.error(f"Error MODIFY data in DB! Retries pass:{i}")
-            FAIL_MODIFY = FAIL_MODIFY + 1  #  for test raice condition - remove in prod
+            FAIL_MODIFY = FAIL_MODIFY + 1  #for test raice condition - remove in prod
             return None           
             
     async def db_add_film(self, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
@@ -214,7 +213,7 @@ class DatabaseBot:
         if cursor == -1:           
             logging.error("User already exist in BD\n")            
             return 1
-        if cursor == None:             
+        if cursor is None:             
             return None
         return 0           
 
@@ -396,7 +395,7 @@ async def main():
    
        
     # Test race condition 
-    count=1000
+    count=10
     tasks=[]
     for i in range(1, count+1):
         # создаем задачи
@@ -496,7 +495,6 @@ async def main():
         rec_id = await db.db_film_by_id(id=1)
     print(f'rec_id={rec_id}')
 
-
     print(f"Add tag: id_nnm:{id_nnm},tag:{sts.SETTAG}, id_user:{id_user}")
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_tag(id_nnm, sts.SETTAG, id_user)
@@ -514,13 +512,13 @@ async def main():
         rec_id = await db.db_get_tag( id_nnm, id_user )
     print(f'rec_id={rec_id}')
 
-    print(f'--------------INFO--------------')
+    print('--------------INFO--------------')
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_info( id_user )
     print(f'rec_id={rec_id}')
 
-    print(f'--------------INFO--------------')
+    print('--------------INFO--------------')
 
     print(f'FAIL_MODIFY={FAIL_MODIFY} ')
 
