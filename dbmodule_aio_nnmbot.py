@@ -102,15 +102,15 @@ class DatabaseBot:
                         logging.debug(f"SQL MODIFY: result={str(cursor.rowcount)}" )
                         return cursor
             except aiosqlite.OperationalError as error:        
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry add in db:{i} Error:{error}")
-                FAIL_MODIFY = FAIL_MODIFY + 1  #  for test raice condition - remove in prod 
+                logging.info(f"Retry modify records in db:{i} Error:{error}") 
+                await asyncio.sleep(0.1)                  
             except aiosqlite.IntegrityError as error:               
                 logging.error(f"DB Modify Error is: {error}")
                 #FIXME 
                 return -1            
         else: 
-            logging.error(f"Error INSERT data in DB! Retries pass:{i}")
+            logging.error(f"Error MODIFY data in DB! Retries pass:{i}")
+            FAIL_MODIFY = FAIL_MODIFY + 1  #  for test raice condition - remove in prod
             return None           
             
     async def db_add_film(self, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
@@ -326,7 +326,7 @@ async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link,
     async with DatabaseBot(sts.db_name) as db:    
             rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                         film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
-    print(f'rec_id={rec_id}')
+    print(f'INS: id_nnm={id_nnm}   rec_id={rec_id}')
              
         
 async def test_db_update(idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
@@ -336,7 +336,7 @@ async def test_db_update(idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magn
     async with DatabaseBot(sts.db_name) as db:    
         rec_id = await db.db_update_film(idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
-    print(f'rec_id={rec_id}')
+    print(f'UPD: id_nnm={id_nnm}   rec_id={rec_id}')
       
 async def test_db_list_all():
     '''Test dblock list all rec'''
@@ -382,8 +382,7 @@ async def main():
     name_user='test_user'
     active=1
     rights=0
-    publish=0
-    cur_date=datetime.now()
+    
 
 
 
@@ -393,15 +392,11 @@ async def main():
     async with DatabaseBot(sts.db_name) as db:    
         rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                     film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
-    print(f'rec_id={rec_id}')
+    print(f'INS FIRST: id_nnm={id_nnm}   rec_id={rec_id}')
    
-    async with DatabaseBot(sts.db_name) as db:    
-        rec_id = await db.db_update_film(rec_id, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
-                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
-    print(f'rec_id={rec_id}')
-    
+       
     # Test race condition 
-    count=10
+    count=1000
     tasks=[]
     for i in range(1, count+1):
         # создаем задачи
@@ -424,18 +419,10 @@ async def main():
     # планируем одновременные вызовы
     await asyncio.gather(*tasks)
     
-    print(f'--------------INFO--------------')
-
-    async with DatabaseBot(sts.db_name) as db:   
-        rec_id = await db.db_info( id_user )
-    print(f'rec_id={rec_id}')
-
-    print(f'--------------INFO--------------')
-
-    print(f'FAIL_MODIFY={FAIL_MODIFY} ')
-
-    
-    #exit()
+    async with DatabaseBot(sts.db_name) as db:    
+        rec_id = await db.db_update_film(1, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    print(f'UPD LAST: id_nnm={id_nnm}   rec_id={rec_id}')
 
     async with DatabaseBot(sts.db_name) as db:    
         rec_id = await db.db_exist_Id(id_kpsk, id_imdb)
@@ -510,7 +497,7 @@ async def main():
     print(f'rec_id={rec_id}')
 
 
-    print(f"Add tag failed:id_nnm:{id_nnm},tag:{sts.SETTAG}, id_user:{id_user}")
+    print(f"Add tag: id_nnm:{id_nnm},tag:{sts.SETTAG}, id_user:{id_user}")
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_tag(id_nnm, sts.SETTAG, id_user)
     print(f'rec_id={rec_id}')
@@ -526,6 +513,16 @@ async def main():
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_get_tag( id_nnm, id_user )
     print(f'rec_id={rec_id}')
+
+    print(f'--------------INFO--------------')
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_info( id_user )
+    print(f'rec_id={rec_id}')
+
+    print(f'--------------INFO--------------')
+
+    print(f'FAIL_MODIFY={FAIL_MODIFY} ')
 
 if __name__ == "__main__":
     asyncio.run(main())

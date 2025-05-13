@@ -47,7 +47,7 @@ NO_MENU = 0
 
 LIST_REC_IN_MSG = 20
 #-----------------
-RETRIES_DB_LOCK = 3 
+RETRIES_DB_LOCK = 5 
 
 
 
