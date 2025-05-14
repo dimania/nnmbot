@@ -7,7 +7,7 @@
 
 import io
 import re
-import sqlite3
+import aiosqlite
 import logging
 import asyncio
 import os.path
@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 #from urllib3.util import Retry
 # --------------------------------
 import settings as sts
-import dbmodule_nnmbot as dbm
+import dbmodule_aio_nnmbot as dbm
 # --------------------------------
 
 async def get_image(msg): #TODO NO NEED I think
@@ -308,29 +308,20 @@ async def main_backend():
         rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
         if rec_id:
             rec_id=dict(rec_id).get("id")
-            
-        # Work with DB insert/update records    
-        for i in range(retries):
-            try:
-                if rec_id:                    
-                    # Update exist film to DB 🔄
-                    dbm.db_update_film(rec_id, id_nnm, url, film_name, \
+
+        if rec_id:                    
+            # Update exist film to DB 🔄
+            async with dbm.DatabaseBot(sts.db_name) as db:    
+                await db.db_update_film(rec_id, id_nnm, url, film_name, \
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
                         description, image_nnm_url, image_msg, sts.PUBL_UPD)
-                    logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
-                    break
-                else:
-                    # Add new film to DB
-                    rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
-                        genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
-                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
-                    break
-            except sqlite3.OperationalError as error:
-                await asyncio.sleep(0.1)  
-                logging.info(f"Retry write in db:{i} Error:{error}")                                   
-        else: 
-            logging.error("Error UPDATE data in DB!")
-            return            
+            logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
+        else:
+            # Add new film to DB
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                rec_id = await db.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
+                    genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
+            logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
         
         try:
             # Send inline query message to frondend bot for publish Film
@@ -342,59 +333,53 @@ async def main_backend():
     
     return client
 
+async def main():
+    # main()
+    print('Start backend.')
 
-# main()
-print('Start backend.')
+    sts.get_config()
 
-sts.get_config()
+    # Enable logging
+    logging.basicConfig(level=sts.log_level, filename="backend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
+    logging.info("--------------------------------------\nStart backend bot.")
 
-# Enable logging
-logging.basicConfig(level=sts.log_level, filename="backend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
-logging.info("--------------------------------------\nStart backend bot.")
+    localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
-localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
+    if os.path.isdir(localedir):
+        translate = gettext.translation('nnmbot', localedir, [sts.Lang])
+        _ = translate.gettext
+    else:
+        logging.info(f"No locale dir for support langs: {localedir} \n Use default lang: Engilsh")
+        def _(message):
+            return message
 
-if os.path.isdir(localedir):
-    translate = gettext.translation('nnmbot', localedir, [sts.Lang])
-    _ = translate.gettext
-else:
-    logging.info(f"No locale dir for support langs: {localedir} \n Use default lang: Engilsh")
-    def _(message):
-        return message
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        await db.db_create()
+    
+    # Connect to Telegram as user
+    if sts.use_proxy:
+        prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
+        proxy = (prx.group(1), prx.group(2), int(prx.group(3)))
+    else:
+        proxy = None
 
-db_lock = asyncio.Lock()
-db_lock_sl = threading.Lock()
+    # Set type session: file or env string
+    if not sts.ses_usr_str:
+        session=sts.session_client
+        logging.info("Use File session mode")
+    else:
+        session=StringSession(sts.ses_usr_str)
+        logging.info("Use String session mode")
 
-sts.connection = sqlite3.connect(sts.db_name, timeout=10)
-sts.connection.row_factory = sqlite3.Row
-sts.cursor = sts.connection.cursor()
+    # Init and start Telegram client as bot
+    client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
 
-# Init database
-dbm.db_init()
-dbm.db_create()
+    client.start()
+    client.loop.run_until_complete(main_backend())
+    client.run_until_disconnected()
 
-# Connect to Telegram as user
-if sts.use_proxy:
-    prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
-    proxy = (prx.group(1), prx.group(2), int(prx.group(3)))
-else:
-    proxy = None
+    logging.info("End backend.\n--------------------------")
+    print('End.')
 
-# Set type session: file or env string
-if not sts.ses_usr_str:
-    session=sts.session_client
-    logging.info("Use File session mode")
-else:
-    session=StringSession(sts.ses_usr_str)
-    logging.info("Use String session mode")
-
-# Init and start Telegram client as bot
-client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
-
-client.start()
-client.loop.run_until_complete(main_backend())
-client.run_until_disconnected()
-
-sts.connection.close()
-logging.info("End backend.\n--------------------------")
-print('End.')
+if __name__ == "__main__":
+    asyncio.run(main())
