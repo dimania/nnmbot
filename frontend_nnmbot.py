@@ -137,7 +137,7 @@ async def publish_new_film( idf ):
         idf - number film in db
         rec_upd - was updated exist film'''
     
-    msg=prep_message_film( idf )
+    msg = await prep_message_film( idf )
     
     bdata = 'XX'+dict(msg).get('id_nnm')
     buttons_film = [
@@ -198,7 +198,7 @@ async def send_card_one_record( idf, index, event ):
         idf - number film in db
         event - descriptor channel '''
     
-    msg=prep_message_film( idf )
+    msg = await prep_message_film( idf )
     
     # Create buttons for message
     f_prev = 'PREV'+f'{index}'
@@ -837,4 +837,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-    
