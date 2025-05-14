@@ -25,6 +25,8 @@ from bs4 import BeautifulSoup
 import settings as sts
 import dbmodule_aio_nnmbot as dbm
 # --------------------------------
+#Global client connection telegram
+client = None 
 
 async def get_image(msg): #TODO NO NEED I think
     '''Get image poster form message'''
@@ -336,7 +338,9 @@ async def main_backend():
 async def main():
     # main()
     print('Start backend.')
-
+    
+    global client
+    
     sts.get_config()
 
     # Enable logging
@@ -374,9 +378,9 @@ async def main():
     # Init and start Telegram client as bot
     client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
 
-    client.start()
-    client.loop.run_until_complete(main_backend())
-    client.run_until_disconnected()
+    await client.start()
+    await client.loop.run_until_complete(main_backend())
+    await client.run_until_disconnected()
 
     logging.info("End backend.\n--------------------------")
     print('End.')

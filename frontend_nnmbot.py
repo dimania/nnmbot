@@ -24,8 +24,10 @@ from telethon.sessions import StringSession
 import settings as sts
 import dbmodule_aio_nnmbot as dbm
 # --------------------------------
-
+#Glogal vars
 Channel_my_id = None
+bot = None
+_ = None
 
 def set_image(film_photo):
     '''Create poster for public in channel'''
@@ -262,7 +264,7 @@ async def query_db_info(event, id_usr):
     ''' Get info about database records '''
     logging.info(f"Query info database for user {id_usr}")
     async with dbm.DatabaseBot(sts.db_name) as db:
-        rows = await b.db_info(id_usr)
+        rows = await db.db_info(id_usr)
     message = _("All records: ") + \
         str(rows[0][0])+_("\nTagged records: ") + \
         str(rows[1][0])+_("\nEarly tagged: ")+str(rows[2][0])
@@ -770,6 +772,10 @@ async def main():
     ''' Main function '''   
 
     print('Start frontend.')
+    
+    global bot
+    global Channel_my_id
+    global _
 
     sts.get_config()
     # Enable logging
@@ -809,7 +815,8 @@ async def main():
     bot = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy).start(bot_token=sts.mybot_token)
 
     # Get data for admin user for check and add to db (initialization)
-    admin_ent = bot.loop.run_until_complete(bot.get_entity(sts.admin_name))
+    #admin_ent = bot.loop.run_until_complete(bot.get_entity(sts.admin_name))
+    admin_ent = await bot.get_entity(sts.admin_name)
     name_user = admin_ent.username
     id_user = admin_ent.id
     if not name_user: name_user = admin_ent.first_name
@@ -824,13 +831,13 @@ async def main():
             await db.db_add_user(id_user, name_user)
             await db.db_ch_rights_user(id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE)
 
-    Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(sts.Channel_my))
+    #Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(sts.Channel_my))
+    Channel_my_id = await bot.get_peer_id(sts.Channel_my)
 
     #bot.start()
-    bot.loop.run_until_complete(main_frontend())
-    bot.run_until_disconnected()
-
-    sts.connection.close()
+    await bot.loop.run_until_complete(main_frontend())
+    await bot.run_until_disconnected()
+    
     logging.info("End.\n--------------------------")
     print('End.')
 

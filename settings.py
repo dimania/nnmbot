@@ -78,7 +78,8 @@ def get_config(config=cfg):
     global ses_usr_str
     global ses_bot_str
     global ukp_api_key
-    global ukp_api_url 
+    global ukp_api_url
+     
 
     cursor = None
     connection = None
