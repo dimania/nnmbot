@@ -335,11 +335,9 @@ async def main_backend():
     
     return client
 
-async def main():
-    # main()
-    print('Start backend.')
-    
-    global client
+
+#------------------- Main begin -----------------------------------------------
+
     
     sts.get_config()
 
@@ -356,9 +354,6 @@ async def main():
         logging.info(f"No locale dir for support langs: {localedir} \n Use default lang: Engilsh")
         def _(message):
             return message
-
-    async with dbm.DatabaseBot(sts.db_name) as db:
-        await db.db_create()
     
     # Connect to Telegram as user
     if sts.use_proxy:
@@ -377,13 +372,24 @@ async def main():
 
     # Init and start Telegram client as bot
     client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
+    client.start()
+    
+async def main():
+    # main()
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        await db.db_create()
 
-    await client.start()
-    await client.loop.run_until_complete(main_backend())
-    await client.run_until_disconnected()
+    print('Start backend.')
+    await main_backend()
+    #await client.start()
+    #await client.loop.run_until_complete(main_backend())
+    #await client.run_until_disconnected()
 
     logging.info("End backend.\n--------------------------")
     print('End.')
 
-if __name__ == "__main__":
-    asyncio.run(main())
+with client:
+    client.loop.run_until_complete(main())
+    client.run_until_disconnected()
+#if __name__ == "__main__":
+#    asyncio.run(main())
