@@ -21,6 +21,7 @@ class DatabaseBot:
 
     async def __aenter__(self):
         self.dbm = await aiosqlite.connect(self.db_file)
+        self.dbm.row_factory = aiosqlite.Row
         await self.dbm.execute("PRAGMA foreign_keys = ON")
         await self.dbm.commit()
 
