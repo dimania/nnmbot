@@ -33,7 +33,6 @@ class DatabaseBot:
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.dbm.close()
-
    
     async def db_create( self ):
         ''' Creta DB if not exist '''
@@ -198,7 +197,7 @@ class DatabaseBot:
                 WHERE name LIKE ? COLLATE NOCASE", (str_search,))
         return await cursor.fetchall()
 
-    async def db_search_id(self, str_search):
+    async def db_search_id(self, str_search): #FIXME NOT USE! 
         ''' Search in db '''
         str_search = '%'+str_search+'%'
         cursor = await self.dbm.execute(
@@ -217,7 +216,6 @@ class DatabaseBot:
         if cursor is None:             
             return None
         return 0           
-
 
     async def db_del_user(self, id_user):
         '''Delete user from database and user tagged films'''
@@ -239,9 +237,7 @@ class DatabaseBot:
             return str(cursor.rowcount)
         else:
             return None
-        
-        
-        
+                
     async def db_list_users(self, id_user=None, active=None, rights=None ):
         '''List users in database '''
         
@@ -327,8 +323,7 @@ async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link,
             rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                         film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
     print(f'INS: id_nnm={id_nnm}   rec_id={rec_id}')
-             
-        
+                     
 async def test_db_update(idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                 film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
     '''Test dblock update db'''

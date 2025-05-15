@@ -55,7 +55,7 @@ async def query_all_records(event):
 async def query_all_records_by_one(event):
     ''' 
         Get and send all database records, 
-        one by one wint menu.
+        one by one with menu.
         Use with carefully may be many records 
     '''
     logging.info("Query db records")
@@ -68,7 +68,7 @@ async def query_search(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
     async with dbm.DatabaseBot(sts.db_name) as db:
-        rows = await db.db_search_old(str_search)
+        rows = await db.db_search_list(str_search)
     await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
 
 async def query_tagged_records_list(id_usr, tag, event):
@@ -638,8 +638,8 @@ async def main_frontend():
         elif button_data == '/bm_dwearly':
             # Get films tagget early
             choice_buttons = {
-            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, sts.SETTAG, event_bot]],
-            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.SETTAG, event_bot],sts.BASIC_MENU],
+            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, sts.UNSETTAG, event_bot]],
+            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.UNSETTAG, event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
             await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
