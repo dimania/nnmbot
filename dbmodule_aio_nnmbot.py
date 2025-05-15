@@ -207,7 +207,7 @@ class DatabaseBot:
     async def db_add_user(self, id_user, name_user):
         ''' Add new user to database '''
         cur_date=datetime.now()
-        #FIXME neet another analize return values
+        #FIXME need another analize return values
         cursor = await self.db_modify("INSERT INTO Users (id_user, name_user, date) VALUES(?, ?, ?)",\
             (id_user, name_user, cur_date,))
         if cursor == -1:           
@@ -273,10 +273,10 @@ class DatabaseBot:
         cursor = await self.dbm.execute("SELECT id FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
         return await cursor.fetchall()
 
-    async def db_film_by_id(self, id=None):
+    async def db_film_by_id(self, idf=None):
         ''' List info by id record '''
         cursor = await self.dbm.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url,\
-                            image_nnm, publish, id_nnm FROM Films WHERE id=?", (id,))
+                            image_nnm, publish, id_nnm FROM Films WHERE id=?", (idf,))
         return await cursor.fetchone()
 
     async def db_add_tag(self, id_nnm, tag, id_user):

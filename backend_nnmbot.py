@@ -7,14 +7,11 @@
 
 import io
 import re
-import aiosqlite
 import logging
-import asyncio
 import os.path
 import sys
 import gettext
 import requests
-import threading
 from telethon import TelegramClient, events
 from telethon.tl.types import PeerChannel, MessageEntityUrl
 from telethon.sessions import StringSession
@@ -99,7 +96,7 @@ def get_ukp_film_info( id_kpsk ):
         genre=genre[:-1]
 
     except Exception as error:
-        logging.error(f"Can't open url:{sts.ukp_api_url}")
+        logging.error(f"Can't open url:{sts.ukp_api_url} Error:{error}")
         return None
 
     return { 'film_name':film_name,
@@ -306,7 +303,6 @@ async def main_backend():
 
         image_msg = await client.download_media(msg, bytes)
        
-        retries = 5
         async with dbm.DatabaseBot(sts.db_name) as db:    
             rec_id = await db.db_exist_Id(id_kpsk, id_imdb)
             
@@ -386,5 +382,3 @@ client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.sy
 with client:
     client.loop.run_until_complete(main())
     client.run_until_disconnected()
-#if __name__ == "__main__":
-#    asyncio.run(main())

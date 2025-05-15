@@ -6,7 +6,6 @@
 
 import io
 import re
-import aiosqlite
 import logging
 import asyncio
 import os.path
@@ -299,7 +298,7 @@ async def create_basic_menu(level, event):
 
     await event.respond(_("**☣ Work with database:**"), parse_mode='md', buttons=keyboard)
 
-async def create_control_user_menu(level, event):
+async def create_control_user_menu(event):
     ''' Create menu of control users '''
     logging.info("Create control user menu buttons")
     keyboard = [
@@ -326,7 +325,7 @@ async def create_control_user_menu(level, event):
 
     await event.respond(_("**☣ Work with users:**"), parse_mode='md', buttons=keyboard)
 
-async def create_rights_user_menu(level, event, id_usr):
+async def create_rights_user_menu(event, id_usr):
     ''' Create menu for change rights users '''
     logging.info("Create menu for change rights users menu buttons")
 
@@ -378,7 +377,7 @@ async def create_choice_dialog(question, choice_buttons, event, level):
                 if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
                     await create_basic_menu(level, event)
 
-async def check_user(channel, user, event):
+async def check_user(channel, user):
     ''' Check right of User '''
     logging.debug(f"Try Get permissions for channe={channel} user={user}")
 
@@ -393,8 +392,8 @@ async def check_user(channel, user, event):
           logging.debug(f"User {user} is Admin and not in db - new user!")
           return sts.USER_NEW
         return sts.USER_SUPERADMIN # Admin
-    except:
-      logging.error(f"Can not get permissions for channel={channel} user={user}. Possibly user not join to group but send request for Control")  
+    except Exception as error:
+      logging.error(f"Can not get permissions for channel={channel} user={user} Error:{error}). \nPossibly user not join to group but send request for Control")  
     
     async with dbm.DatabaseBot(sts.db_name) as db:
         user_db = await db.db_exist_user(user)
@@ -519,7 +518,7 @@ async def main_frontend():
     async def callback(event):
         logging.debug(f"Get callback event on channel {sts.Channel_my}: {event}")
         # Check user rights
-        ret = await check_user(event.query.peer, event.query.user_id, event)
+        ret = await check_user(event.query.peer, event.query.user_id)
         
         if ret == sts.USER_NEW: 
             await event.answer(_('Sorry you are not registered user.\nYou can only set Reaction.\nYou can register, press [Control] button.'), alert=True)
@@ -562,9 +561,9 @@ async def main_frontend():
         #user = event_bot.message.peer_id.user_id
         logging.info(f"LOGIN USER_ID:{event_bot.message.peer_id.user_id}")
         try:
-            ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
+            ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id)
         except Exception as error:
-            print(f"Error get user: {error}")
+            logging.error(f"Error get user: {error}")
             return
         
         if ret == sts.USER_NEW:     # New user
@@ -578,12 +577,12 @@ async def main_frontend():
         elif ret == sts.USER_BLOCKED:   # Blocked
             await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
             return
-        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ# FIXME no think # Only View?
+        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ # FIXME no think # Only View?
         elif ret == sts.USER_READ_WRITE: menu_level = sts.MENU_USER_READ_WRITE # Admin
         elif ret == sts.USER_SUPERADMIN: menu_level = sts.MENU_SUPERADMIN # SuperUser
        
         if event_bot.message.message == '/start':
-          # show admin menu
+          # show menu
           await create_basic_menu(menu_level, event_bot)
          
             
@@ -596,7 +595,7 @@ async def main_frontend():
         button_data = event_bot.data.decode()
         await event_bot.delete()               #Delete previous message (prev menu)
         send_menu = sts.MENU_USER_READ
-        ret = await check_user(PeerChannel(Channel_my_id), id_user, event_bot)
+        ret = await check_user(PeerChannel(Channel_my_id), id_user)
         #Stop handle this event other handlers
         #raise StopPropagation
         menu_level = sts.MENU_USER_READ
@@ -761,10 +760,10 @@ async def main_frontend():
             await create_basic_menu(menu_level, event_bot)
         elif send_menu == sts.CUSER_MENU:
             #await event_bot.respond(_("🏁............Done............🏁"))
-            await create_control_user_menu(menu_level, event_bot)
+            await create_control_user_menu(event_bot)
         elif send_menu == sts.CURIGHTS_MENU:
             #await event_bot.respond(_("🏁............Done............🏁"))
-            await create_rights_user_menu(menu_level, event_bot, id_user)
+            await create_rights_user_menu(event_bot, id_user)
 
     return bot
 
@@ -795,8 +794,7 @@ async def main():
 
     #Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(sts.Channel_my))
     Channel_my_id = await bot.get_peer_id(sts.Channel_my)
-
-
+    # Run basic events loop
     await main_frontend()    
 
 #------------------- Main begin -----------------------------------------------
