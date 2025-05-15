@@ -335,61 +335,56 @@ async def main_backend():
     
     return client
 
-
-#------------------- Main begin -----------------------------------------------
-
-    
-    sts.get_config()
-
-    # Enable logging
-    logging.basicConfig(level=sts.log_level, filename="backend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
-    logging.info("--------------------------------------\nStart backend bot.")
-
-    localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
-
-    if os.path.isdir(localedir):
-        translate = gettext.translation('nnmbot', localedir, [sts.Lang])
-        _ = translate.gettext
-    else:
-        logging.info(f"No locale dir for support langs: {localedir} \n Use default lang: Engilsh")
-        def _(message):
-            return message
-    
-    # Connect to Telegram as user
-    if sts.use_proxy:
-        prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
-        proxy = (prx.group(1), prx.group(2), int(prx.group(3)))
-    else:
-        proxy = None
-
-    # Set type session: file or env string
-    if not sts.ses_usr_str:
-        session=sts.session_client
-        logging.info("Use File session mode")
-    else:
-        session=StringSession(sts.ses_usr_str)
-        logging.info("Use String session mode")
-
-    # Init and start Telegram client as bot
-    client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
-    client.start()
-    
 async def main():
     # main()
     async with dbm.DatabaseBot(sts.db_name) as db:
         await db.db_create()
 
     print('Start backend.')
-    await main_backend()
-    #await client.start()
-    #await client.loop.run_until_complete(main_backend())
-    #await client.run_until_disconnected()
-
+    await main_backend()    
     logging.info("End backend.\n--------------------------")
     print('End.')
 
+
+#------------------- Main begin -----------------------------------------------
+
+    
+sts.get_config()
+
+# Enable logging
+logging.basicConfig(level=sts.log_level, filename="backend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
+logging.info("--------------------------------------\nStart backend bot.")
+
+localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
+
+if os.path.isdir(localedir):
+    translate = gettext.translation('nnmbot', localedir, [sts.Lang])
+    _ = translate.gettext
+else:
+    logging.info(f"No locale dir for support langs: {localedir} \n Use default lang: Engilsh")
+    def _(message):
+        return message
+
+# Connect to Telegram as user
+if sts.use_proxy:
+    prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
+    proxy = (prx.group(1), prx.group(2), int(prx.group(3)))
+else:
+    proxy = None
+
+# Set type session: file or env string
+if not sts.ses_usr_str:
+    session=sts.session_client
+    logging.info("Use File session mode")
+else:
+    session=StringSession(sts.ses_usr_str)
+    logging.info("Use String session mode")
+  
+# Init and start Telegram client as bot
+client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
+client.start()
+
 with client:
     client.loop.run_until_complete(main())
-    client.run_until_disconnected()
 #if __name__ == "__main__":
 #    asyncio.run(main())
