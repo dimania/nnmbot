@@ -307,7 +307,9 @@ async def main_backend():
         image_msg = await client.download_media(msg, bytes)
        
         retries = 5
-        rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
+        async with dbm.DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_exist_Id(id_kpsk, id_imdb)
+            
         if rec_id:
             rec_id=dict(rec_id).get("id")
 
@@ -338,13 +340,10 @@ async def main_backend():
 async def main():
     # main()
     async with dbm.DatabaseBot(sts.db_name) as db:
+        print('Create db if not exist.')
         await db.db_create()
 
-    print('Start backend.')
     await main_backend()    
-    logging.info("End backend.\n--------------------------")
-    print('End.')
-
 
 #------------------- Main begin -----------------------------------------------
 
@@ -382,9 +381,10 @@ else:
   
 # Init and start Telegram client as bot
 client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
-client.start()
+#client.start()
 
 with client:
     client.loop.run_until_complete(main())
+    client.run_until_disconnected()
 #if __name__ == "__main__":
 #    asyncio.run(main())
