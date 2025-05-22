@@ -6,7 +6,6 @@
 
 import io
 import re
-import sqlite3
 import logging
 import asyncio
 import os.path
@@ -22,10 +21,12 @@ from telethon.sessions import StringSession
 #from requests.packages.urllib3.util.retry import Retry
 # --------------------------------
 import settings as sts
-import dbmodule_nnmbot as dbm
+import dbmodule_aio_nnmbot as dbm
 # --------------------------------
-
+#Glogal vars
 Channel_my_id = None
+bot = None
+_ = None
 
 def set_image(film_photo):
     '''Create poster for public in channel'''
@@ -46,36 +47,41 @@ async def query_all_records(event):
         Use with carefully may be many records 
     '''
     logging.info("Query all db records")
-    rows = dbm.db_list_all()
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_list_all()
     await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
 
 async def query_all_records_by_one(event):
     ''' 
         Get and send all database records, 
-        one by one wint menu.
+        one by one with menu.
         Use with carefully may be many records 
     '''
     logging.info("Query db records")
-    rows = dbm.db_list_all_id()
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_list_all_id()
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
 async def query_search(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
-    rows = dbm.db_search_old(str_search)
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_search_list(str_search)
     await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
 
 async def query_tagged_records_list(id_usr, tag, event):
     ''' Get films tagget for user '''
     logging.info("Query db records with set tag")
-    rows = dbm.db_list_tagged_films( id_user=id_usr, tag=tag )
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_list_tagged_films( id_user=id_usr, tag=tag )
     await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
 
 async def query_tagged_records_by_one(id_usr, tag, event):
     ''' Get films tagget for user '''
     logging.info("Query db records with set tag")
-    rows = dbm.db_list_tagged_films_id( id_user=id_usr, tag=tag )
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_list_tagged_films_id( id_user=id_usr, tag=tag )
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
@@ -114,7 +120,8 @@ async def publish_all_new_films():
     ''' Publish All films on channel which are not published '''
     #Publish new Films
     
-    rows=dbm.db_list_4_publish()
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_list_4_publish()
 
     if rows:
        for row in rows:
@@ -122,7 +129,8 @@ async def publish_all_new_films():
          logging.info(f"ALL FILMS:Publish new film id:{idf}")
          await publish_new_film(idf)
          #set to sts.PUBL_YES
-         dbm.db_update_publish(idf)
+         async with dbm.DatabaseBot(sts.db_name) as db:
+            await db.db_update_publish(idf)
          await asyncio.sleep(5)
 
 async def publish_new_film( idf ):
@@ -130,7 +138,7 @@ async def publish_new_film( idf ):
         idf - number film in db
         rec_upd - was updated exist film'''
     
-    msg=prep_message_film( idf )
+    msg = await prep_message_film( idf )
     
     bdata = 'XX'+dict(msg).get('id_nnm')
     buttons_film = [
@@ -147,13 +155,14 @@ async def publish_new_film( idf ):
 
     logging.debug(f"Send new film Message:{send_msg}")
 
-def prep_message_film( idf ):
+async def prep_message_film( idf ):
     ''' Prepare message and file for publish in channel 
         idf - number film in db
         rec_upd - was updated exist film'''
     
     logging.debug(f"Publish film id={idf}")
-    row=dbm.db_film_by_id( idf )
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        row = await db.db_film_by_id( idf )
     logging.debug(f"Get film from db ={row}")
     film_name = f"<a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
     film_section = f"🟢<b>Раздел:</b> \n{dict(row).get('section')}\n"
@@ -190,7 +199,7 @@ async def send_card_one_record( idf, index, event ):
         idf - number film in db
         event - descriptor channel '''
     
-    msg=prep_message_film( idf )
+    msg = await prep_message_film( idf )
     
     # Create buttons for message
     f_prev = 'PREV'+f'{index}'
@@ -242,7 +251,8 @@ async def send_lists_records( rows, num_per_message, event ):
 async def query_clear_tagged_records(id_usr, event):
     ''' Clear all tag for user '''
     logging.info("Query db for clear tag ")
-    rows = dbm.db_switch_user_tag( sts.UNSETTAG, id_usr )
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_switch_user_tag( sts.UNSETTAG, id_usr )
     if rows:
         message = _('Clear ')+rows+_(' records')
     else:
@@ -252,7 +262,8 @@ async def query_clear_tagged_records(id_usr, event):
 async def query_db_info(event, id_usr):
     ''' Get info about database records '''
     logging.info(f"Query info database for user {id_usr}")
-    rows = dbm.db_info(id_usr)
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_info(id_usr)
     message = _("All records: ") + \
         str(rows[0][0])+_("\nTagged records: ") + \
         str(rows[1][0])+_("\nEarly tagged: ")+str(rows[2][0])
@@ -287,7 +298,7 @@ async def create_basic_menu(level, event):
 
     await event.respond(_("**☣ Work with database:**"), parse_mode='md', buttons=keyboard)
 
-async def create_control_user_menu(level, event):
+async def create_control_user_menu(event):
     ''' Create menu of control users '''
     logging.info("Create control user menu buttons")
     keyboard = [
@@ -314,7 +325,7 @@ async def create_control_user_menu(level, event):
 
     await event.respond(_("**☣ Work with users:**"), parse_mode='md', buttons=keyboard)
 
-async def create_rights_user_menu(level, event, id_usr):
+async def create_rights_user_menu(event, id_usr):
     ''' Create menu for change rights users '''
     logging.info("Create menu for change rights users menu buttons")
 
@@ -366,7 +377,7 @@ async def create_choice_dialog(question, choice_buttons, event, level):
                 if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
                     await create_basic_menu(level, event)
 
-async def check_user(channel, user, event):
+async def check_user(channel, user):
     ''' Check right of User '''
     logging.debug(f"Try Get permissions for channe={channel} user={user}")
 
@@ -374,16 +385,18 @@ async def check_user(channel, user, event):
       permissions = await bot.get_permissions(channel, user)
       logging.debug(f"Get permissions = {permissions}  for channe={channel} user={user}")
       if permissions.is_admin:
-        user_db = dbm.db_exist_user(user)
+        async with dbm.DatabaseBot(sts.db_name) as db:
+            user_db = await db.db_exist_user(user)
         ret = -1
         if not user_db:
           logging.debug(f"User {user} is Admin and not in db - new user!")
           return sts.USER_NEW
         return sts.USER_SUPERADMIN # Admin
-    except:
-      logging.error(f"Can not get permissions for channel={channel} user={user}. Possibly user not join to group but send request for Control")  
-
-    user_db = dbm.db_exist_user(user)
+    except Exception as error:
+      logging.error(f"Can not get permissions for channel={channel} user={user} Error:{error}). \nPossibly user not join to group but send request for Control")  
+    
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        user_db = await db.db_exist_user(user)
     ret = -1
     if not user_db:
       logging.debug(f"User {user} is not in db - new user")
@@ -402,8 +415,9 @@ async def check_user(channel, user, event):
     return ret
 
 async def query_wait_users(event):
-    ''' Get list users who submitted applications '''     
-    rows = dbm.db_list_users( id_user=None, active=sts.USER_BLOCKED, rights=sts.USER_NO_RIGHTS )
+    ''' Get list users who submitted applications '''
+    async with dbm.DatabaseBot(sts.db_name) as db:     
+        rows = await db.db_list_users( id_user=None, active=sts.USER_BLOCKED, rights=sts.USER_NO_RIGHTS )
     logging.debug("Get users waiting approve")
     button=[]
     if rows:
@@ -419,8 +433,9 @@ async def query_wait_users(event):
         await event.respond(message)
 
 async def query_all_users(event, bdata_id, message):
-    ''' Get list all users '''     
-    rows = dbm.db_list_users()
+    ''' Get list all users '''
+    async with dbm.DatabaseBot(sts.db_name) as db:     
+        rows = await db.db_list_users()
     logging.debug(f"Get all users result={len(rows)}")
     button=[]
     if rows:
@@ -452,12 +467,14 @@ async def query_all_users(event, bdata_id, message):
 
 async def query_user_tag_film(event, id_nnm, id_usr):
     ''' User tag film '''
-    res=dbm.db_get_tag( id_nnm, id_usr )
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        res = await db.db_get_tag( id_nnm, id_usr )
     if res:
        await event.answer(_('Film already in database!'), alert=True)
        logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
        return
-    res=dbm.db_add_tag( id_nnm, sts.SETTAG, id_usr )
+    async with dbm.DatabaseBot(sts.db_name) as db:   
+        res = await db.db_add_tag( id_nnm, sts.SETTAG, id_usr )
     logging.info(f"User {id_usr} tag film id_nnm={id_nnm} with result={res}")
     #bdata = 'TAG'+id_nnm
     await event.answer(_('Film added to database'), alert=True)
@@ -472,7 +489,8 @@ async def add_new_user(event):
     if not name_user: name_user = user_ent.first_name
     logging.debug(f"Get username for id {id_user}: {name_user}")
     #await query_add_user(id_user, name_user, event)
-    res = dbm.db_add_user(id_user, name_user)
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        res = await db.db_add_user(id_user, name_user)
     if res:
         await event.respond(_("Yoy already power user!"))
     else:
@@ -500,7 +518,7 @@ async def main_frontend():
     async def callback(event):
         logging.debug(f"Get callback event on channel {sts.Channel_my}: {event}")
         # Check user rights
-        ret = await check_user(event.query.peer, event.query.user_id, event)
+        ret = await check_user(event.query.peer, event.query.user_id)
         
         if ret == sts.USER_NEW: 
             await event.answer(_('Sorry you are not registered user.\nYou can only set Reaction.\nYou can register, press [Control] button.'), alert=True)
@@ -529,7 +547,8 @@ async def main_frontend():
         idf = pbl_data.replace('PUBLISH#', '')
         await publish_new_film(idf)
         #set to sts.PUBL_YES
-        dbm.db_update_publish(idf)
+        async with dbm.DatabaseBot(sts.db_name) as db:
+            await db.db_update_publish(idf)
         builder = event_publish_iq.builder
         await event_publish_iq.answer([builder.article('Publish', text="ok")])
         raise StopPropagation
@@ -542,9 +561,9 @@ async def main_frontend():
         #user = event_bot.message.peer_id.user_id
         logging.info(f"LOGIN USER_ID:{event_bot.message.peer_id.user_id}")
         try:
-            ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id, event_bot)
+            ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id)
         except Exception as error:
-            print(f"Error get user: {error}")
+            logging.error(f"Error get user: {error}")
             return
         
         if ret == sts.USER_NEW:     # New user
@@ -558,12 +577,12 @@ async def main_frontend():
         elif ret == sts.USER_BLOCKED:   # Blocked
             await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
             return
-        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ# FIXME no think # Only View?
+        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ # FIXME no think # Only View?
         elif ret == sts.USER_READ_WRITE: menu_level = sts.MENU_USER_READ_WRITE # Admin
         elif ret == sts.USER_SUPERADMIN: menu_level = sts.MENU_SUPERADMIN # SuperUser
        
         if event_bot.message.message == '/start':
-          # show admin menu
+          # show menu
           await create_basic_menu(menu_level, event_bot)
          
             
@@ -576,7 +595,7 @@ async def main_frontend():
         button_data = event_bot.data.decode()
         await event_bot.delete()               #Delete previous message (prev menu)
         send_menu = sts.MENU_USER_READ
-        ret = await check_user(PeerChannel(Channel_my_id), id_user, event_bot)
+        ret = await check_user(PeerChannel(Channel_my_id), id_user)
         #Stop handle this event other handlers
         #raise StopPropagation
         menu_level = sts.MENU_USER_READ
@@ -601,8 +620,9 @@ async def main_frontend():
             await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
             send_menu = sts.NO_MENU            
         elif button_data == '/bm_dwclear':
-            # Clear all tag 
-            res=dbm.db_switch_user_tag( id_user, sts.UNSETTAG )
+            # Clear all tag
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                res = await db.db_switch_user_tag( id_user, sts.UNSETTAG )
             await event_bot.respond(_("  Clear ")+res+_(" records  "))
             send_menu = sts.BASIC_MENU
         elif button_data == '/bm_dwlist':
@@ -617,8 +637,8 @@ async def main_frontend():
         elif button_data == '/bm_dwearly':
             # Get films tagget early
             choice_buttons = {
-            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, sts.SETTAG, event_bot]],
-            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.SETTAG, event_bot],sts.BASIC_MENU],
+            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[id_user, sts.UNSETTAG, event_bot]],
+            "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.UNSETTAG, event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
             await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
@@ -653,8 +673,9 @@ async def main_frontend():
             id_user_approve = data.replace('ENABLE', '') 
             # Approve waiting users
             logging.info(f"Approve waiting users: user={id_user_approve}")
-            dbm.db_ch_rights_user(id_user_approve, sts.USER_ACTIVE, sts.USER_READ_WRITE)
-            user_db=dbm.db_exist_user(id_user_approve)
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                await db.db_ch_rights_user(id_user_approve, sts.USER_ACTIVE, sts.USER_READ_WRITE)
+                user_db = await db.db_exist_user(id_user_approve)
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("User: ")+user_name+_(" add to DB"))
             #Send message to user
@@ -672,10 +693,12 @@ async def main_frontend():
             # Get user for delete
             data = button_data
             id_user_delete = data.replace('DELETE', '') #FIXME change id_user_delete id_user
-            user_db=dbm.db_exist_user(id_user_delete)
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                user_db = await db.db_exist_user(id_user_delete)
             user_name=dict(user_db[0]).get('name_user')
             logging.info(f"Delete users: user={id_user_delete}")
-            dbm.db_del_user(id_user_delete)
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                await db.db_del_user(id_user_delete)
             await event_bot.respond(_("User: ")+user_name+_(" deleted from DB"))
             send_menu = sts.CUSER_MENU   
         elif button_data == '/cu_cur':
@@ -686,7 +709,8 @@ async def main_frontend():
             data = button_data
             id_user = data.replace('RIGHTS', '')
             logging.info(f"Change rights for user={id_user}")
-            user_db=dbm.db_exist_user(id_user)
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                user_db = await db.db_exist_user(id_user)
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("Change righst for user: ")+user_name)
             send_menu = sts.CURIGHTS_MENU
@@ -694,14 +718,16 @@ async def main_frontend():
             #Change to RO
             data = button_data
             id_user = data.replace('/cr_ro', '')
-            dbm.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ )
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                await db.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ )
             logging.info(f"Change rights RO for user={id_user}")
             send_menu = sts.CUSER_MENU
         elif button_data.find('/cr_rw', 0, 7) != -1:
             #Change to RW
             data = button_data
             id_user = data.replace('/cr_rw', '')
-            dbm.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE )
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                await db.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE )
             logging.info(f"Change rights RW for user={id_user}")
             send_menu = sts.CUSER_MENU
         elif button_data == '/cu_buu':
@@ -711,19 +737,22 @@ async def main_frontend():
         elif button_data.find('BLOCK_UNBLOCK', 0,13 ) != -1:
             data = button_data
             id_user = data.replace('BLOCK_UNBLOCK', '')
-            user_db=dbm.db_exist_user(id_user)
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                user_db = await db.db_exist_user(id_user)
             user_name=dict(user_db[0]).get('name_user')
             active=dict(user_db[0]).get('active')
             if active == sts.USER_BLOCKED:
-              logging.info(f"Unblock user={id_user}")
-              dbm.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE )
-              user_db=dbm.db_exist_user(id_user_approve)
-              await event_bot.respond(_("User: ")+user_name+_(" Unblocked"))
+                logging.info(f"Unblock user={id_user}")
+                async with dbm.DatabaseBot(sts.db_name) as db:
+                    await db.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE )
+                    user_db = await db.db_exist_user(id_user_approve)
+                await event_bot.respond(_("User: ")+user_name+_(" Unblocked"))
             else:
-              logging.info(f"Block user={id_user}")
-              dbm.db_ch_rights_user( id_user, sts.USER_BLOCKED, sts.USER_READ_WRITE )
-              await event_bot.respond(_("User: ")+user_name+_(" Blocked"))
-            send_menu = sts.CUSER_MENU
+                logging.info(f"Block user={id_user}")
+                async with dbm.DatabaseBot(sts.db_name) as db:
+                    await db.db_ch_rights_user( id_user, sts.USER_BLOCKED, sts.USER_READ_WRITE )
+                await event_bot.respond(_("User: ")+user_name+_(" Blocked"))
+                send_menu = sts.CUSER_MENU
             #Back to user menu
 
         if send_menu == sts.BASIC_MENU:
@@ -731,15 +760,44 @@ async def main_frontend():
             await create_basic_menu(menu_level, event_bot)
         elif send_menu == sts.CUSER_MENU:
             #await event_bot.respond(_("🏁............Done............🏁"))
-            await create_control_user_menu(menu_level, event_bot)
+            await create_control_user_menu(event_bot)
         elif send_menu == sts.CURIGHTS_MENU:
             #await event_bot.respond(_("🏁............Done............🏁"))
-            await create_rights_user_menu(menu_level, event_bot, id_user)
+            await create_rights_user_menu(event_bot, id_user)
 
     return bot
-    
-# main()
-print('Start frontend.')
+
+async def main():
+    ''' Main function '''
+    global Channel_my_id
+
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        print('Create db if not exist.')
+        await db.db_create()
+
+    # Get data for admin user for check and add to db (initialization)
+    #admin_ent = bot.loop.run_until_complete(bot.get_entity(sts.admin_name))
+    admin_ent = await bot.get_entity(sts.admin_name)
+    name_user = admin_ent.username
+    id_user = admin_ent.id
+    if not name_user: name_user = admin_ent.first_name
+    logging.debug(f"Get Admin username for id {id_user}: {name_user}")
+
+    # if not exist add admin user to DB
+    async with dbm.DatabaseBot(sts.db_name) as db:
+            exist_user = await db.db_exist_user(id_user)
+
+    if not exist_user:
+        async with dbm.DatabaseBot(sts.db_name) as db:
+            await db.db_add_user(id_user, name_user)
+            await db.db_ch_rights_user(id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE)
+
+    #Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(sts.Channel_my))
+    Channel_my_id = await bot.get_peer_id(sts.Channel_my)
+    # Run basic events loop
+    await main_frontend()    
+
+#------------------- Main begin -----------------------------------------------
 
 sts.get_config()
 # Enable logging
@@ -749,19 +807,11 @@ logging.info("Start frontend bot.")
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
 if os.path.isdir(localedir):
-  translate = gettext.translation('nnmbot', localedir, [sts.Lang])
-  _ = translate.gettext
+    translate = gettext.translation('nnmbot', localedir, [sts.Lang])
+    _ = translate.gettext
 else: 
-  logging.info(f"No locale dir found for support langs: {localedir} \n Use default lang: Engilsh")
-  def _(message): return message
- 
-sts.connection = sqlite3.connect(sts.db_name)
-sts.connection.row_factory = sqlite3.Row
-sts.cursor = sts.connection.cursor()
-
-# Init database
-dbm.db_init()
-dbm.db_create()
+    logging.info(f"No locale dir found for support langs: {localedir} \n Use default lang: Engilsh")
+    def _(message): return message
 
 # Connect to Telegram as bot
 if sts.use_proxy:
@@ -781,24 +831,10 @@ else:
 # Init and start Telegram client as bot
 bot = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy).start(bot_token=sts.mybot_token)
 
-# Get data for admin user for check and add to db (initialization)
-admin_ent = bot.loop.run_until_complete(bot.get_entity(sts.admin_name))
-name_user = admin_ent.username
-id_user = admin_ent.id
-if not name_user: name_user = admin_ent.first_name
-logging.debug(f"Get Admin username for id {id_user}: {name_user}")
-
-# if not exist add admin user to DB 
-if not dbm.db_exist_user(id_user):
-  dbm.db_add_user(id_user, name_user)
-  dbm.db_ch_rights_user(id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE)
-
-Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(sts.Channel_my))
-
 #bot.start()
-bot.loop.run_until_complete(main_frontend())
-bot.run_until_disconnected()
 
-sts.connection.close()
-logging.info("End.\n--------------------------")
-print('End.')
+with bot:
+    bot.loop.run_until_complete(main())
+    bot.run_until_disconnected()
+
+
