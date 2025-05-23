@@ -10,6 +10,7 @@ import logging
 import os.path
 import asyncio
 import aiosqlite
+from pprintpp import pprint as pp 
 
 import settings as sts
 
@@ -157,7 +158,7 @@ class DatabaseBot:
         return await cursor.fetchone()
 
     async def db_info( self, id_user ):
-        ''' Get Info database: all records, tagged records and tagged early records for user '''
+        ''' Get Info database: all records, tagged records and tagged early records for user '''        
         cursor = await self.dbm.execute("SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Ufilms \
             WHERE tag = ? AND id_user = ? UNION ALL SELECT COUNT(*) FROM Ufilms \
                 WHERE tag = ? AND id_user = ?", (sts.SETTAG, id_user, sts.UNSETTAG, id_user,) )
@@ -391,8 +392,8 @@ async def main():
     print(f'INS FIRST: id_nnm={id_nnm}   rec_id={rec_id}')
    
        
-    # Test race condition 
-    count=10
+    # Test race condition for best res count set more 300
+    count=5
     tasks=[]
     for i in range(1, count+1):
         # создаем задачи
@@ -422,102 +423,100 @@ async def main():
 
     async with DatabaseBot(sts.db_name) as db:    
         rec_id = await db.db_exist_Id(id_kpsk, id_imdb)
-    print(f'rec_id={rec_id}')
-
-    async with DatabaseBot(sts.db_name) as db:   
-        rec_id = await db.db_info( id_user )
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_list_4_publish]={row}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_list_4_publish()
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_list_4_publish]={dict(row)}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_update_publish( 1 )
-    print(f'rec_id={rec_id}')
+    print(f'[db_update_publish]={rec_id}')
         
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_list_all()
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_list_all]={dict(row)}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_list_all_id()
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_list_all_id]={dict(row)}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_search_list('test')
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_list_all_id]={dict(row)}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_search_id('test')
-    print(f'rec_id={rec_id}')   
+    for row in rec_id: print(f"[db_search_id]={dict(row)}")   
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_user( id_user, name_user )
-    print(f'rec_id={rec_id}')
+    print(f'[db_add_user]={rec_id}')
     
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_del_user( id_user )
-    print(f'rec_id={rec_id}')
+    print(f'db_del_user={rec_id}')
     # Yet one for test
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_user( id_user, name_user )
-    print(f'rec_id={rec_id}')
+    print(f'[db_add_user]={rec_id}')
      # Yet one for test exception
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_user( id_user, name_user )
-    print(f'rec_id={rec_id}')
+    print(f'[db_add_user+]={rec_id}')
     #exit()
     async with DatabaseBot(sts.db_name) as db:   
-        rec_id = await db.db_exist_user(id_user)
-    print(f'rec_id={rec_id}')
+        rec_id = await db.db_exist_user(id_user)    
+    for row in rec_id: print(f"db_exist_user]={dict(row)}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_ch_rights_user(id_user, active, rights)
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_ch_rights_user]={row}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_list_users( id_user, active, rights )
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_list_users]={dict(row)}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_list_tagged_films( id_user, tag=sts.SETTAG )
-    print(f'rec_id={rec_id}')
+    print(f'(db_list_tagged_films)={rec_id}')
+    for row in rec_id: print(f"[db_list_tagged_films]={dict(row)}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_list_tagged_films_id( id_user, tag=sts.SETTAG )
-    print(f'rec_id={rec_id}')
+    print(f'(db_list_tagged_films_id)={rec_id}')
+    for row in rec_id: print(f"[db_list_tagged_films_id]={dict(row)}")
 
     async with DatabaseBot(sts.db_name) as db:   
-        rec_id = await db.db_film_by_id(id=1)
-    print(f'rec_id={rec_id}')
+        rec_id = await db.db_film_by_id(idf=1)
+    for row in rec_id: print(f"[db_film_by_id]={row}")
 
     print(f"Add tag: idf:{idf},tag:{sts.SETTAG}, id_user:{id_user}")
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_tag(idf, sts.SETTAG, id_user)
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_add_tag]={row}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_switch_film_tag(idf, sts.SETTAG, id_user)
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_switch_film_tag]={row}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_switch_user_tag(id_user, sts.SETTAG)
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_switch_user_tag]={row}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_get_tag( idf, id_user )
-    print(f'rec_id={rec_id}')
+    for row in rec_id: print(f"[db_get_tag]={dict(row)}")
 
     print('--------------INFO--------------')
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_info( id_user )
-    print(f'rec_id={rec_id}')
-
+    for row in rec_id: print(f"[db_info]={dict(row)}\n")
+    
     print('--------------INFO--------------')
 
-    print(f'FAIL_MODIFY={FAIL_MODIFY} ')
+    print(f'FAIL_MODIFY(test for race condition)={FAIL_MODIFY} ')
 
 if __name__ == "__main__":
     asyncio.run(main())
