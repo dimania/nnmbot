@@ -279,21 +279,21 @@ class DatabaseBot:
                             image_nnm, publish, id_nnm FROM Films WHERE id=?", (idf,))
         return await cursor.fetchone()
 
-    async def db_add_tag(self, id_nnm, tag, id_user):
+    async def db_add_tag(self, idf, tag, id_user):
         ''' User first Tag film in database '''
         cur_date=datetime.now()        
-        cursor = await self.db_modify("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,(SELECT id FROM Films WHERE id_nnm=?),?,?)",
-                    (id_user,id_nnm,cur_date,tag))
+        cursor = await self.db_modify("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,?,?,?)",
+                    (id_user,idf,cur_date,tag))
         if cursor:                                    
             return str(cursor.rowcount)
         else:
             return None
 
-    async def db_switch_film_tag(self, id_nnm, tag, id_user):
+    async def db_switch_film_tag(self, idf, tag, id_user): #NOT USE!
         ''' Update user tagging in database for films  '''
         
-        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ? AND id_Films = (SELECT id FROM Films WHERE id_nnm=?)",
-                    (tag,id_user,id_nnm)) 
+        cursor = await self.db_modify("UPDATE Ufilms SET tag = ? WHERE id_user = ? AND id_Films = ?",
+                    (tag,id_user,idf)) 
         if cursor:                                    
             return str(cursor.rowcount)
         else:
@@ -308,9 +308,9 @@ class DatabaseBot:
         else:
             return None               
 
-    async def db_get_tag(self, id_nnm, id_user ):
+    async def db_get_tag(self, idf, id_user ):
         ''' Get if exist current tag for user '''
-        cursor = await self.dbm.execute("SELECT tag FROM Ufilms WHERE id_Films = (SELECT id FROM Films WHERE id_nnm=?) AND id_user=?", (id_nnm, id_user,))
+        cursor = await self.dbm.execute("SELECT tag FROM Ufilms WHERE id_Films = ? AND id_user = ?", (idf, id_user,))
         return await cursor.fetchall()
 
 
@@ -372,6 +372,7 @@ async def main():
     film_description='Description test'
     image_nnm_url='http://test_image.ru'
     image_nnm=None
+    idf=1
     #---
     id_user='12345678'
     name_user='test_user'
@@ -491,13 +492,13 @@ async def main():
         rec_id = await db.db_film_by_id(id=1)
     print(f'rec_id={rec_id}')
 
-    print(f"Add tag: id_nnm:{id_nnm},tag:{sts.SETTAG}, id_user:{id_user}")
+    print(f"Add tag: idf:{idf},tag:{sts.SETTAG}, id_user:{id_user}")
     async with DatabaseBot(sts.db_name) as db:   
-        rec_id = await db.db_add_tag(id_nnm, sts.SETTAG, id_user)
+        rec_id = await db.db_add_tag(idf, sts.SETTAG, id_user)
     print(f'rec_id={rec_id}')
 
     async with DatabaseBot(sts.db_name) as db:   
-        rec_id = await db.db_switch_film_tag(id_nnm, sts.SETTAG, id_user)
+        rec_id = await db.db_switch_film_tag(idf, sts.SETTAG, id_user)
     print(f'rec_id={rec_id}')
 
     async with DatabaseBot(sts.db_name) as db:   
@@ -505,7 +506,7 @@ async def main():
     print(f'rec_id={rec_id}')
 
     async with DatabaseBot(sts.db_name) as db:   
-        rec_id = await db.db_get_tag( id_nnm, id_user )
+        rec_id = await db.db_get_tag( idf, id_user )
     print(f'rec_id={rec_id}')
 
     print('--------------INFO--------------')
