@@ -10,7 +10,7 @@ import logging
 import os.path
 import asyncio
 import aiosqlite
-from pprintpp import pprint as pp 
+ 
 
 import settings as sts
 
