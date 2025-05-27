@@ -140,7 +140,7 @@ async def publish_new_film( idf ):
     
     msg = await prep_message_film( idf )
     
-    bdata = 'XX'+dict(msg).get('id_nnm')
+    bdata = 'XX'+idf
     buttons_film = [
                 Button.inline(_("Add Film"), bdata),
                 Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
@@ -157,8 +157,7 @@ async def publish_new_film( idf ):
 
 async def prep_message_film( idf ):
     ''' Prepare message and file for publish in channel 
-        idf - number film in db
-        rec_upd - was updated exist film'''
+        idf - number film in db'''
     
     logging.debug(f"Publish film id={idf}")
     async with dbm.DatabaseBot(sts.db_name) as db:
@@ -465,17 +464,17 @@ async def query_all_users(event, bdata_id, message):
         message = _(".....No records.....")
         await event.respond(message)
 
-async def query_user_tag_film(event, id_nnm, id_usr):
-    ''' User tag film '''
+async def query_user_tag_film(event, idf, id_usr):
+    ''' User set tag to film '''
     async with dbm.DatabaseBot(sts.db_name) as db:
-        res = await db.db_get_tag( id_nnm, id_usr )
+        res = await db.db_get_tag( idf, id_usr )
     if res:
        await event.answer(_('Film already in database!'), alert=True)
-       logging.info(f"User tag film but already in database id_nnm={id_nnm} with result={res}")
+       logging.info(f"User tag film but already in database id={idf} with result={res}")
        return
     async with dbm.DatabaseBot(sts.db_name) as db:   
-        res = await db.db_add_tag( id_nnm, sts.SETTAG, id_usr )
-    logging.info(f"User {id_usr} tag film id_nnm={id_nnm} with result={res}")
+        res = await db.db_add_tag( idf, sts.SETTAG, id_usr )
+    logging.info(f"User {id_usr} tag film id={idf} with result={res}")
     #bdata = 'TAG'+id_nnm
     await event.answer(_('Film added to database'), alert=True)
 
