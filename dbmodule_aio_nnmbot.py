@@ -10,7 +10,7 @@ import logging
 import os.path
 import asyncio
 import aiosqlite
- 
+import json
 
 import settings as sts
 
@@ -69,7 +69,9 @@ class DatabaseBot:
         date TEXT NOT NULL,
         active INTEGER DEFAULT 0,
         rights INTEGER DEFAULT 0,
-        setings TEXT DEFAULT NULL
+        setings TEXT DEFAULT NULL,
+        share2users TEXT DEFAULT NULL, 
+        users4share TEXT DEFAULT NULL 
         )
         ''')
         # Create table Ufilms - films tagged users
@@ -313,9 +315,79 @@ class DatabaseBot:
         ''' Get if exist current tag for user '''
         cursor = await self.dbm.execute("SELECT tag FROM Ufilms WHERE id_Films = ? AND id_user = ?", (idf, id_user,))
         return await cursor.fetchall()
+    
+    async def db_add_share(self, field, share_list, id_user):
+        ''' Add to user table users to whom share lists '''
+        
+        # From deepseeek
+        try:
+            # Получаем текущий JSON
+            cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+            result = await cursor.fetchone()
+            
+            # Десериализация или создание нового списка
+            current_list = json.loads(result[0]) if result and result[0] else []
+            
+            # Добавляем новые элементы (поддерживает как одиночные, так и множественные значения)
+            if isinstance(share_list, list):
+                current_list.extend(share_list)
+            else:
+                current_list.append(share_list)
+            
+            # Обновляем запись в базе
+            await self.db_modify( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
+                (json.dumps(current_list, ensure_ascii=False), id_user) )
+            return True
+        except json.JSONDecodeError:
+            logging.error(f"Error in format data: {share_list}\n")
+            return False   
+        
+
+    async def db_del_share(self, field, users_to_remove, id_user):
+        '''Delete users from table to whom share lists '''
+
+        try:
+            # Получаем текущие данные
+            #logging.error(f"Run del: {users_to_remove}/{field}/{id_user} \n")
+            cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+            result = await cursor.fetchone()
+            #logging.debug(f"Result shared list for delete: {result}\n")
+
+            if not result or not result[0]:
+                return False
+
+            current_list = json.loads(result[0])
+            #logging.debug(f"Current list: {current_list}\n")
+
+            new_list = [item for item in current_list if item != users_to_remove]
+            #logging.debug(f"New list: {new_list}\n")
+
+            # Обновляем запись
+            await self.db_modify( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
+                (json.dumps(new_list, ensure_ascii=False), id_user))
+
+            return True
+
+        except json.JSONDecodeError:
+            logging.error(f"Error in format data: {users_to_remove}\n") 
+            return False
+
+    async def db_get_share(self, field, id_user):
+        '''Get share users '''
+
+        cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+        result = await cursor.fetchone()
+        
+        if not result or not result[0]:
+            return False
+
+        current_list = json.loads(result[0])
+        #logging.debug(f"Current get share list: {current_list}\n")
+        return current_list
+    
 
 
-# For test block task
+#------------------------- For test block task
 async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                         film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0):
     ''' Test dblock'''
@@ -376,12 +448,15 @@ async def main():
     idf=1
     #---
     id_user='12345678'
+    id_user2='87654321'
+    id_user3='000333000'
     name_user='test_user'
     active=1
     rights=0
-    
+    share2users_list=[]
 
-
+    share2users_list.append(id_user2)
+    share2users_list.append(id_user3)
 
     async with DatabaseBot(sts.db_name) as db:
         await db.db_create()
@@ -464,7 +539,15 @@ async def main():
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_user( id_user, name_user )
     print(f'[db_add_user+]={rec_id}')
-    #exit()
+    
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user2, name_user )
+    print(f'[db_add_user+]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user3, name_user )
+    print(f'[db_add_user+]={rec_id}')
+
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_exist_user(id_user)    
     for row in rec_id: print(f"db_exist_user]={dict(row)}")
@@ -507,6 +590,26 @@ async def main():
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_get_tag( idf, id_user )
     for row in rec_id: print(f"[db_get_tag]={dict(row)}")
+
+    async with DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_add_share( 'share2users', share2users_list, id_user )
+    print(f'[db.db_add_share users {share2users_list} for user {id_user}]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_add_share( 'users4share', id_user, id_user2 )
+    print(f'[db.db_add_share user {id_user} for user {id_user2}]={rec_id}')
+    
+    async with DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_del_share( 'share2users', id_user2, id_user )  
+    print(f'[db.db_del_share user {id_user2} for user {id_user}]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_get_share( 'share2users', id_user )
+    print(f'[db.db_get_share for user {id_user}]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_get_share( 'users4share', id_user2 )
+    print(f'[db.db_get_share for user {id_user2}]={rec_id}')    
 
     print('--------------INFO--------------')
 

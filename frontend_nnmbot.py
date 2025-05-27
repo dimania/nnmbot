@@ -444,7 +444,7 @@ async def create_select_user_dialog(event , level):
             logging.debug(f"It is not RequestedPeerUser message:{error}")
             return None
 
-async def check_user(channel, user, event):
+async def check_user(channel, user):
     ''' Check right of User '''
     logging.debug(f"Try Get permissions for channe={channel} user={user}")
 
@@ -884,8 +884,6 @@ else:
     logging.info(f"No locale dir found for support langs: {localedir} \n Use default lang: Engilsh")
     def _(message): return message
 
-exit(0)
-# Connect to Telegram as bot
 if sts.use_proxy:
     prx = re.search('(^.*)://(.*):(.*$)', sts.proxies.get('http'))
     proxy = (prx.group(1), prx.group(2), int(prx.group(3)))
