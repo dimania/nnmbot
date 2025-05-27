@@ -381,7 +381,6 @@ async def create_choice_dialog(question, choice_buttons, event, level):
                 if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
                     await create_basic_menu(level, event)
 
-<<<<<<< HEAD
 async def create_select_user_dialog(event , level):
     ''' Select users for share list films
         event = bot event handled id
@@ -446,9 +445,6 @@ async def create_select_user_dialog(event , level):
             return None
 
 async def check_user(channel, user, event):
-=======
-async def check_user(channel, user):
->>>>>>> develop
     ''' Check right of User '''
     logging.debug(f"Try Get permissions for channe={channel} user={user}")
 
@@ -463,18 +459,11 @@ async def check_user(channel, user):
           logging.debug(f"User {user} is Admin and not in db - new user!")
           return sts.USER_NEW
         return sts.USER_SUPERADMIN # Admin
-<<<<<<< HEAD
-    except Exception as error :
-      logging.error(f"Can not get permissions for channel={channel} user={user} Error {error}. Possibly user not join to group but send request for Control")  
-
-    user_db = dbm.db_exist_user(user)
-=======
     except Exception as error:
       logging.error(f"Can not get permissions for channel={channel} user={user} Error:{error}). \nPossibly user not join to group but send request for Control")  
     
     async with dbm.DatabaseBot(sts.db_name) as db:
         user_db = await db.db_exist_user(user)
->>>>>>> develop
     ret = -1
     if not user_db:
       logging.debug(f"User {user} is not in db - new user")
@@ -655,11 +644,7 @@ async def main_frontend():
         elif ret == sts.USER_BLOCKED:   # Blocked
             await event_bot.respond(_('Sorry You are Blocked!\n Send message to Admin this channel'))
             return
-<<<<<<< HEAD
-        elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ  #Not used now
-=======
         elif ret == sts.USER_READ: menu_level = sts.MENU_USER_READ # FIXME no think # Only View?
->>>>>>> develop
         elif ret == sts.USER_READ_WRITE: menu_level = sts.MENU_USER_READ_WRITE # Admin
         elif ret == sts.USER_SUPERADMIN: menu_level = sts.MENU_SUPERADMIN # SuperUser
        
@@ -896,31 +881,8 @@ if os.path.isdir(localedir):
     translate = gettext.translation('nnmbot', localedir, [sts.Lang])
     _ = translate.gettext
 else: 
-<<<<<<< HEAD
-  logging.info(f"No locale dir found for support langs: {localedir} \n Use default lang: Engilsh")
-  def _(message): return message
- 
-sts.connection = sqlite3.connect(sts.db_name)
-sts.connection.row_factory = sqlite3.Row
-sts.cursor = sts.connection.cursor()
-
-# Init database
-dbm.db_init()
-dbm.db_create()
-# Test Sharing
-share2users=['7113450139']
-id_user='1033339697'
-id_user_del='7113450139'
-#dbm.db_del_share( 'share2users', id_user_del, id_user )
-dbm.db_add_share( 'share2users', share2users, id_user )
-dbm.db_add_share( 'users4share', id_user, id_user_del )
-result1=dbm.db_get_share( 'share2users', id_user )
-result2=dbm.db_get_share( 'users4share', id_user_del )
-print(f"Result 1:{result1[0]}\nResult 2:{result2[0]}\n")
-=======
     logging.info(f"No locale dir found for support langs: {localedir} \n Use default lang: Engilsh")
     def _(message): return message
->>>>>>> develop
 
 exit(0)
 # Connect to Telegram as bot
@@ -941,23 +903,6 @@ else:
 # Init and start Telegram client as bot
 bot = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy).start(bot_token=sts.mybot_token)
 
-<<<<<<< HEAD
-# Get data for admin user for check and add to db (initialization)
-admin_ent = bot.loop.run_until_complete(bot.get_entity(sts.admin_name))
-admin_name_user = admin_ent.username
-admin_id_user = admin_ent.id
-if not admin_name_user: admin_name_user = admin_ent.first_name
-logging.debug(f"Get Admin username for id {admin_id_user}: {admin_name_user}")
-
-# if not exist add admin user to DB 
-if not dbm.db_exist_user(admin_id_user):
-  dbm.db_add_user(admin_id_user, admin_name_user)
-  dbm.db_ch_rights_user(admin_id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE)
-
-Channel_my_id = bot.loop.run_until_complete(bot.get_peer_id(sts.Channel_my))
-
-=======
->>>>>>> develop
 #bot.start()
 
 with bot:
