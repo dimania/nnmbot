@@ -47,6 +47,9 @@ NO_MENU = 0
 
 LIST_REC_IN_MSG = 20
 #-----------------
+RETRIES_DB_LOCK = 5 
+
+
 
 def get_config(config=cfg):
     ''' set global variable from included config.py - import config directive'''
@@ -75,7 +78,8 @@ def get_config(config=cfg):
     global ses_usr_str
     global ses_bot_str
     global ukp_api_key
-    global ukp_api_url 
+    global ukp_api_url
+     
 
     cursor = None
     connection = None

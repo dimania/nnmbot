@@ -1,5 +1,5 @@
 myconfig.py
-*database*.db
+*.db*
 *.session
 test/*
 test*

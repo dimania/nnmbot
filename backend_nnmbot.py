@@ -7,9 +7,7 @@
 
 import io
 import re
-import sqlite3
 import logging
-import asyncio
 import os.path
 import sys
 import gettext
@@ -22,8 +20,10 @@ from bs4 import BeautifulSoup
 #from urllib3.util import Retry
 # --------------------------------
 import settings as sts
-import dbmodule_nnmbot as dbm
+import dbmodule_aio_nnmbot as dbm
 # --------------------------------
+#Global client connection telegram
+client = None 
 
 async def get_image(msg): #TODO NO NEED I think
     '''Get image poster form message'''
@@ -36,7 +36,7 @@ async def get_image(msg): #TODO NO NEED I think
     file_photo.seek(0)  # set cursor to the beginning
     logging.debug(f"Message Photo{film_photo_d}")
 
-    return { 'image_nnm': file_photo, 'image_msg':film_photo}
+    return { 'image_nnm': file_photo, 'image_msg': film_photo}
 
 def get_film_id( soup ):
     ''' Get Kinopoisk id of Film'''
@@ -96,7 +96,7 @@ def get_ukp_film_info( id_kpsk ):
         genre=genre[:-1]
 
     except Exception as error:
-        logging.error(f"Can't open url:{sts.ukp_api_url}, Error:{error}")
+        logging.error(f"Can't open url:{sts.ukp_api_url} Error:{error}")
         return None
 
     return { 'film_name':film_name,
@@ -111,7 +111,11 @@ def get_ukp_film_info( id_kpsk ):
 def get_rating_kp_imdb(id_kpsk, id_imdb):
     '''Get raiting film from kinopoisk site or immdb site'''
     
-    kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+    if id_kpsk:
+        kpsk_url = 'https://rating.kinopoisk.ru/'+id_kpsk+'.xml'
+    else: 
+        kpsk_url = None
+
     if id_imdb: 
         imdb_url = 'https://www.imdb.com/title/'+id_imdb+'/ratings/?ref_=tt_ov_rt'
     else: 
@@ -120,17 +124,18 @@ def get_rating_kp_imdb(id_kpsk, id_imdb):
     imdb_r=None
     # Get rating film from kinopoisk if not then from imdb site
 
-    page = requests.get(kpsk_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
-    # Parse data
-    # FIXME: me be better use xml.parser ?
-    soup = BeautifulSoup(page.text, 'html.parser')
-    try:
-        rating_xml = soup.find('rating')
-        kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
-        imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
-        logging.info(f"Get rating from kinopoisk: {kpsk_url}")
-    except Exception as error:
-        logging.info(f"No kinopoisk rating on site:{error}")
+    if kpsk_url:
+        page = requests.get(kpsk_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
+        # Parse data
+        # FIXME: me be better use xml.parser ?
+        soup = BeautifulSoup(page.text, 'html.parser')
+        try:
+            rating_xml = soup.find('rating')
+            kpsk_r = rating_xml.find('kp_rating').get_text('\n', strip='True')
+            imdb_r = rating_xml.find('imdb_rating').get_text('\n', strip='True')
+            logging.info(f"Get rating from kinopoisk: {kpsk_url}")
+        except Exception as error:
+            logging.info(f"No kinopoisk rating on site:{error}")
 
     if not imdb_r and id_imdb:
         page = requests.get(imdb_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'}, proxies=sts.proxies)
@@ -160,6 +165,12 @@ async def main_backend():
     async def normal_handler(event):
         url = post_body  = []
         mydict = {}
+        image_nnm_url = None
+        kpsk_r = None
+        imdb_r = None
+        description = None
+        genres = None
+
         logging.debug(f"Get new message in NNMCLUB Channel: {event.message}")
         msg = event.message
 
@@ -222,13 +233,15 @@ async def main_backend():
         id_nnm = re.search('viewtopic.php.t=(.+?)$', url).group(1)
         
         # Get film info from unofficial kinopoisk API 
-        ukp_info=get_ukp_film_info(id_kpsk)
-        image_nnm_url=ukp_info.get('image_nnm_url')
-        film_name=ukp_info.get('film_name')
-        description=ukp_info.get('description')
-        kpsk_r=ukp_info.get('kpsk_r')
-        imdb_r=ukp_info.get('imdb_r')
-        genres=ukp_info.get('genres')
+        if id_kpsk: 
+            ukp_info=get_ukp_film_info(id_kpsk)
+            if ukp_info:
+                image_nnm_url=ukp_info.get('image_nnm_url')
+                film_name=ukp_info.get('film_name')
+                description=ukp_info.get('description')
+                kpsk_r=ukp_info.get('kpsk_r')
+                imdb_r=ukp_info.get('imdb_r')
+                genres=ukp_info.get('genres')
 
         # Select data where class - nav - info about tracker section
         post_body = soup.find_all('a', {'class': 'nav'}) 
@@ -252,7 +265,7 @@ async def main_backend():
                 image_nnm_url = a_hr.get('title')
             logging.info(f"Get image url from nnmblub: {image_nnm_url}")
 
-        if not kpsk_r and not imdb_r:
+        if not kpsk_r and not imdb_r and id_kpsk:
             rating=get_rating_kp_imdb(id_kpsk, id_imdb)
             kpsk_r=rating.get('kpsk_r')
             imdb_r=rating.get('imdb_r')
@@ -290,42 +303,52 @@ async def main_backend():
 
         image_msg = await client.download_media(msg, bytes)
        
-        try:
-            async with db_lock:
-                rec_id=dbm.db_exist_Id(id_kpsk, id_imdb)
-                if rec_id:
-                    rec_id=dict(rec_id).get("id")
-                    # Update exist film to DB 🔄
-                    dbm.db_update_film(rec_id, id_nnm, url, film_name, \
+        async with dbm.DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_exist_Id(id_kpsk, id_imdb)
+            
+        if rec_id:
+            rec_id=dict(rec_id).get("id")
+
+        if rec_id:                    
+            # Update exist film to DB 🔄
+            async with dbm.DatabaseBot(sts.db_name) as db:    
+                await db.db_update_film(rec_id, id_nnm, url, film_name, \
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
                         description, image_nnm_url, image_msg, sts.PUBL_UPD)
-                    #rec_upd='UPD'
-                    logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
-                else:
-                    # Add new film to DB
-                    rec_id=dbm.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
-                        genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
-                    logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
-            try:
-                # Send inline query message to frondend bot for publish Film
-                result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
-                logging.debug(f"Send inline_query:{result}")
-            except Exception as error:
-                logging.warning(f'Cant send inline_query to bot. Ignore this because frondend not running:\n {error}')
+            logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
+        else:
+            # Add new film to DB
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                rec_id = await db.db_add_film(id_nnm, url, film_name, id_kpsk, id_imdb, mag_link, section, \
+                    genres, kpsk_r, imdb_r, description, image_nnm_url, image_msg, sts.PUBL_NOT)
+            logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
+        
+        try:
+            # Send inline query message to frondend bot for publish Film
+            result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
+            logging.debug(f"Send inline_query:{result}")
         except Exception as error:
-            logging.error(f'Error in block db_lock: {error}') 
+            logging.warning(f'Cant send inline_query to bot. Ignore this because frondend not running:\n {error}')
+       
     
     return client
 
+async def main():
+    # main()
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        print('Create db if not exist.')
+        await db.db_create()
 
-# main()
-print('Start backend.')
+    await main_backend()    
 
+#------------------- Main begin -----------------------------------------------
+
+    
 sts.get_config()
 
 # Enable logging
 logging.basicConfig(level=sts.log_level, filename="backend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
-logging.info("Start backend bot.")
+logging.info("--------------------------------------\nStart backend bot.")
 
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
 
@@ -336,15 +359,6 @@ else:
     logging.info(f"No locale dir for support langs: {localedir} \n Use default lang: Engilsh")
     def _(message):
         return message
-
-db_lock = asyncio.Lock()
-sts.connection = sqlite3.connect(sts.db_name)
-sts.connection.row_factory = sqlite3.Row
-sts.cursor = sts.connection.cursor()
-
-# Init database
-dbm.db_init()
-dbm.db_create()
 
 # Connect to Telegram as user
 if sts.use_proxy:
@@ -360,14 +374,11 @@ if not sts.ses_usr_str:
 else:
     session=StringSession(sts.ses_usr_str)
     logging.info("Use String session mode")
-
+  
 # Init and start Telegram client as bot
 client = TelegramClient(session, sts.api_id, sts.api_hash, system_version=sts.system_version, proxy=proxy)
+#client.start()
 
-client.start()
-client.loop.run_until_complete(main_backend())
-client.run_until_disconnected()
-
-sts.connection.close()
-logging.info("End backend.\n--------------------------")
-print('End.')
+with client:
+    client.loop.run_until_complete(main())
+    client.run_until_disconnected()
