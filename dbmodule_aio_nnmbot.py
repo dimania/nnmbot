@@ -594,8 +594,6 @@ async def main():
         rec_id = await db.db_list_users( id_user, active, rights )
     for row in rec_id: print(f"[db_list_users]={dict(row)}")
 
-   
-
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_film_by_id(idf=1)
     for row in rec_id: print(f"[db_film_by_id]={row}")
@@ -633,11 +631,9 @@ async def main():
     print(f'(db_list_tagged_films_id)={rec_id}')
     for row in rec_id: print(f"[db_list_tagged_films_id]={dict(row)}")
 
-   # async with DatabaseBot(sts.db_name) as db:   
-   #     rec_id = await db.db_switch_film_tag(idf, sts.SETTAG, id_user)
-   # for row in rec_id: print(f"[db_switch_film_tag]={row}")
-
-    
+    # async with DatabaseBot(sts.db_name) as db:   
+    #     rec_id = await db.db_switch_film_tag(idf, sts.SETTAG, id_user)
+    # for row in rec_id: print(f"[db_switch_film_tag]={row}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_get_tag( idf, id_user )
