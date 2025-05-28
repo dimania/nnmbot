@@ -292,7 +292,7 @@ class DatabaseBot:
         else:
             return None
 
-    async def db_switch_film_tag(self, idf, tag, id_user): #NOT USE!
+    async def db_switch_film_tag(self, idf, tag, id_user): #FIXME NOT USE!
         ''' Update user tagging in database for films  '''
         
         cursor = await self.db_modify("UPDATE Ufilms SET tag = ? WHERE id_user = ? AND id_Films = ?",
@@ -305,7 +305,7 @@ class DatabaseBot:
     async def db_switch_user_tag(self, id_user, tag):
         ''' Update tag in database for user '''
         
-        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ?", (tag,id_user))
+        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ? AND tag <> ?", (tag,id_user,tag))
         if cursor:                                    
             return str(cursor.rowcount)
         else:
@@ -342,7 +342,6 @@ class DatabaseBot:
             logging.error(f"Error in format data: {share_list}\n")
             return False   
         
-
     async def db_del_share(self, field, users_to_remove, id_user):
         '''Delete users from table to whom share lists '''
 
@@ -387,7 +386,7 @@ class DatabaseBot:
     
 
 
-#------------------------- For test block task
+#------------------------- For test block task ------------------
 async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                         film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0):
     ''' Test dblock'''
