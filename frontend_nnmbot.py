@@ -205,9 +205,9 @@ async def send_card_one_record( idf, index, event ):
     f_next = 'NEXT'+f'{index}'
     f_curr = 'HOME_MENU'
     buttons_film = [
-            Button.inline(_("◀"), f_prev),
-            Button.inline(_("◼"), f_curr),
-            Button.inline(_("▶"), f_next)
+            Button.inline(_("◀️"), f_prev),#◀️◀︎
+            Button.inline(_("⏹️"), f_curr),#⏹️⏹︎
+            Button.inline(_("▶️"), f_next) #▶️▶︎
             ]
         
     #FIXME as send? as respond or as send_file message
