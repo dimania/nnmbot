@@ -387,7 +387,7 @@ async def create_select_user_dialog(event , level):
         level = user level for show menu exxtended or no
     '''
     id_user = event.query.user_id
-    logging.debug(f"Create select user dialog for user {id_user}")
+    logging.debug(f"Create select users dialog for user {id_user}")
     
     buttons = [
     {
@@ -411,7 +411,7 @@ async def create_select_user_dialog(event , level):
     # Send selection user Button 
     url = f"https://api.telegram.org/bot{sts.mybot_token}/sendMessage"
 
-    response = requests.post(url, data=payload, timeout = 30)
+    response = requests.post(url, data=payload, timeout = 30, proxies=sts.proxies)
     logging.debug(f"Rsponse Select user button post:{response}\n")
 
     # hanled answer
@@ -429,13 +429,14 @@ async def create_select_user_dialog(event , level):
                         users_id.append(peer.user_id)
                     bot.remove_event_handler(on_requested_peer_user)
                     logging.debug(f"Get selected users:{users_id}")
+                    
                     reply_markup = { "remove_keyboard": True }
                     payload_remove_kb = {
                     "chat_id": id_user, # Id user to
                     "text": _("🏁............Done............🏁"), 
                     "reply_markup": json.dumps(reply_markup)
                     }
-                    response = requests.post(url, data=payload_remove_kb, timeout = 30)
+                    response = requests.post(url, data=payload_remove_kb, timeout = 30, proxies=sts.proxies)
                     logging.debug(f"Rsponse Remove keyboard:{response}\n")
                     await create_basic_menu(level, event) 
                     #TODO Add to db users_id

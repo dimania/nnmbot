@@ -585,6 +585,10 @@ async def main():
     for row in rec_id: print(f"[db_add_tag]={row}")
 
     async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_switch_user_tag(id_user, sts.UNSETTAG)
+    for row in rec_id: print(f"[db_switch_user_tag]={row}")
+
+    async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_list_tagged_films( id_user, tag=sts.SETTAG )
     print(f'(db_list_tagged_films)={rec_id}')
     for row in rec_id: print(f"[db_list_tagged_films]={dict(row)}")
