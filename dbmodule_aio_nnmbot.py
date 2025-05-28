@@ -305,7 +305,7 @@ class DatabaseBot:
     async def db_switch_user_tag(self, id_user, tag):
         ''' Update tag in database for user '''
         
-        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ?", (tag,id_user))
+        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ? AND tag <> ?", (tag,id_user,tag))
         if cursor:                                    
             return str(cursor.rowcount)
         else:
@@ -404,7 +404,7 @@ async def db_add_share_to_table(share_list, id_user):
 
 
 
-#------------------------- For test block task
+#------------------------- For test block task ------------------
 async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                         film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0):
     ''' Test dblock'''
@@ -618,6 +618,10 @@ async def main():
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_tag(idf+2, sts.SETTAG, id_user)
     for row in rec_id: print(f"[db_add_tag]={row}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_switch_user_tag(id_user, sts.UNSETTAG)
+    for row in rec_id: print(f"[db_switch_user_tag]={row}")
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_list_tagged_films( id_user, tag=sts.SETTAG )
