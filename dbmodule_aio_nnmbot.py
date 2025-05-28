@@ -664,8 +664,8 @@ async def main():
     print(f'[db.db_get_share for user {id_user0}]={rec_id}')
 
     async with DatabaseBot(sts.db_name) as db:    
-            rec_id = await db.db_get_share( 'users4share', id_user1 )
-    print(f'[db.db_get_share for user {id_user1}]={rec_id}')    
+            rec_id = await db.db_get_share( 'users4share', id_user3 )
+    print(f'[db.db_get_share for user {id_user3}]={rec_id}')    
 
     print('--------------INFO--------------')
 
