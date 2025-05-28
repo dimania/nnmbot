@@ -303,7 +303,7 @@ class DatabaseBot:
     async def db_switch_user_tag(self, id_user, tag):
         ''' Update tag in database for user '''
         
-        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ?", (tag,id_user))
+        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ? AND tag <> ?", (tag,id_user,tag))
         if cursor:                                    
             return str(cursor.rowcount)
         else:
