@@ -292,7 +292,7 @@ class DatabaseBot:
         else:
             return None
 
-    async def db_switch_film_tag(self, idf, tag, id_user): #NOT USE!
+    async def db_switch_film_tag(self, idf, tag, id_user): #FIXME NOT USE!
         ''' Update user tagging in database for films  '''
         
         cursor = await self.db_modify("UPDATE Ufilms SET tag = ? WHERE id_user = ? AND id_Films = ?",
@@ -342,7 +342,6 @@ class DatabaseBot:
             logging.error(f"Error in format data: {share_list}\n")
             return False   
         
-
     async def db_del_share(self, field, users_to_remove, id_user):
         '''Delete users from table to whom share lists '''
 
@@ -386,6 +385,24 @@ class DatabaseBot:
         return current_list
     
 
+async def db_add_share_to_table(share_list, id_user):
+        ''' Complex add shares to table '''
+        
+        async with DatabaseBot(sts.db_name) as db:    
+            ret = await db.db_add_share( 'share2users', share_list, id_user )
+            print(f"ret={ret} id_user={id_user} share_list={share_list}")
+            if ret:
+                for id_user_u4s in share_list:
+                    ret = await db.db_add_share( 'users4share', id_user, id_user_u4s )
+                    print(f"ret={ret} id_user_u4s={id_user_u4s}")
+                    if ret: 
+                        continue
+                    else:
+                        return False
+            else: 
+                return False
+
+
 
 #------------------------- For test block task
 async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
@@ -426,7 +443,7 @@ async def main():
     sts.logfile = 'db_module_aio.log'
     sts.db_name='test_aio_db.db'
 
-   # Enable logging
+    # Enable logging
     logging.basicConfig(level=sts.log_level, filename="backend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
     logging.info("--------------------------------------\nStart db_module_aio.")
 
@@ -448,15 +465,24 @@ async def main():
     idf=1
     #---
     id_user='12345678'
-    id_user2='87654321'
-    id_user3='000333000'
+    
+    id_user0='0_87654321'
+    id_user1='1_000333000'
+    id_user2='2_87654321'
+    id_user3='3_000333000'
+
     name_user='test_user'
     active=1
     rights=0
-    share2users_list=[]
-
-    share2users_list.append(id_user2)
-    share2users_list.append(id_user3)
+    select_users_list0=[]
+    select_users_list1=[]
+    
+    select_users_list0.append(id_user1)
+    select_users_list0.append(id_user2)
+    select_users_list0.append(id_user3)
+    
+    select_users_list1.append(id_user2)
+    select_users_list1.append(id_user3)
 
     async with DatabaseBot(sts.db_name) as db:
         await db.db_create()
@@ -541,12 +567,20 @@ async def main():
     print(f'[db_add_user+]={rec_id}')
     
     async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user0, name_user )
+    print(f'[db_add_user0]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user1, name_user )
+    print(f'[db_add_user1]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_user( id_user2, name_user )
-    print(f'[db_add_user+]={rec_id}')
+    print(f'[db_add_user2]={rec_id}')
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_add_user( id_user3, name_user )
-    print(f'[db_add_user+]={rec_id}')
+    print(f'[db_add_user3]={rec_id}')
 
     async with DatabaseBot(sts.db_name) as db:   
         rec_id = await db.db_exist_user(id_user)    
@@ -605,25 +639,29 @@ async def main():
         rec_id = await db.db_get_tag( idf, id_user )
     for row in rec_id: print(f"[db_get_tag]={dict(row)}")
 
-    async with DatabaseBot(sts.db_name) as db:    
-            rec_id = await db.db_add_share( 'share2users', share2users_list, id_user )
-    print(f'[db.db_add_share users {share2users_list} for user {id_user}]={rec_id}')
+    #async with DatabaseBot(sts.db_name) as db:    
+    #        rec_id = await db.db_add_share( 'share2users', share2users_list, id_user )
+    #print(f'[db.db_add_share users {share2users_list} for user {id_user}]={rec_id}')
 
-    async with DatabaseBot(sts.db_name) as db:    
-            rec_id = await db.db_add_share( 'users4share', id_user, id_user2 )
-    print(f'[db.db_add_share user {id_user} for user {id_user2}]={rec_id}')
+    #async with DatabaseBot(sts.db_name) as db:    
+    #        rec_id = await db.db_add_share( 'users4share', id_user, id_user2 )
+    #print(f'[db.db_add_share user {id_user} for user {id_user2}]={rec_id}')
     
-    async with DatabaseBot(sts.db_name) as db:    
-            rec_id = await db.db_del_share( 'share2users', id_user2, id_user )  
-    print(f'[db.db_del_share user {id_user2} for user {id_user}]={rec_id}')
+    #async with DatabaseBot(sts.db_name) as db:    
+    #        rec_id = await db.db_del_share( 'share2users', id_user2, id_user )  
+    #print(f'[db.db_del_share user {id_user2} for user {id_user}]={rec_id}')
+
+    await db_add_share_to_table(select_users_list0, id_user0)
+
+    await db_add_share_to_table(select_users_list1, id_user1) 
 
     async with DatabaseBot(sts.db_name) as db:    
-            rec_id = await db.db_get_share( 'share2users', id_user )
-    print(f'[db.db_get_share for user {id_user}]={rec_id}')
+            rec_id = await db.db_get_share( 'share2users', id_user0 )
+    print(f'[db.db_get_share for user {id_user0}]={rec_id}')
 
     async with DatabaseBot(sts.db_name) as db:    
-            rec_id = await db.db_get_share( 'users4share', id_user2 )
-    print(f'[db.db_get_share for user {id_user2}]={rec_id}')    
+            rec_id = await db.db_get_share( 'users4share', id_user1 )
+    print(f'[db.db_get_share for user {id_user1}]={rec_id}')    
 
     print('--------------INFO--------------')
 
