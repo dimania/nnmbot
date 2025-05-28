@@ -388,11 +388,23 @@ class DatabaseBot:
 async def db_add_share_to_table(share_list, id_user):
         ''' Complex add shares to table '''
         
-        async with DatabaseBot(sts.db_name) as db:    
+        async with DatabaseBot(sts.db_name) as db:
+            exist_share = await db.db_get_share('share2users', id_user)
+            if exist_share:
+                for id_user_exist in exist_share:
+                    if id_user_exist in share_list:
+                        share_list.remove(id_user_exist)
+                        print(f"Share for user {id_user_exist} exist")
+
             ret = await db.db_add_share( 'share2users', share_list, id_user )
+
             print(f"ret={ret} id_user={id_user} share_list={share_list}")
             if ret:
                 for id_user_u4s in share_list:
+                    #exist_share = await db.db_get_share('users4share', id_user_u4s)
+                    #if exist_share:
+                    #    print(f"User for Share for user {id_user_u4s} exist")
+                    #    continue
                     ret = await db.db_add_share( 'users4share', id_user, id_user_u4s )
                     print(f"ret={ret} id_user_u4s={id_user_u4s}")
                     if ret: 
