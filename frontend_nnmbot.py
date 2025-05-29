@@ -430,7 +430,6 @@ async def create_select_user_dialog(event , level):
                     bot.remove_event_handler(on_requested_peer_user)
                     logging.debug(f"Get selected users:{users_id_list}")
                     
-                    #TODO Add to db users_id
                     #FIXME Need get new id_user or not?
                     ret = await dbm.db_add_share_to_table(user_id_list, id_user)
                     if ret:
