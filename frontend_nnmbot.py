@@ -272,7 +272,7 @@ async def query_db_info(event, id_usr):
 
 async def create_basic_menu(level, event):
     ''' Create basic menu control database '''
-    logging.info("Create menu buttons")
+    logging.debug("Create menu buttons")
     keyboard = [
         [
             Button.inline(_("List Films tagged"), b"/bm_dwlist")
@@ -347,6 +347,27 @@ async def create_rights_user_menu(event, id_usr):
     #await event.respond(_("Select user for change rights"))
     await event.respond(_("**☣     Select rights:    **"), parse_mode='md', buttons=keyboard)
 
+async def create_share_menu(event):
+    ''' Create share menu '''
+
+    logging.debug("Create share buttons")
+    keyboard = [
+        [
+            Button.inline(_("List Share"), b"/sm_list")
+        ],
+        [
+            Button.inline(_("Remove Share"), b"/sm_remove")
+        ],
+        [
+            Button.inline(_("Add Share"), b"/sm_add")
+        ],
+        [
+            Button.inline(_("Back to basic menu "), b"/sm_bbm")
+        ]
+    ]
+
+    await event.respond(_("**☣ Share list Films:**"), parse_mode='md', buttons=keyboard)
+
 async def create_choice_dialog(question, choice_buttons, event, level):
     ''' Create dialog for choice buttons with text question
         and run function when choice was 
@@ -381,7 +402,7 @@ async def create_choice_dialog(question, choice_buttons, event, level):
                 if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
                     await create_basic_menu(level, event)
 
-async def create_select_user_dialog(event , level):
+async def create_add_share(event , level):
     ''' Select users for share list films
         event = bot event handled id
         level = user level for show menu exxtended or no
@@ -452,6 +473,24 @@ async def create_select_user_dialog(event , level):
             logging.debug(f"It is not RequestedPeerUser message:{error}")
             return None
 
+async def create_remove_share(event , level):
+    '''Create dialogs for Remove share for users'''
+    bdata_id = "DEL_SHARE_USER_"
+    id_user = event.query.user_id
+    logging.debug(f"Create remove dialog for user {id_user}")
+    share2users_list = await db.db_get_share( 'share2users', id_user )
+    button = []
+    if share2users_list:        
+        for share_user in share2users_list:
+            rows = await db_list_users(id_user=share_user, active=None, rights=None )
+            user_name = dict(rows).get('name_user') #FIXME may be error must be rows[0] if not error remove comment
+            bdata=bdata_id+id_user
+            button.append([ Button.inline(user_name, bdata)])
+            await event.respond(message, buttons=button)
+    else:
+        message = _(".....No records.....")
+        await event.respond(message)
+        
 async def check_user(channel, user):
     ''' Check right of User '''
     logging.debug(f"Try Get permissions for channe={channel} user={user}")
@@ -734,9 +773,32 @@ async def main_frontend():
                 bot.remove_event_handler(search_handler)
                 await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_share':
-            # Share list
-            await create_select_user_dialog(event_bot, menu_level)
-            send_menu = sts.NO_MENU
+            # Go to Share menu           
+            send_menu = sts.SHARE_MENU
+        elif button_data == '/sm_list':
+            #List share
+            pass
+        elif button_data == '/sm_remove':
+            await create_remove_share(event , level)
+            #remove share
+            pass    
+        elif button_data == '/sm_add':
+            #add share
+            await create_add_share(event_bot, menu_level)
+            send_menu = sts.NO_MENU    
+        elif button_data == '/sm_bbm':
+            # Back to basic menu form share menu
+            send_menu = sts.BASIC_MENU
+        elif button_data.find('DEL_SHARE_USER_', 0, 14) != -1:
+            # Get user for delete
+            data = button_data
+            del_share4user = data.replace('DEL_SHARE_USER_', '')
+            await dbm.db_del_share_from_table(del_share4user, id_user)
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                user_db = await db.db_exist_user(del_share4user)
+            user_name=dict(user_db[0]).get('name_user')
+            await event_bot.respond(_("User: ")+user_name+_(" Unshared"))
+            send_menu = sts.SHARE_MENU
         elif button_data == '/bm_cum':
             # Go to control users menu 
             send_menu = sts.CUSER_MENU
@@ -835,14 +897,13 @@ async def main_frontend():
             #Back to user menu
 
         if send_menu == sts.BASIC_MENU:
-            #await event_bot.respond(_("🏁............Done............🏁"))
             await create_basic_menu(menu_level, event_bot)
         elif send_menu == sts.CUSER_MENU:
-            #await event_bot.respond(_("🏁............Done............🏁"))
             await create_control_user_menu(event_bot)
         elif send_menu == sts.CURIGHTS_MENU:
-            #await event_bot.respond(_("🏁............Done............🏁"))
             await create_rights_user_menu(event_bot, id_user)
+        elif send_menu == sts.SHARE_MENU:
+            await create_share_menu(event_bot)
 
     return bot
 
