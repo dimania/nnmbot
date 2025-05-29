@@ -159,7 +159,7 @@ class DatabaseBot:
         
         return await cursor.fetchone()
 
-    async def db_info( self, id_user ):
+    async def db_info(self, id_user):
         ''' Get Info database: all records, tagged records and tagged early records for user '''        
         cursor = await self.dbm.execute("SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Ufilms \
             WHERE tag = ? AND id_user = ? UNION ALL SELECT COUNT(*) FROM Ufilms \
@@ -394,11 +394,16 @@ async def db_add_share_to_table(share_list, id_user):
                 for id_user_exist in exist_share:
                     if id_user_exist in share_list:
                         share_list.remove(id_user_exist)
-                        print(f"Share for user {id_user_exist} exist")
+                        logging.info(f"SHARE: Share for user {id_user_exist} already exist" )
+                        print(f"Share for user {id_user_exist} already exist")
+                    if not await db.db_exist_user(id_user_exist):
+                        share_list.remove(id_user_exist)
+                        logging.info(f"SHARE: User {id_user_exist} not exist in DB." )
+                        print(f"User {id_user_exist} not exist in DB.")
 
             ret = await db.db_add_share( 'share2users', share_list, id_user )
-
             print(f"ret={ret} id_user={id_user} share_list={share_list}")
+
             if ret:
                 for id_user_u4s in share_list:
                     #exist_share = await db.db_get_share('users4share', id_user_u4s)
@@ -406,6 +411,7 @@ async def db_add_share_to_table(share_list, id_user):
                     #    print(f"User for Share for user {id_user_u4s} exist")
                     #    continue
                     ret = await db.db_add_share( 'users4share', id_user, id_user_u4s )
+                    logging.debug(f"SHARE: users4share add ret={ret} id_user_u4s={id_user_u4s}" )
                     print(f"ret={ret} id_user_u4s={id_user_u4s}")
                     if ret: 
                         continue
@@ -482,12 +488,17 @@ async def main():
     id_user1='1_000333000'
     id_user2='2_87654321'
     id_user3='3_000333000'
+    id_user4='4_000333000' # Not existen user
 
     name_user='test_user'
     active=1
     rights=0
     select_users_list0=[]
     select_users_list1=[]
+    select_users_list2=[]
+    select_users_list3=[]
+    select_users_list4=[]
+
     
     select_users_list0.append(id_user1)
     select_users_list0.append(id_user2)
@@ -663,9 +674,21 @@ async def main():
     #        rec_id = await db.db_del_share( 'share2users', id_user2, id_user )  
     #print(f'[db.db_del_share user {id_user2} for user {id_user}]={rec_id}')
 
+    # Test share to user
     await db_add_share_to_table(select_users_list0, id_user0)
 
     await db_add_share_to_table(select_users_list1, id_user1) 
+
+    # Test share to not existed user - user4
+    select_users_list2.append(id_user3)
+    select_users_list2.append(id_user4)
+   
+    await db_add_share_to_table(select_users_list4, id_user2)
+
+    # Test share 
+    #select_users_list3.append(id_user3)
+    #select_users_list3.append(id_user4)
+
 
     async with DatabaseBot(sts.db_name) as db:    
             rec_id = await db.db_get_share( 'share2users', id_user0 )
