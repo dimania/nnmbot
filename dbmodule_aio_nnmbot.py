@@ -384,42 +384,48 @@ class DatabaseBot:
         #logging.debug(f"Current get share list: {current_list}\n")
         return current_list
     
-
 async def db_add_share_to_table(share_list, id_user):
         ''' Complex add shares to table '''
         
         async with DatabaseBot(sts.db_name) as db:
-            exist_share = await db.db_get_share('share2users', id_user)
-            if exist_share:
+            # Exclude users not in DB
+            for id_cur_user in share_list:               
+                if not await db.db_exist_user(id_cur_user):
+                    share_list.remove(id_cur_user)
+                    logging.info(f"SHARE: User {id_cur_user} not exist in DB." )
+                    #print(f"User {id_cur_user} not exist in DB.")
+
+            # Exclude already exist share
+            exist_share = await db.db_get_share('share2users', id_user)            
+            if exist_share:                
                 for id_user_exist in exist_share:
                     if id_user_exist in share_list:
                         share_list.remove(id_user_exist)
-                        logging.info(f"SHARE: Share for user {id_user_exist} already exist" )
-                        print(f"Share for user {id_user_exist} already exist")
-                    if not await db.db_exist_user(id_user_exist):
-                        share_list.remove(id_user_exist)
-                        logging.info(f"SHARE: User {id_user_exist} not exist in DB." )
-                        print(f"User {id_user_exist} not exist in DB.")
-
+                        logging.info(f"SHARE: Share for user {id_user_exist}" )
+                        #print(f"Share for user {id_user_exist} already exist")                                    
+            # Add share to users in DB
+            if not share_list: # for test
+                logging.info(f"SHARE: Share list now empty for user: {id_user} already exist" )
+                #print(f"Share list is empty: {share_list}")
+                return False
+            
             ret = await db.db_add_share( 'share2users', share_list, id_user )
             logging.debug(f"SHARE: share2users add ret={ret} id_user={id_user} share_list={share_list}")
-            print(f"ret={ret} id_user={id_user} share_list={share_list}")
+            #print(f"ret={ret} id_user={id_user} share_list={share_list}")
 
+            # Add who share list to DB
             if ret:
-                for id_user_u4s in share_list:
-                    #exist_share = await db.db_get_share('users4share', id_user_u4s)
-                    #if exist_share:
-                    #    print(f"User for Share for user {id_user_u4s} exist")
-                    #    continue
+                for id_user_u4s in share_list:                    
                     ret = await db.db_add_share( 'users4share', id_user, id_user_u4s )
-                    logging.debug(f"SHARE: users4share add ret={ret} id_user_u4s={id_user_u4s}" )
-                    print(f"ret={ret} id_user_u4s={id_user_u4s}")
+                    logging.debug(f"SHARE: users4share add ret={ret} id_user_u4s={id_user_u4s}")
+                    #print(f"ret={ret} id_user_u4s={id_user_u4s}")
                     if ret: 
                         continue
                     else:
                         return False
             else: 
                 return False
+            return True
 
 
 
@@ -684,7 +690,7 @@ async def main():
     select_users_list2.append(id_user3)
     select_users_list2.append(id_user4)
    
-    await db_add_share_to_table(select_users_list4, id_user2)
+    await db_add_share_to_table(select_users_list2, id_user2)
 
     # Test share 
     #select_users_list3.append(id_user3)
