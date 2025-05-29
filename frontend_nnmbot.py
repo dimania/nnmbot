@@ -418,7 +418,7 @@ async def create_select_user_dialog(event , level):
     @bot.on(events.Raw(types=UpdateNewMessage))
     async def on_requested_peer_user(event_select):
         logging.debug(f"Get select user event:{event_select}")
-        users_id=[] 
+        users_id_list=[] 
         usernames=[]
         try:
             if event_select.message.action.peers[0].__class__.__name__ == "RequestedPeerUser":
@@ -426,20 +426,28 @@ async def create_select_user_dialog(event , level):
                 if button_id == 1:
                     for peer in event_select.message.action.peers:
                         usernames.append(peer.first_name)
-                        users_id.append(peer.user_id)
+                        users_id_list.append(peer.user_id)
                     bot.remove_event_handler(on_requested_peer_user)
-                    logging.debug(f"Get selected users:{users_id}")
+                    logging.debug(f"Get selected users:{users_id_list}")
                     
+                    #TODO Add to db users_id
+                    #FIXME Need get new id_user or not?
+                    ret = await dbm.db_add_share_to_table(user_id_list, id_user)
+                    if ret:
+                        text_reply=_("🏁............Done............🏁")
+                    else: 
+                        text_reply=_("🏁........Unsucessful.........🏁")
+
                     reply_markup = { "remove_keyboard": True }
                     payload_remove_kb = {
                     "chat_id": id_user, # Id user to
-                    "text": _("🏁............Done............🏁"), 
+                    "text": text_reply, 
                     "reply_markup": json.dumps(reply_markup)
                     }
                     response = requests.post(url, data=payload_remove_kb, timeout = 30, proxies=sts.proxies)
                     logging.debug(f"Rsponse Remove keyboard:{response}\n")
                     await create_basic_menu(level, event) 
-                    #TODO Add to db users_id
+                    
                     return 
         except Exception as error :
             logging.debug(f"It is not RequestedPeerUser message:{error}")
