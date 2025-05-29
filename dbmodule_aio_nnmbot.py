@@ -432,9 +432,9 @@ async def db_del_share_from_table(del_user, id_user):
 
     async with DatabaseBot(sts.db_name) as db:    
         rec_id = await db.db_del_share( 'share2users', del_user, id_user )
-        if not rec_id: return False
+        #if not rec_id: return False
         rec_id = await db.db_del_share( 'users4share', id_user, del_user )
-        if not rec_id: return False
+        #if not rec_id: return False
 
         return True
 

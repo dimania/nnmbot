@@ -452,7 +452,7 @@ async def create_add_share(event , level):
                     logging.debug(f"Get selected users:{users_id_list}")
                     
                     #FIXME Need get new id_user or not?
-                    ret = await dbm.db_add_share_to_table(user_id_list, id_user)
+                    ret = await dbm.db_add_share_to_table(users_id_list, id_user)
                     if ret:
                         text_reply=_("🏁............Done............🏁")
                     else: 
@@ -478,32 +478,39 @@ async def create_remove_share(event):
     bdata_id = "DEL_SHARE_USER_"
     id_user = event.query.user_id
     logging.debug(f"Create remove dialog for user {id_user}")
-    share2users_list = await db.db_get_share( 'share2users', id_user )
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        share2users_list = await db.db_get_share( 'share2users', id_user )
+    
     button = []
     if share2users_list:        
         for share_user in share2users_list:
-            rows = await db_list_users(id_user=share_user, active=None, rights=None )
-            user_name = dict(rows).get('name_user') #FIXME may be error must be rows[0] if not error remove comment
-            bdata=bdata_id+id_user
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                rows = await db.db_list_users(id_user=share_user, active=None, rights=None )
+            user_name = dict(rows[0]).get('name_user')
+            bdata=bdata_id+str(share_user)
             button.append([ Button.inline(user_name, bdata)])
+            message=_("Select user to remove share")
             await event.respond(message, buttons=button)
     else:
         message = _(".....No records.....")
         await event.respond(message)
 
-async def create_list_share(event , level):
+async def create_list_share(event):
     '''Create dialogs for Remove share for users'''
-    bdata_id = "LIST_SHARE_USER_"
+    #bdata_id = "LIST_SHARE_USER_"
     id_user = event.query.user_id
     logging.debug(f"Create List share for: {id_user}")
-    share2users_list = await db.db_get_share( 'share2users', id_user )
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        share2users_list = await db.db_get_share( 'share2users', id_user )
+
     message=""
     if share2users_list:        
         for share_user in share2users_list:
-            rows = await db_list_users(id_user=share_user, active=None, rights=None )
-            user_name = dict(rows).get('name_user') #FIXME may be error must be rows[0] if not error remove comment
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                rows = await db.db_list_users(id_user=share_user, active=None, rights=None )
+            user_name = dict(rows[0]).get('name_user')
             message=message+f"{user_name}\n"
-            await event.respond(message, buttons=button)
+        await event.respond(message)
     else:
         message = _(".....No records.....")
         await event.respond(message)
@@ -794,11 +801,11 @@ async def main_frontend():
             send_menu = sts.SHARE_MENU
         elif button_data == '/sm_list':
             #List share
-            create_list_share(event)
+            await create_list_share(event_bot)
             send_menu = sts.SHARE_MENU
         elif button_data == '/sm_remove':
             #Remove share
-            await create_remove_share(event)            
+            await create_remove_share(event_bot)            
             send_menu = sts.SHARE_MENU    
         elif button_data == '/sm_add':
             #add share
@@ -807,7 +814,7 @@ async def main_frontend():
         elif button_data == '/sm_bbm':
             # Back to basic menu form share menu
             send_menu = sts.BASIC_MENU
-        elif button_data.find('DEL_SHARE_USER_', 0, 14) != -1:
+        elif button_data.find('DEL_SHARE_USER_', 0, 15) != -1:
             # Real remove share
             data = button_data
             del_share4user = data.replace('DEL_SHARE_USER_', '')
