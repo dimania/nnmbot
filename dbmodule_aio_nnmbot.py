@@ -402,6 +402,7 @@ async def db_add_share_to_table(share_list, id_user):
                         print(f"User {id_user_exist} not exist in DB.")
 
             ret = await db.db_add_share( 'share2users', share_list, id_user )
+            logging.debug(f"SHARE: share2users add ret={ret} id_user={id_user} share_list={share_list}")
             print(f"ret={ret} id_user={id_user} share_list={share_list}")
 
             if ret:
