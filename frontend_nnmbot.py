@@ -473,7 +473,7 @@ async def create_add_share(event , level):
             logging.debug(f"It is not RequestedPeerUser message:{error}")
             return None
 
-async def create_remove_share(event , level):
+async def create_remove_share(event):
     '''Create dialogs for Remove share for users'''
     bdata_id = "DEL_SHARE_USER_"
     id_user = event.query.user_id
@@ -490,7 +490,24 @@ async def create_remove_share(event , level):
     else:
         message = _(".....No records.....")
         await event.respond(message)
-        
+
+async def create_list_share(event , level):
+    '''Create dialogs for Remove share for users'''
+    bdata_id = "LIST_SHARE_USER_"
+    id_user = event.query.user_id
+    logging.debug(f"Create List share for: {id_user}")
+    share2users_list = await db.db_get_share( 'share2users', id_user )
+    message=""
+    if share2users_list:        
+        for share_user in share2users_list:
+            rows = await db_list_users(id_user=share_user, active=None, rights=None )
+            user_name = dict(rows).get('name_user') #FIXME may be error must be rows[0] if not error remove comment
+            message=message+f"{user_name}\n"
+            await event.respond(message, buttons=button)
+    else:
+        message = _(".....No records.....")
+        await event.respond(message)
+
 async def check_user(channel, user):
     ''' Check right of User '''
     logging.debug(f"Try Get permissions for channe={channel} user={user}")
@@ -777,11 +794,12 @@ async def main_frontend():
             send_menu = sts.SHARE_MENU
         elif button_data == '/sm_list':
             #List share
-            pass
+            create_list_share(event)
+            send_menu = sts.SHARE_MENU
         elif button_data == '/sm_remove':
-            await create_remove_share(event , level)
-            #remove share
-            pass    
+            #Remove share
+            await create_remove_share(event)            
+            send_menu = sts.SHARE_MENU    
         elif button_data == '/sm_add':
             #add share
             await create_add_share(event_bot, menu_level)
@@ -790,7 +808,7 @@ async def main_frontend():
             # Back to basic menu form share menu
             send_menu = sts.BASIC_MENU
         elif button_data.find('DEL_SHARE_USER_', 0, 14) != -1:
-            # Get user for delete
+            # Real remove share
             data = button_data
             del_share4user = data.replace('DEL_SHARE_USER_', '')
             await dbm.db_del_share_from_table(del_share4user, id_user)
