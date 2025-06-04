@@ -352,6 +352,8 @@ class DatabaseBot:
             result = await cursor.fetchone()
             logging.debug(f"DELETE SHARE: Result shared list for delete: {result}\n")
 
+            users_to_remove=int(users_to_remove)
+            
             if not result or not result[0]:
                 return False
 
@@ -430,7 +432,7 @@ async def db_add_share_to_table(share_list, id_user):
 async def db_del_share_from_table(del_user, id_user):
     '''Delete share from id_user to del_user'''
 
-    async with DatabaseBot(sts.db_name) as db:    
+    async with DatabaseBot(sts.db_name) as db:
         rec_id = await db.db_del_share( 'share2users', del_user, id_user )
         #if not rec_id: return False
         rec_id = await db.db_del_share( 'users4share', id_user, del_user )
