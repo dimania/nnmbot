@@ -198,7 +198,7 @@ class DatabaseBot:
                 WHERE name LIKE ? COLLATE NOCASE", (str_search,))
         return await cursor.fetchall()
 
-    async def db_search_id(self, str_search): #FIXME NOT USE! 
+    async def db_search_id(self, str_search): 
         ''' Search in db '''
         str_search = '%'+str_search+'%'
         cursor = await self.dbm.execute(

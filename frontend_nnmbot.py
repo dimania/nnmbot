@@ -63,12 +63,20 @@ async def query_all_records_by_one(event):
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
-async def query_search(str_search, event):
+async def query_search_list(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
     async with dbm.DatabaseBot(sts.db_name) as db:
         rows = await db.db_search_list(str_search)
     await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
+
+async def query_search_by_one(str_search, event):
+    ''' Search Films in database '''
+    logging.info(f"Search in database:{str_search}")
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_search_id(str_search)
+    ret = await show_card_one_record_menu( rows, event )
+    return ret
 
 async def query_tagged_records_list(id_usr, tag, event):
     ''' Get films tagget for user '''
@@ -653,10 +661,17 @@ async def main_frontend():
             @bot.on(events.NewMessage()) 
             async def search_handler(event_search):
                 logging.info(f"Get search string: {event_search.message.message}")
-                await query_search(event_search.message.message, event_bot)
-                await event_bot.respond(_("🏁............Done............🏁"))
+                # Get films tagget early
+                choice_buttons = {
+                "button1": [_("Card"), "CARD", query_search_by_one,[event_search.message.message, event_bot]],
+                "button2": [_("List"), "LIST", query_search_list,[event_search.message.message, event_bot],sts.BASIC_MENU],
+                "button3": [_("Cancel"), "HOME_MENU", home,[]]
+                }
+                await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
+                #await query_search_list(event_search.message.message, event_bot)
+                #await event_bot.respond(_("🏁............Done............🏁"))
                 bot.remove_event_handler(search_handler)
-                await create_basic_menu(menu_level, event_bot)
+                #await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_cum':
             # Go to control users menu 
             send_menu = sts.CUSER_MENU
