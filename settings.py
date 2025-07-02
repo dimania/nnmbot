@@ -46,8 +46,10 @@ CURIGHTS_MENU = 3
 NO_MENU = 0
 
 LIST_REC_IN_MSG = 20
-#-----------------
+
 RETRIES_DB_LOCK = 5 
+
+SWOW_ADD_BUTTON = 1
 
 
 

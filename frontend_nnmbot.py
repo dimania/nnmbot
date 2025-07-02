@@ -75,7 +75,7 @@ async def query_search_by_one(str_search, event):
     logging.info(f"Search in database:{str_search}")
     async with dbm.DatabaseBot(sts.db_name) as db:
         rows = await db.db_search_id(str_search)
-    ret = await show_card_one_record_menu( rows, event )
+    ret = await show_card_one_record_menu( rows, event, sts.SWOW_ADD_BUTTON )
     return ret
 
 async def query_tagged_records_list(id_usr, tag, event):
@@ -93,32 +93,50 @@ async def query_tagged_records_by_one(id_usr, tag, event):
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
-async def show_card_one_record_menu( rows=None, event=None ):
+async def show_card_one_record_menu( rows=None, event=None, show_add_button=None ):
     ''' Create card of one film and send to channel 
         rows - list id records 
-        event - descriptor channel '''
+        event - descriptor channel 
+        show_add_button - show or not ADD to list button'''
     lenrows=len(rows)
     if rows:
-        await send_card_one_record( dict(rows[0]).get("id"), 0, event )
+        await send_card_one_record( dict(rows[0]).get("id"), 0, event, show_add_button )
         @bot.on(events.CallbackQuery())
         async def callback_bot_list(event_bot_list):
             logging.debug(f"Get callback event_bot_list {event_bot_list}")  
             button_data = event_bot_list.data.decode()
             await event_bot_list.delete()
             i=0
+            if button_data.find('XX') != -1:
+                # Add to Film to DB 
+                data = button_data
+                i, _, data = button_data.partition("XX")
+                #data = data.replace('XX', '')
+                await event_bot_list.answer('Film added to database1', alert=True)
+                await event.respond('Film added to database1', parse_mode='html', link_preview=0)
+                logging.info(f"Button 'Add...' pressed in search - data={button_data} write {data}")
+                await asyncio.sleep(2)
+                await query_user_tag_film(event_bot_list, data, event.query.user_id)
+                await event_bot_list.answer('Film added to database2', alert=True)
+                await asyncio.sleep(2)
+                await send_card_one_record( dict(rows[int(i)]).get("id"), int(i), event, show_add_button )
+                await event_bot_list.answer('Film added to database3', alert=True)
+
+                #return 0
             if button_data.find('NEXT', 0, 4) != -1:
                 i = int(button_data.replace('NEXT', '')) + 1 
                 if i == lenrows:
                     i = 0
-                await send_card_one_record( dict(rows[i]).get("id"), i, event )  
+                await send_card_one_record( dict(rows[i]).get("id"), i, event, show_add_button )  
             if button_data.find('PREV', 0, 4) != -1:
                 i = int(button_data.replace('PREV', '')) - 1
                 if i == -1:
                     i = lenrows-1
-                await send_card_one_record( dict(rows[i]).get("id"), i, event )
+                await send_card_one_record( dict(rows[i]).get("id"), i, event, show_add_button )
             if button_data == 'HOME_MENU':
                 removed_handler=bot.remove_event_handler(callback_bot_list)
-                logging.debug(f"Remove handler event_bot_list =  {removed_handler}") 
+                logging.debug(f"Remove handler event_bot_list =  {removed_handler}")
+            
     else:
         message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)
@@ -201,7 +219,7 @@ async def prep_message_film( idf ):
         
     return { 'message':new_message, 'file':file_send, 'id_nnm':id_nnm }
 
-async def send_card_one_record( idf, index, event ):
+async def send_card_one_record( idf, index, event, show_add_button=None ):
     ''' Create card of one film and send to channel 
         idf - number film in db
         event - descriptor channel '''
@@ -212,11 +230,14 @@ async def send_card_one_record( idf, index, event ):
     f_prev = 'PREV'+f'{index}'
     f_next = 'NEXT'+f'{index}'
     f_curr = 'HOME_MENU'
+    f_add = f'{index}'+'XX'+f'{idf}'
     buttons_film = [
             Button.inline(_("◀️"), f_prev),#◀️◀︎
             Button.inline(_("⏹️"), f_curr),#⏹️⏹︎
             Button.inline(_("▶️"), f_next) #▶️▶︎
             ]
+    if show_add_button:
+        buttons_film = buttons_film,[Button.inline(_("ADD to you list"), f_add)]
         
     #FIXME as send? as respond or as send_file message
     #await event.respond(message, parse_mode='html', link_preview=0)
