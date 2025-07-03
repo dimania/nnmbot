@@ -98,9 +98,14 @@ async def show_card_one_record_menu( rows=None, event=None, show_add_button=None
         rows - list id records 
         event - descriptor channel 
         show_add_button - show or not ADD to list button'''
+    
+    s_record = _('Film')
+    s_from = _('from')
+
     lenrows=len(rows)
     if rows:
-        await send_card_one_record( dict(rows[0]).get("id"), 0, event, show_add_button )
+        count_str = f"{s_record} 1 {s_from} {lenrows}" 
+        await send_card_one_record( dict(rows[0]).get("id"), 0, event, show_add_button, count_str )
         @bot.on(events.CallbackQuery())
         async def callback_bot_list(event_bot_list):
             logging.debug(f"Get callback event_bot_list {event_bot_list}")  
@@ -111,28 +116,24 @@ async def show_card_one_record_menu( rows=None, event=None, show_add_button=None
                 # Add to Film to DB 
                 data = button_data
                 i, _, data = button_data.partition("XX")
-                #data = data.replace('XX', '')
-                await event_bot_list.answer('Film added to database1', alert=True)
-                await event.respond('Film added to database1', parse_mode='html', link_preview=0)
+                count_str = f"{s_record} {int(i)+1} {s_from} {lenrows}"
+                #result = await event_bot_list.answer('Film added to database1', alert=True)
+                #logging.info(f"Result answer={result}")
                 logging.info(f"Button 'Add...' pressed in search - data={button_data} write {data}")
-                await asyncio.sleep(2)
                 await query_user_tag_film(event_bot_list, data, event.query.user_id)
-                await event_bot_list.answer('Film added to database2', alert=True)
-                await asyncio.sleep(2)
-                await send_card_one_record( dict(rows[int(i)]).get("id"), int(i), event, show_add_button )
-                await event_bot_list.answer('Film added to database3', alert=True)
-
-                #return 0
+                await send_card_one_record( dict(rows[int(i)]).get("id"), int(i), event, show_add_button, count_str )
             if button_data.find('NEXT', 0, 4) != -1:
                 i = int(button_data.replace('NEXT', '')) + 1 
                 if i == lenrows:
                     i = 0
-                await send_card_one_record( dict(rows[i]).get("id"), i, event, show_add_button )  
+                count_str = f"{s_record} {i+1} {s_from} {lenrows}"
+                await send_card_one_record( dict(rows[i]).get("id"), i, event, show_add_button, count_str )  
             if button_data.find('PREV', 0, 4) != -1:
                 i = int(button_data.replace('PREV', '')) - 1
                 if i == -1:
                     i = lenrows-1
-                await send_card_one_record( dict(rows[i]).get("id"), i, event, show_add_button )
+                count_str = f"{s_record} {i+1} {s_from} {lenrows}"
+                await send_card_one_record( dict(rows[i]).get("id"), i, event, show_add_button, count_str )
             if button_data == 'HOME_MENU':
                 removed_handler=bot.remove_event_handler(callback_bot_list)
                 logging.debug(f"Remove handler event_bot_list =  {removed_handler}")
@@ -181,16 +182,24 @@ async def publish_new_film( idf ):
 
     logging.debug(f"Send new film Message:{send_msg}")
 
-async def prep_message_film( idf ):
+async def prep_message_film( idf, event=None, count_str=None  ):
     ''' Prepare message and file for publish in channel 
         idf - number film in db'''
-    
+    tag=None
+    #Get data about film from DB
     logging.debug(f"Publish film id={idf}")
     async with dbm.DatabaseBot(sts.db_name) as db:
         row = await db.db_film_by_id( idf )
     logging.debug(f"Get film from db ={row}")
+    
+    #Get info about set tag film for user
+    if event:
+        async with dbm.DatabaseBot(sts.db_name) as db:
+            tag = await db.db_get_tag(idf,event.query.user_id)
+        logging.debug(f"Get tag for user_id[{event.query.user_id}] = {tag}")
+
     film_name = f"<a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
-    film_section = f"🟢<b>Раздел:</b> \n{dict(row).get('section')}\n"
+    film_section = f"🟢<b>Раздел:</b>{dict(row).get('section')}\n"
     film_genre = f"🟢<b>Жанр:</b> {dict(row).get('genre')}\n"
     film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get('rating_kpsk')}] Imdb[{dict(row).get('rating_imdb')}]\n"
     film_description = f"🟢<b>Описание:</b> \n{dict(row).get('description')}\n"
@@ -207,7 +216,13 @@ async def prep_message_film( idf ):
     # Create new message
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
     if rec_upd == sts.PUBL_UPD:
-       new_message = f"🔄{new_message}" 
+        new_message = f"🔄{new_message}"
+    
+    if tag:  #Maybe tag == sts.SETTAG
+        new_message = f"✅{new_message}"
+
+    if count_str:  #Maybe tag == sts.SETTAG
+        new_message = f"{count_str}\n{new_message}"
 
     #trim long message ( telegramm support only 1024 byte caption )
     if len(new_message) > 1023:
@@ -219,12 +234,12 @@ async def prep_message_film( idf ):
         
     return { 'message':new_message, 'file':file_send, 'id_nnm':id_nnm }
 
-async def send_card_one_record( idf, index, event, show_add_button=None ):
+async def send_card_one_record( idf, index, event, show_add_button=None, count_str=None ):
     ''' Create card of one film and send to channel 
         idf - number film in db
         event - descriptor channel '''
     
-    msg = await prep_message_film( idf )
+    msg = await prep_message_film( idf, event, count_str )
     
     # Create buttons for message
     f_prev = 'PREV'+f'{index}'
