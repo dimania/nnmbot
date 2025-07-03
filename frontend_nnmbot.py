@@ -117,8 +117,6 @@ async def show_card_one_record_menu( rows=None, event=None, show_add_button=None
                 data = button_data
                 i, _, data = button_data.partition("XX")
                 count_str = f"{s_record} {int(i)+1} {s_from} {lenrows}"
-                #result = await event_bot_list.answer('Film added to database1', alert=True)
-                #logging.info(f"Result answer={result}")
                 logging.info(f"Button 'Add...' pressed in search - data={button_data} write {data}")
                 await query_user_tag_film(event_bot_list, data, event.query.user_id)
                 await send_card_one_record( dict(rows[int(i)]).get("id"), int(i), event, show_add_button, count_str )
@@ -274,6 +272,8 @@ async def send_lists_records( rows, num_per_message, event ):
             if mag_link_str and sts.magnet_helper:
                message = message + f"<a href='{sts.magnet_helper}+{mag_link_str}'>🧲Примагнититься</a>\n"
             i = i + 1
+            #https://t.me/your_bot?start=airplane
+            message = message + f"<a href='https://t.me/{sts.bot_name}?start=XX{dict(row).get('id')}'>➕Добавить в список</a>\n"
             if not i%num_per_message:
                 try:
                     await event.respond(message, parse_mode='html', link_preview=0)
@@ -627,6 +627,15 @@ async def main_frontend():
         if event_bot.message.message == '/start':
           # show menu
           await create_basic_menu(menu_level, event_bot)
+
+        #/start XX764
+        if event_bot.message.message.find('XX', 7) != -1:
+           # Add to Film to DB 
+           data = event_bot.message.message
+           data = data.replace('/start XX', '')
+           logging.info(f"Button 'Add...' pressed data={event_bot.message.message} write {data}")
+           await query_user_tag_film(event_bot, data, event_bot.message.peer_id.user_id)
+       
          
             
     # Handle basic Menu

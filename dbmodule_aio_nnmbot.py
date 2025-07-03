@@ -194,7 +194,7 @@ class DatabaseBot:
         ''' Search in db '''
         str_search = '%'+str_search+'%'
         cursor = await self.dbm.execute(
-            "SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url FROM Films \
+            "SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, id FROM Films \
                 WHERE name LIKE ? COLLATE NOCASE", (str_search,))
         return await cursor.fetchall()
 
