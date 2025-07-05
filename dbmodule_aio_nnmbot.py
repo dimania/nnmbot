@@ -290,7 +290,7 @@ class DatabaseBot:
         else:
             return None
 
-    async def db_switch_film_tag(self, idf, tag, id_user): #NOT USE!
+    async def db_switch_film_tag(self, idf, tag, id_user): 
         ''' Update user tagging in database for films  '''
         
         cursor = await self.db_modify("UPDATE Ufilms SET tag = ? WHERE id_user = ? AND id_Films = ?",
@@ -312,8 +312,10 @@ class DatabaseBot:
     async def db_get_tag(self, idf, id_user ):
         ''' Get if exist current tag for user '''
         cursor = await self.dbm.execute("SELECT tag FROM Ufilms WHERE id_Films = ? AND id_user = ?", (idf, id_user,))
-        return await cursor.fetchall()
-
+        res = await cursor.fetchone()
+        if res:
+            return int(dict(res).get('tag'))
+        else: return 0
 
 # For test block task
 async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \

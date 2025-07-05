@@ -68,7 +68,7 @@ async def query_search_list(str_search, event):
     logging.info(f"Search in database:{str_search}")
     async with dbm.DatabaseBot(sts.db_name) as db:
         rows = await db.db_search_list(str_search)
-    await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
+    await send_lists_records( rows, sts.LIST_REC_IN_MSG, event, search=True )
 
 async def query_search_by_one(str_search, event):
     ''' Search Films in database '''
@@ -213,9 +213,10 @@ async def prep_message_film( idf, event=None, count_str=None  ):
         film_magnet_link=""    
     # Create new message
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
+    # Label for repeat film
     if rec_upd == sts.PUBL_UPD:
         new_message = f"🔄{new_message}"
-    
+    #Label for taget film
     if tag:  #Maybe tag == sts.SETTAG
         new_message = f"✅{new_message}"
 
@@ -257,7 +258,7 @@ async def send_card_one_record( idf, index, event, show_add_button=None, count_s
     logging.debug(f"Event:{event}")
     await bot.send_file(event.original_update.peer, dict(msg).get('file'), caption=dict(msg).get('message'), buttons=buttons_film, parse_mode="html" )
     
-async def send_lists_records( rows, num_per_message, event ):
+async def send_lists_records( rows, num_per_message, event, search=False ):
     ''' Create messages from  list records and send to channel 
         rows - list records {url,name,magnet_url}
         num_per_message - module how many records insert in one messag
@@ -272,8 +273,9 @@ async def send_lists_records( rows, num_per_message, event ):
             if mag_link_str and sts.magnet_helper:
                message = message + f"<a href='{sts.magnet_helper}+{mag_link_str}'>🧲Примагнититься</a>\n"
             i = i + 1
-            #https://t.me/your_bot?start=airplane
-            message = message + f"<a href='https://t.me/{sts.bot_name}?start=XX{dict(row).get('id')}'>➕Добавить в список</a>\n"
+            if search:
+                message = message + f"<a href='https://t.me/{sts.bot_name}?start=XX{dict(row).get('id')}'>➕Добавить в список</a>\n"
+
             if not i%num_per_message:
                 try:
                     await event.respond(message, parse_mode='html', link_preview=0)
@@ -512,15 +514,42 @@ async def query_user_tag_film(event, idf, id_usr):
     ''' User set tag to film '''
     async with dbm.DatabaseBot(sts.db_name) as db:
         res = await db.db_get_tag( idf, id_usr )
-    if res:
-       await event.answer(_('Film already in database!'), alert=True)
-       logging.info(f"User tag film but already in database id={idf} with result={res}")
-       return
+    
+    logging.info(f"Checkfor User {id_usr} tag film id={idf} with result={res}")
+    if res == sts.UNSETTAG:
+        async with dbm.DatabaseBot(sts.db_name) as db:   
+            res = await db.db_switch_film_tag( idf, sts.SETTAG, id_usr )
+        if isinstance(event, events.CallbackQuery.Event):
+            await event.answer(_('Film switch to active list'), alert=True)
+        if isinstance(event, events.NewMessage.Event):
+            await event.delete()
+            await event.reply(_('Film switch to active list'))
+            #await asyncio.sleep(1)
+        logging.info(f"User switch tag film to active list id={idf} with result={res}")
+        return
+    if res == sts.SETTAG:
+        if isinstance(event, events.CallbackQuery.Event):
+            await event.answer(_('Film already in database!'), alert=True)
+        if isinstance(event, events.NewMessage.Event):
+            await event.delete()
+            await event.reply(_('Film already in database!'))
+            #await asyncio.sleep(1)
+            
+        
+        logging.info(f"User tag film but already in database id={idf} with result={res}")
+        return
+    # Set tag for user    
     async with dbm.DatabaseBot(sts.db_name) as db:   
         res = await db.db_add_tag( idf, sts.SETTAG, id_usr )
     logging.info(f"User {id_usr} tag film id={idf} with result={res}")
     #bdata = 'TAG'+id_nnm
-    await event.answer(_('Film added to database'), alert=True)
+    if isinstance(event, events.CallbackQuery.Event):
+        await event.answer(_('Film added to database'), alert=True)
+    if isinstance(event, events.NewMessage.Event):
+            await event.delete()
+            await event.reply(_('Film added to database'))
+            await asyncio.sleep(1)
+            
 
 async def add_new_user(event):
     '''
@@ -830,8 +859,10 @@ async def main():
     ''' Main function '''
     global Channel_my_id
 
+    print("Start frontend Bot...")
+
     async with dbm.DatabaseBot(sts.db_name) as db:
-        print('Create db if not exist.')
+        logging.debug('Create db if not exist.')
         await db.db_create()
 
     # Get data for admin user for check and add to db (initialization)
