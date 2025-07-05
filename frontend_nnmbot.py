@@ -75,7 +75,7 @@ async def query_search_by_one(str_search, event):
     logging.info(f"Search in database:{str_search}")
     async with dbm.DatabaseBot(sts.db_name) as db:
         rows = await db.db_search_id(str_search)
-    ret = await show_card_one_record_menu( rows, event, sts.SWOW_ADD_BUTTON )
+    ret = await show_card_one_record_menu( rows, event, sts.SHOW_ADD_BUTTON )
     return ret
 
 async def query_tagged_records_list(id_usr, tag, event):
@@ -180,7 +180,7 @@ async def publish_new_film( idf ):
 
     logging.debug(f"Send new film Message:{send_msg}")
 
-async def prep_message_film( idf, event=None, count_str=None  ):
+async def prep_message_film( idf, id_usr=None, count_str=None  ):
     ''' Prepare message and file for publish in channel 
         idf - number film in db'''
     tag=None
@@ -191,10 +191,10 @@ async def prep_message_film( idf, event=None, count_str=None  ):
     logging.debug(f"Get film from db ={row}")
     
     #Get info about set tag film for user
-    if event:
+    if id_usr:
         async with dbm.DatabaseBot(sts.db_name) as db:
-            tag = await db.db_get_tag(idf,event.query.user_id)
-        logging.debug(f"Get tag for user_id[{event.query.user_id}] = {tag}")
+            tag = await db.db_get_tag(idf,id_usr)
+        logging.debug(f"Get tag for user_id[{id_usr}] = {tag}")
 
     film_name = f"<a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
     film_section = f"🟢<b>Раздел:</b>{dict(row).get('section')}\n"
@@ -238,8 +238,14 @@ async def send_card_one_record( idf, index, event, show_add_button=None, count_s
         idf - number film in db
         event - descriptor channel '''
     
-    msg = await prep_message_film( idf, event, count_str )
+    if isinstance(event, events.CallbackQuery.Event):
+        id_usr = event.query.user_id
+    if isinstance(event, events.NewMessage.Event):
+        id_usr = event.message.peer_id.user_id
+
+    msg = await prep_message_film( idf, id_usr, count_str )
     
+
     # Create buttons for message
     f_prev = 'PREV'+f'{index}'
     f_next = 'NEXT'+f'{index}'
@@ -250,14 +256,18 @@ async def send_card_one_record( idf, index, event, show_add_button=None, count_s
             Button.inline(_("⏹️"), f_curr),#⏹️⏹︎
             Button.inline(_("▶️"), f_next) #▶️▶︎
             ]
-    if show_add_button:
+    if show_add_button == sts.SHOW_ADD_BUTTON:
         buttons_film = buttons_film,[Button.inline(_("ADD to you list"), f_add)]
-        
+
+    if show_add_button == sts.SHOW_NO_BUTTON:
+        buttons_film = None
+
     #FIXME as send? as respond or as send_file message
     #await event.respond(message, parse_mode='html', link_preview=0)
-    logging.debug(f"Event:{event}")
-    await bot.send_file(event.original_update.peer, dict(msg).get('file'), caption=dict(msg).get('message'), buttons=buttons_film, parse_mode="html" )
-    
+    logging.debug(f"Event in send_card_one_record:{event}")
+    await bot.send_file( id_usr, dict(msg).get('file'), caption=dict(msg).get('message'), buttons=buttons_film, parse_mode="html" )
+    #event.original_update.peer replace to id_usr
+
 async def send_lists_records( rows, num_per_message, event, search=False ):
     ''' Create messages from  list records and send to channel 
         rows - list records {url,name,magnet_url}
@@ -274,7 +284,8 @@ async def send_lists_records( rows, num_per_message, event, search=False ):
                message = message + f"<a href='{sts.magnet_helper}+{mag_link_str}'>🧲Примагнититься</a>\n"
             i = i + 1
             if search:
-                message = message + f"<a href='https://t.me/{sts.bot_name}?start=XX{dict(row).get('id')}'>➕Добавить в список</a>\n"
+                message = message + f"<a href='https://t.me/{sts.bot_name}?start=XX{dict(row).get('id')}'>☑️ Добавить в список</a>\n\n"
+                message = message + f"<a href='https://t.me/{sts.bot_name}?start=VV{dict(row).get('id')}'>ℹ️ Показать карточку</a>\n\n"
 
             if not i%num_per_message:
                 try:
@@ -550,7 +561,6 @@ async def query_user_tag_film(event, idf, id_usr):
             await event.reply(_('Film added to database'))
             await asyncio.sleep(1)
             
-
 async def add_new_user(event):
     '''
     Add new user to DB
@@ -662,10 +672,16 @@ async def main_frontend():
            # Add to Film to DB 
            data = event_bot.message.message
            data = data.replace('/start XX', '')
-           logging.info(f"Button 'Add...' pressed data={event_bot.message.message} write {data}")
+           logging.info(f"Button 'Add...' pressed on list data={event_bot.message.message} write {data}")
            await query_user_tag_film(event_bot, data, event_bot.message.peer_id.user_id)
        
-         
+        #/start VV764
+        if event_bot.message.message.find('VV', 7) != -1:
+           # Add to Film to DB 
+           data = event_bot.message.message
+           data = data.replace('/start VV', '')
+           logging.info(f"Button 'Show card...' pressed on list data={event_bot.message.message} write {data}")
+           await send_card_one_record( data, 0, event_bot, show_add_button=sts.SHOW_NO_BUTTON )
             
     # Handle basic Menu
     @bot.on(events.CallbackQuery())
@@ -860,7 +876,7 @@ async def main():
     global Channel_my_id
 
     print("Start frontend Bot...")
-
+    
     async with dbm.DatabaseBot(sts.db_name) as db:
         logging.debug('Create db if not exist.')
         await db.db_create()
