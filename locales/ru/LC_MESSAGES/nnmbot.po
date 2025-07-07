@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: NNMBOT  0.3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-04-14 19:50+0300\n"
-"PO-Revision-Date: 2025-04-14 20:03+0300\n"
+"POT-Creation-Date: 2025-07-07 11:25+0300\n"
+"PO-Revision-Date: 2025-07-07 11:42+0300\n"
 "Last-Translator: Dmitry\n"
 "Language-Team: ru <dimard@gmail.com>\n"
 "Language: ru\n"
@@ -17,57 +17,62 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"Generated-By: Babel 2.17.0\n"
-"X-Generator: Poedit 3.6\n"
+"Generated-By: Babel 2.14.0\n"
+"X-Generator: Poedit 3.4.2\n"
 
-#: ../frontend_nnmbot.py:109 ../frontend_nnmbot.py:239
-#: ../test/nnmbot-v0.5.py:399 ../test/nnmbot-v0.5.py:478
-#: ../test/old/nnmbot.old.py:328
+#: ../frontend_nnmbot.py:102
+msgid "Film"
+msgstr "Фильм"
+
+#: ../frontend_nnmbot.py:103
+msgid "from"
+msgstr "из"
+
+#: ../frontend_nnmbot.py:140 ../frontend_nnmbot.py:304
 msgid "😔 No records"
 msgstr "😔 Нет данных"
 
-#: ../frontend_nnmbot.py:137 ../test/nnmbot-v0.5.py:1146
-#: ../test/old/nnmbot.old.py:948
+#: ../frontend_nnmbot.py:170
 msgid "Add Film"
 msgstr "Добавить"
 
-#: ../frontend_nnmbot.py:138 ../test/nnmbot-v0.5.py:1147
-#: ../test/old/nnmbot.old.py:949
+#: ../frontend_nnmbot.py:171
 msgid "Control"
 msgstr "Управлять"
 
-#: ../frontend_nnmbot.py:200 ../test/nnmbot-v0.5.py:425
-msgid "◀"
+#: ../frontend_nnmbot.py:255
+msgid "◀️"
 msgstr ""
 
-#: ../frontend_nnmbot.py:201 ../test/nnmbot-v0.5.py:426
-msgid "◼"
+#: ../frontend_nnmbot.py:256
+msgid "⏹️"
 msgstr ""
 
-#: ../frontend_nnmbot.py:202 ../test/nnmbot-v0.5.py:427
-msgid "▶"
+#: ../frontend_nnmbot.py:257
+msgid "▶️"
 msgstr ""
 
-#: ../frontend_nnmbot.py:247 ../test/nnmbot-v0.5.py:486
+#: ../frontend_nnmbot.py:260
+msgid "ADD to you list"
+msgstr "Добавить в персональный список"
+
+#: ../frontend_nnmbot.py:313
 msgid "Clear "
 msgstr "Очищено "
 
-#: ../frontend_nnmbot.py:247 ../test/nnmbot-v0.5.py:486
+#: ../frontend_nnmbot.py:313
 msgid " records"
-msgstr "записей"
+msgstr " записей"
 
-#: ../frontend_nnmbot.py:249 ../test/nnmbot-v0.5.py:488
-#: ../test/old/nnmbot.old.py:338
+#: ../frontend_nnmbot.py:315
 msgid "No records"
 msgstr "Нет данных"
 
-#: ../frontend_nnmbot.py:256 ../test/nnmbot-v0.5.py:495
-#: ../test/old/nnmbot.old.py:345
+#: ../frontend_nnmbot.py:323
 msgid "All records: "
 msgstr "Всего фильмов в БД: "
 
-#: ../frontend_nnmbot.py:257 ../test/nnmbot-v0.5.py:496
-#: ../test/old/nnmbot.old.py:346
+#: ../frontend_nnmbot.py:324
 msgid ""
 "\n"
 "Tagged records: "
@@ -75,138 +80,115 @@ msgstr ""
 "\n"
 "Отмечено фильмов: "
 
-#: ../frontend_nnmbot.py:258 ../test/nnmbot-v0.5.py:497
-#: ../test/old/nnmbot.old.py:347
+#: ../frontend_nnmbot.py:325
 msgid ""
 "\n"
 "Early tagged: "
 msgstr ""
 "\n"
-"Ранее отмечено фильмов: "
+"Отмечено фильмов ранее: "
 
-#: ../frontend_nnmbot.py:266 ../test/nnmbot-v0.5.py:505
-#: ../test/old/nnmbot.old.py:366
+#: ../frontend_nnmbot.py:333
 msgid "List Films tagged"
 msgstr "Список отмеченных фильмов"
 
-#: ../frontend_nnmbot.py:269 ../test/nnmbot-v0.5.py:508
-#: ../test/old/nnmbot.old.py:369
+#: ../frontend_nnmbot.py:336
 msgid "List Films tagged early"
 msgstr "Список ранее отмеченных фильмов"
 
-#: ../frontend_nnmbot.py:272 ../test/nnmbot-v0.5.py:511
-#: ../test/old/nnmbot.old.py:372
+#: ../frontend_nnmbot.py:339
 msgid "Clear all tagged Films"
-msgstr "Снять отметку со всех фильмов"
+msgstr "Очистить персональный список"
 
-#: ../frontend_nnmbot.py:275 ../test/nnmbot-v0.5.py:514
-#: ../test/old/nnmbot.old.py:375
+#: ../frontend_nnmbot.py:342
 msgid "Get database info "
 msgstr "Информация о базе данных "
 
-#: ../frontend_nnmbot.py:278 ../test/nnmbot-v0.5.py:517
-#: ../test/old/nnmbot.old.py:378
+#: ../frontend_nnmbot.py:345
 msgid "Search Films in database "
 msgstr "Поиск фильмов в базе данных "
 
-#: ../frontend_nnmbot.py:284 ../test/nnmbot-v0.5.py:523
-#: ../test/old/nnmbot.old.py:384
+#: ../frontend_nnmbot.py:351
 msgid "List All Films in DB"
 msgstr "Список всех фильмов"
 
-#: ../frontend_nnmbot.py:285 ../test/nnmbot-v0.5.py:524
-#: ../test/old/nnmbot.old.py:385
+#: ../frontend_nnmbot.py:352
 msgid "Go to control users menu"
 msgstr "Перейти в меню пользователей"
 
-#: ../frontend_nnmbot.py:288 ../test/nnmbot-v0.5.py:527
-#: ../test/old/nnmbot.old.py:388
+#: ../frontend_nnmbot.py:355
 msgid "**☣ Work with database:**"
 msgstr "**☣ Работа с базой данных:**"
 
-#: ../frontend_nnmbot.py:295 ../test/nnmbot-v0.5.py:534
-#: ../test/old/nnmbot.old.py:395
+#: ../frontend_nnmbot.py:362
 msgid "List user requests"
 msgstr "Список запросов на подключение"
 
-#: ../frontend_nnmbot.py:298 ../test/nnmbot-v0.5.py:537
-#: ../test/old/nnmbot.old.py:398
+#: ../frontend_nnmbot.py:365
 msgid "List all users"
 msgstr "Список всех пользователей"
 
-#: ../frontend_nnmbot.py:301 ../test/nnmbot-v0.5.py:540
-#: ../test/old/nnmbot.old.py:401
+#: ../frontend_nnmbot.py:368
 msgid "Block/Unblock user"
 msgstr "Блок./Разблок. пользователя"
 
-#: ../frontend_nnmbot.py:304 ../test/nnmbot-v0.5.py:543
-#: ../test/old/nnmbot.old.py:404
+#: ../frontend_nnmbot.py:371
 msgid "Change rights user"
 msgstr "Сменить права пользователя"
 
-#: ../frontend_nnmbot.py:307 ../test/nnmbot-v0.5.py:546
-#: ../test/old/nnmbot.old.py:407
+#: ../frontend_nnmbot.py:374
 msgid "Delete user"
 msgstr "Удалить пользователя"
 
-#: ../frontend_nnmbot.py:311 ../test/nnmbot-v0.5.py:550
-#: ../test/old/nnmbot.old.py:411
+#: ../frontend_nnmbot.py:378
 msgid "Back to basic menu"
 msgstr "Вернуться в основное меню"
 
-#: ../frontend_nnmbot.py:315 ../test/nnmbot-v0.5.py:554
-#: ../test/old/nnmbot.old.py:415
+#: ../frontend_nnmbot.py:382
 msgid "**☣ Work with users:**"
 msgstr "**☣ Работа с пользователями **"
 
-#: ../frontend_nnmbot.py:323 ../test/nnmbot-v0.5.py:562
-#: ../test/old/nnmbot.old.py:423
+#: ../frontend_nnmbot.py:390
 msgid "Set Read only"
 msgstr "Только чтение"
 
-#: ../frontend_nnmbot.py:326 ../test/nnmbot-v0.5.py:565
-#: ../test/old/nnmbot.old.py:426
+#: ../frontend_nnmbot.py:393
 msgid "Set Read Write"
 msgstr "Чтение-запись"
 
-#: ../frontend_nnmbot.py:329 ../test/nnmbot-v0.5.py:568
-#: ../test/old/nnmbot.old.py:429
+#: ../frontend_nnmbot.py:396
 msgid "Back to users menu"
 msgstr "Вернуться в меню пользователей"
 
-#: ../frontend_nnmbot.py:333 ../test/nnmbot-v0.5.py:572
-#: ../test/old/nnmbot.old.py:433
+#: ../frontend_nnmbot.py:400
 msgid "**☣     Select rights:    **"
 msgstr "**☣     Выберете права:    **"
 
-#: ../frontend_nnmbot.py:415 ../test/nnmbot-v0.5.py:648
-#: ../test/old/nnmbot.old.py:488
+#: ../frontend_nnmbot.py:486
 msgid "List awaiting users:"
 msgstr "Список ожидающих пользователей:"
 
-#: ../frontend_nnmbot.py:417 ../frontend_nnmbot.py:449
-#: ../test/nnmbot-v0.5.py:650 ../test/nnmbot-v0.5.py:682
-#: ../test/old/nnmbot.old.py:490 ../test/old/nnmbot.old.py:522
+#: ../frontend_nnmbot.py:488 ../frontend_nnmbot.py:521
 msgid ".....No records....."
 msgstr ".....Нет данных....."
 
-#: ../frontend_nnmbot.py:456 ../test/nnmbot-v0.5.py:689
-#: ../test/old/nnmbot.old.py:529
-msgid "Film already in database!"
-msgstr "Фильм уже в базе данных!"
+#: ../frontend_nnmbot.py:534 ../frontend_nnmbot.py:537
+msgid "Film switch to active list"
+msgstr "Фильм переведен в активный список"
 
-#: ../frontend_nnmbot.py:462 ../test/nnmbot-v0.5.py:695
-#: ../test/old/nnmbot.old.py:535
-msgid "Film added to database"
-msgstr "Фильм добавлен в базу данных"
+#: ../frontend_nnmbot.py:543 ../frontend_nnmbot.py:546
+msgid "Film already in you list!"
+msgstr "Фильм уже в списке!"
 
-#: ../frontend_nnmbot.py:476 ../test/nnmbot-v0.5.py:709
-#: ../test/old/nnmbot.old.py:355
+#: ../frontend_nnmbot.py:558 ../frontend_nnmbot.py:561
+msgid "Film added to you list"
+msgstr "Фильм добавлен в персональный список"
+
+#: ../frontend_nnmbot.py:577
 msgid "Yoy already power user!"
 msgstr "Вы уже СуперЮзверь!"
 
-#: ../frontend_nnmbot.py:478 ../test/nnmbot-v0.5.py:711
-#: ../test/old/nnmbot.old.py:357
+#: ../frontend_nnmbot.py:579
 msgid "You request send to Admins, and will be reviewed soon."
 msgstr ""
 "Ваш запрос направлен Администратору.\n"
@@ -214,18 +196,15 @@ msgstr ""
 "Когда администратор одобрит ваш запрос\n"
 "Вы получите уведомление."
 
-#: ../frontend_nnmbot.py:480 ../test/nnmbot-v0.5.py:713
-#: ../test/old/nnmbot.old.py:637
+#: ../frontend_nnmbot.py:581
 msgid "New user **"
 msgstr "Новый пользователь **"
 
-#: ../frontend_nnmbot.py:480 ../test/nnmbot-v0.5.py:713
-#: ../test/old/nnmbot.old.py:637
+#: ../frontend_nnmbot.py:581
 msgid "** request approve."
 msgstr "** ожидает одобрения."
 
-#: ../frontend_nnmbot.py:505 ../test/nnmbot-v0.5.py:752
-#: ../test/old/nnmbot.old.py:566
+#: ../frontend_nnmbot.py:606
 msgid ""
 "Sorry you are not registered user.\n"
 "You can only set Reaction.\n"
@@ -236,9 +215,7 @@ msgstr ""
 "Вы можете подать заявку на регистрацию,\n"
 "нажмите [ Управлять ] ."
 
-#: ../frontend_nnmbot.py:509 ../frontend_nnmbot.py:570
-#: ../test/nnmbot-v0.5.py:756 ../test/nnmbot-v0.5.py:790
-#: ../test/old/nnmbot.old.py:570 ../test/old/nnmbot.old.py:598
+#: ../frontend_nnmbot.py:610 ../frontend_nnmbot.py:660
 msgid ""
 "Sorry You are Blocked!\n"
 " Send message to Admin this channel"
@@ -246,89 +223,69 @@ msgstr ""
 "Извините, Вы заблокированы.\n"
 "Можете обратиться к администратору данного канала"
 
-#: ../frontend_nnmbot.py:563 ../test/nnmbot-v0.5.py:783
-#: ../test/old/nnmbot.old.py:440
+#: ../frontend_nnmbot.py:653
 msgid "Yes"
 msgstr "Да"
 
-#: ../frontend_nnmbot.py:564 ../test/nnmbot-v0.5.py:784
-#: ../test/old/nnmbot.old.py:441
+#: ../frontend_nnmbot.py:654
 msgid "No"
 msgstr "Нет"
 
-#: ../frontend_nnmbot.py:564 ../test/nnmbot-v0.5.py:784
-#: ../test/old/nnmbot.old.py:642
+#: ../frontend_nnmbot.py:654
 msgid "Goodbye! See you later..."
 msgstr "Пока! Увидимся...."
 
-#: ../frontend_nnmbot.py:566 ../test/nnmbot-v0.5.py:786
-#: ../test/old/nnmbot.old.py:595
-msgid "**Y realy want tag/untag films**"
+#: ../frontend_nnmbot.py:656
+#, fuzzy
+msgid "**Y realy want control personal lists of films**"
 msgstr "**Вы действительно хотите подключиться?**"
 
-#: ../frontend_nnmbot.py:608 ../frontend_nnmbot.py:622
-#: ../frontend_nnmbot.py:631 ../test/nnmbot-v0.5.py:827
-#: ../test/nnmbot-v0.5.py:841 ../test/nnmbot-v0.5.py:850
+#: ../frontend_nnmbot.py:713 ../frontend_nnmbot.py:728
+#: ../frontend_nnmbot.py:737 ../frontend_nnmbot.py:761
 msgid "Card"
 msgstr "Карточка"
 
-#: ../frontend_nnmbot.py:609 ../frontend_nnmbot.py:623
-#: ../frontend_nnmbot.py:632 ../test/nnmbot-v0.5.py:828
-#: ../test/nnmbot-v0.5.py:842 ../test/nnmbot-v0.5.py:851
+#: ../frontend_nnmbot.py:714 ../frontend_nnmbot.py:729
+#: ../frontend_nnmbot.py:738 ../frontend_nnmbot.py:762
 msgid "List"
 msgstr "Список"
 
-#: ../frontend_nnmbot.py:610 ../frontend_nnmbot.py:624
-#: ../frontend_nnmbot.py:633 ../test/nnmbot-v0.5.py:829
-#: ../test/nnmbot-v0.5.py:843 ../test/nnmbot-v0.5.py:852
+#: ../frontend_nnmbot.py:715 ../frontend_nnmbot.py:730
+#: ../frontend_nnmbot.py:739 ../frontend_nnmbot.py:763
 msgid "Cancel"
 msgstr "Отменить"
 
-#: ../frontend_nnmbot.py:612 ../frontend_nnmbot.py:626
-#: ../test/nnmbot-v0.5.py:831 ../test/nnmbot-v0.5.py:845
-msgid "Output all in one List or in Card format one by one"
-msgstr "Вывести все одним списком или в формате карточек по одному"
+#: ../frontend_nnmbot.py:717 ../frontend_nnmbot.py:732
+#: ../frontend_nnmbot.py:741 ../frontend_nnmbot.py:765
+msgid "Output all in one List or in Card format?"
+msgstr "Вывести все одним списком или в формате карточек по одному?"
 
-#: ../frontend_nnmbot.py:617 ../test/nnmbot-v0.5.py:836
-#: ../test/old/nnmbot.old.py:657
+#: ../frontend_nnmbot.py:723
 msgid "  Clear "
 msgstr " Очищено "
 
-#: ../frontend_nnmbot.py:617 ../test/nnmbot-v0.5.py:836
-#: ../test/old/nnmbot.old.py:657
+#: ../frontend_nnmbot.py:723
 msgid " records  "
 msgstr " записей "
 
-#: ../frontend_nnmbot.py:635 ../test/nnmbot-v0.5.py:854
-msgid "Get list or card format"
-msgstr "В формате списка или карточек"
+#: ../frontend_nnmbot.py:749
+msgid "Inputs search string (3 chars min.):"
+msgstr "Введите строку поиска (мин. 3 симв.):"
 
-#: ../frontend_nnmbot.py:643 ../test/nnmbot-v0.5.py:862
-#: ../test/old/nnmbot.old.py:669
-msgid "Write and send what you search:"
-msgstr "Введите что ищите и отправьте:"
+#: ../frontend_nnmbot.py:755
+msgid "Search string very short - 3 chars min.:"
+msgstr "Строка поиска слишком короткая - 3 симв. мин."
 
-#: ../frontend_nnmbot.py:649 ../test/nnmbot-v0.5.py:868
-#: ../test/old/nnmbot.old.py:675
-msgid "🏁............Done............🏁"
-msgstr "🏁............Готово............🏁"
-
-#: ../frontend_nnmbot.py:670 ../frontend_nnmbot.py:690
-#: ../frontend_nnmbot.py:732 ../frontend_nnmbot.py:736
-#: ../test/nnmbot-v0.5.py:889 ../test/nnmbot-v0.5.py:909
-#: ../test/nnmbot-v0.5.py:951 ../test/nnmbot-v0.5.py:955
-#: ../test/old/nnmbot.old.py:696 ../test/old/nnmbot.old.py:716
-#: ../test/old/nnmbot.old.py:758 ../test/old/nnmbot.old.py:762
+#: ../frontend_nnmbot.py:789 ../frontend_nnmbot.py:811
+#: ../frontend_nnmbot.py:858 ../frontend_nnmbot.py:863
 msgid "User: "
 msgstr "Пользователь: "
 
-#: ../frontend_nnmbot.py:670 ../test/nnmbot-v0.5.py:889
-#: ../test/old/nnmbot.old.py:696
+#: ../frontend_nnmbot.py:789
 msgid " add to DB"
 msgstr " добавлен в БД"
 
-#: ../frontend_nnmbot.py:672 ../test/nnmbot-v0.5.py:891
-#: ../test/old/nnmbot.old.py:698
+#: ../frontend_nnmbot.py:791
 msgid ""
 "You request approved\n"
 "Now Yoy can work with films."
@@ -336,43 +293,35 @@ msgstr ""
 "Ваш запрос одобрен. \n"
 "Теперь вы можете работать с фильмами."
 
-#: ../frontend_nnmbot.py:676 ../test/nnmbot-v0.5.py:895
-#: ../test/old/nnmbot.old.py:702
+#: ../frontend_nnmbot.py:795
 msgid "List current users:"
 msgstr "Список текущих пользователей:"
 
-#: ../frontend_nnmbot.py:680 ../test/nnmbot-v0.5.py:899
-#: ../test/old/nnmbot.old.py:706
+#: ../frontend_nnmbot.py:799
 msgid "Select user for delete:"
 msgstr "Выберете пользователя для удаления:"
 
-#: ../frontend_nnmbot.py:690 ../test/nnmbot-v0.5.py:909
-#: ../test/old/nnmbot.old.py:716
+#: ../frontend_nnmbot.py:811
 msgid " deleted from DB"
 msgstr " Удален из БД"
 
-#: ../frontend_nnmbot.py:694 ../test/nnmbot-v0.5.py:913
-#: ../test/old/nnmbot.old.py:720
+#: ../frontend_nnmbot.py:815
 msgid "Select user for change rights:"
 msgstr "Выберете пользователя для смены прав:"
 
-#: ../frontend_nnmbot.py:702 ../test/nnmbot-v0.5.py:921
-#: ../test/old/nnmbot.old.py:728
+#: ../frontend_nnmbot.py:824
 msgid "Change righst for user: "
 msgstr "Смена прав для пользователя: "
 
-#: ../frontend_nnmbot.py:720 ../test/nnmbot-v0.5.py:939
-#: ../test/old/nnmbot.old.py:746
+#: ../frontend_nnmbot.py:844
 msgid "Select user for block/unblock:"
 msgstr "Выберете пользователя для блок./разблок.:"
 
-#: ../frontend_nnmbot.py:732 ../test/nnmbot-v0.5.py:951
-#: ../test/old/nnmbot.old.py:758
+#: ../frontend_nnmbot.py:858
 msgid " Unblocked"
 msgstr " Разблокирован"
 
-#: ../frontend_nnmbot.py:736 ../test/nnmbot-v0.5.py:955
-#: ../test/old/nnmbot.old.py:762
+#: ../frontend_nnmbot.py:863
 msgid " Blocked"
 msgstr " Заблокирован"
 
@@ -385,3 +334,12 @@ msgstr " Заблокирован"
 
 #~ msgid "Add Film to DB"
 #~ msgstr "Добавить"
+
+#~ msgid "Get list or card format"
+#~ msgstr "В формате списка или карточек"
+
+#~ msgid "Write and send what you search:"
+#~ msgstr "Введите что ищите и отправьте:"
+
+#~ msgid "🏁............Done............🏁"
+#~ msgstr "🏁............Готово............🏁"

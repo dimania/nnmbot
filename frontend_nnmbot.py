@@ -540,10 +540,10 @@ async def query_user_tag_film(event, idf, id_usr):
         return
     if res == sts.SETTAG:
         if isinstance(event, events.CallbackQuery.Event):
-            await event.answer(_('Film already in database!'), alert=True)
+            await event.answer(_('Film already in you list!'), alert=True)
         if isinstance(event, events.NewMessage.Event):
             await event.delete()
-            await event.reply(_('Film already in database!'))
+            await event.reply(_('Film already in you list!'))
             #await asyncio.sleep(1)
             
         
@@ -555,10 +555,10 @@ async def query_user_tag_film(event, idf, id_usr):
     logging.info(f"User {id_usr} tag film id={idf} with result={res}")
     #bdata = 'TAG'+id_nnm
     if isinstance(event, events.CallbackQuery.Event):
-        await event.answer(_('Film added to database'), alert=True)
+        await event.answer(_('Film added to you list'), alert=True)
     if isinstance(event, events.NewMessage.Event):
             await event.delete()
-            await event.reply(_('Film added to database'))
+            await event.reply(_('Film added to you list'))
             await asyncio.sleep(1)
             
 async def add_new_user(event):
@@ -653,7 +653,7 @@ async def main_frontend():
             "button1": [_("Yes"), "YES_NEW_USER",add_new_user,[event_bot]],
             "button2": [_("No"), "NO_NEW_USER", event_bot.respond,[_('Goodbye! See you later...')]]
             }
-            await create_choice_dialog(_('**Y realy want tag/untag films**'), choice_buttons, event_bot, menu_level)
+            await create_choice_dialog(_('**Y realy want control personal lists of films**'), choice_buttons, event_bot, menu_level)
             send_menu = sts.NO_MENU
             return
         elif ret == sts.USER_BLOCKED:   # Blocked
@@ -714,7 +714,7 @@ async def main_frontend():
             "button2": [_("List"), "LIST", query_all_records,[event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
-            await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
+            await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
             send_menu = sts.NO_MENU            
         elif button_data == '/bm_dwclear':
             # Clear all tag
@@ -729,7 +729,7 @@ async def main_frontend():
             "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.SETTAG, event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
-            await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
+            await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
             send_menu = sts.NO_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early
@@ -738,7 +738,7 @@ async def main_frontend():
             "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.UNSETTAG, event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
-            await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
+            await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
             send_menu = sts.NO_MENU
         elif button_data == '/bm_dbinfo':
             # Get info about DB
@@ -746,22 +746,27 @@ async def main_frontend():
             send_menu =sts.BASIC_MENU
         elif button_data == '/bm_search':
             # Search Films
-            await event_bot.respond(_("Write and send what you search:"))
+            await event_bot.respond(_("Inputs search string (3 chars min.):"))
             send_menu = sts.NO_MENU
             @bot.on(events.NewMessage()) 
             async def search_handler(event_search):
                 logging.info(f"Get search string: {event_search.message.message}")
-                # Get films tagget early
-                choice_buttons = {
-                "button1": [_("Card"), "CARD", query_search_by_one,[event_search.message.message, event_bot]],
-                "button2": [_("List"), "LIST", query_search_list,[event_search.message.message, event_bot],sts.BASIC_MENU],
-                "button3": [_("Cancel"), "HOME_MENU", home,[]]
-                }
-                await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
-                #await query_search_list(event_search.message.message, event_bot)
-                #await event_bot.respond(_("🏁............Done............🏁"))
-                bot.remove_event_handler(search_handler)
-                #await create_basic_menu(menu_level, event_bot)
+                if (len(event_search.message.message)  < 3 ):
+                    await event_bot.respond(_("Search string very short - 3 chars min.:"))
+                    bot.remove_event_handler(search_handler)
+                    send_menu =sts.BASIC_MENU
+                else:
+                    # Get films tagget early
+                    choice_buttons = {
+                    "button1": [_("Card"), "CARD", query_search_by_one,[event_search.message.message, event_bot]],
+                    "button2": [_("List"), "LIST", query_search_list,[event_search.message.message, event_bot],sts.BASIC_MENU],
+                    "button3": [_("Cancel"), "HOME_MENU", home,[]]
+                    }
+                    await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
+                    #await query_search_list(event_search.message.message, event_bot)
+                    #await event_bot.respond(_("🏁............Done............🏁"))
+                    bot.remove_event_handler(search_handler)
+                    #await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_cum':
             # Go to control users menu 
             send_menu = sts.CUSER_MENU
