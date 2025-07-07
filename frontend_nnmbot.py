@@ -754,7 +754,8 @@ async def main_frontend():
                 if (len(event_search.message.message)  < 3 ):
                     await event_bot.respond(_("Search string very short - 3 chars min.:"))
                     bot.remove_event_handler(search_handler)
-                    send_menu =sts.BASIC_MENU
+                    await create_basic_menu(menu_level, event_bot)
+                    #send_menu =sts.BASIC_MENU
                 else:
                     # Get films tagget early
                     choice_buttons = {
