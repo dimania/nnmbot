@@ -165,7 +165,7 @@ async def publish_new_film( idf ):
     
     msg = await prep_message_film( idf )
     
-    bdata = 'XX'+idf
+    bdata = 'XX'+str(idf)
     buttons_film = [
                 Button.inline(_("Add Film"), bdata),
                 Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
