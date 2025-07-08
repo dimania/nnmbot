@@ -65,12 +65,20 @@ async def query_all_records_by_one(event):
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
-async def query_search(str_search, event):
+async def query_search_list(str_search, event):
     ''' Search Films in database '''
     logging.info(f"Search in database:{str_search}")
     async with dbm.DatabaseBot(sts.db_name) as db:
         rows = await db.db_search_list(str_search)
-    await send_lists_records( rows, sts.LIST_REC_IN_MSG, event )
+    await send_lists_records( rows, sts.LIST_REC_IN_MSG, event, search=True )
+
+async def query_search_by_one(str_search, event):
+    ''' Search Films in database '''
+    logging.info(f"Search in database:{str_search}")
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        rows = await db.db_search_id(str_search)
+    ret = await show_card_one_record_menu( rows, event, sts.SHOW_ADD_BUTTON )
+    return ret
 
 async def query_tagged_records_list(id_usr, tag, event):
     ''' Get films tagget for user '''
@@ -87,32 +95,49 @@ async def query_tagged_records_by_one(id_usr, tag, event):
     ret = await show_card_one_record_menu( rows, event )
     return ret
 
-async def show_card_one_record_menu( rows=None, event=None ):
+async def show_card_one_record_menu( rows=None, event=None, show_add_button=None ):
     ''' Create card of one film and send to channel 
         rows - list id records 
-        event - descriptor channel '''
+        event - descriptor channel 
+        show_add_button - show or not ADD to list button'''
+    
+    s_record = _('Film')
+    s_from = _('from')
+
     lenrows=len(rows)
     if rows:
-        await send_card_one_record( dict(rows[0]).get("id"), 0, event )
+        count_str = f"{s_record} 1 {s_from} {lenrows}" 
+        await send_card_one_record( dict(rows[0]).get("id"), 0, event, show_add_button, count_str )
         @bot.on(events.CallbackQuery())
         async def callback_bot_list(event_bot_list):
             logging.debug(f"Get callback event_bot_list {event_bot_list}")  
             button_data = event_bot_list.data.decode()
             await event_bot_list.delete()
             i=0
+            if button_data.find('XX') != -1:
+                # Add to Film to DB 
+                data = button_data
+                i, _, data = button_data.partition("XX")
+                count_str = f"{s_record} {int(i)+1} {s_from} {lenrows}"
+                logging.info(f"Button 'Add...' pressed in search - data={button_data} write {data}")
+                await query_user_tag_film(event_bot_list, data, event.query.user_id)
+                await send_card_one_record( dict(rows[int(i)]).get("id"), int(i), event, show_add_button, count_str )
             if button_data.find('NEXT', 0, 4) != -1:
                 i = int(button_data.replace('NEXT', '')) + 1 
                 if i == lenrows:
                     i = 0
-                await send_card_one_record( dict(rows[i]).get("id"), i, event )  
+                count_str = f"{s_record} {i+1} {s_from} {lenrows}"
+                await send_card_one_record( dict(rows[i]).get("id"), i, event, show_add_button, count_str )  
             if button_data.find('PREV', 0, 4) != -1:
                 i = int(button_data.replace('PREV', '')) - 1
                 if i == -1:
                     i = lenrows-1
-                await send_card_one_record( dict(rows[i]).get("id"), i, event )
+                count_str = f"{s_record} {i+1} {s_from} {lenrows}"
+                await send_card_one_record( dict(rows[i]).get("id"), i, event, show_add_button, count_str )
             if button_data == 'HOME_MENU':
                 removed_handler=bot.remove_event_handler(callback_bot_list)
-                logging.debug(f"Remove handler event_bot_list =  {removed_handler}") 
+                logging.debug(f"Remove handler event_bot_list =  {removed_handler}")
+            
     else:
         message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)
@@ -142,7 +167,7 @@ async def publish_new_film( idf ):
     
     msg = await prep_message_film( idf )
     
-    bdata = 'XX'+idf
+    bdata = 'XX'+str(idf)
     buttons_film = [
                 Button.inline(_("Add Film"), bdata),
                 Button.url(_("Control"), 't.me/'+sts.bot_name+'?start')
@@ -157,16 +182,24 @@ async def publish_new_film( idf ):
 
     logging.debug(f"Send new film Message:{send_msg}")
 
-async def prep_message_film( idf ):
+async def prep_message_film( idf, id_usr=None, count_str=None  ):
     ''' Prepare message and file for publish in channel 
         idf - number film in db'''
-    
+    tag=None
+    #Get data about film from DB
     logging.debug(f"Publish film id={idf}")
     async with dbm.DatabaseBot(sts.db_name) as db:
         row = await db.db_film_by_id( idf )
     logging.debug(f"Get film from db ={row}")
+    
+    #Get info about set tag film for user
+    if id_usr:
+        async with dbm.DatabaseBot(sts.db_name) as db:
+            tag = await db.db_get_tag(idf,id_usr)
+        logging.debug(f"Get tag for user_id[{id_usr}] = {tag}")
+
     film_name = f"<a href='{dict(row).get('nnm_url')}'>{dict(row).get('name')}</a>\n"
-    film_section = f"🟢<b>Раздел:</b> \n{dict(row).get('section')}\n"
+    film_section = f"🟢<b>Раздел:</b>{dict(row).get('section')}\n"
     film_genre = f"🟢<b>Жанр:</b> {dict(row).get('genre')}\n"
     film_rating = f"🟢<b>Рейтинг:</b> КП[{dict(row).get('rating_kpsk')}] Imdb[{dict(row).get('rating_imdb')}]\n"
     film_description = f"🟢<b>Описание:</b> \n{dict(row).get('description')}\n"
@@ -182,8 +215,15 @@ async def prep_message_film( idf ):
         film_magnet_link=""    
     # Create new message
     new_message = f"{film_name}{film_magnet_link}{film_section}{film_genre}{film_rating}{film_description}"
+    # Label for repeat film
     if rec_upd == sts.PUBL_UPD:
-       new_message = f"🔄{new_message}" 
+        new_message = f"🔄{new_message}"
+    #Label for taget film
+    if tag:  #Maybe tag == sts.SETTAG
+        new_message = f"✅{new_message}"
+
+    if count_str:  #Maybe tag == sts.SETTAG
+        new_message = f"{count_str}\n{new_message}"
 
     #trim long message ( telegramm support only 1024 byte caption )
     if len(new_message) > 1023:
@@ -195,29 +235,42 @@ async def prep_message_film( idf ):
         
     return { 'message':new_message, 'file':file_send, 'id_nnm':id_nnm }
 
-async def send_card_one_record( idf, index, event ):
+async def send_card_one_record( idf, index, event, show_add_button=None, count_str=None ):
     ''' Create card of one film and send to channel 
         idf - number film in db
         event - descriptor channel '''
     
-    msg = await prep_message_film( idf )
+    if isinstance(event, events.CallbackQuery.Event):
+        id_usr = event.query.user_id
+    if isinstance(event, events.NewMessage.Event):
+        id_usr = event.message.peer_id.user_id
+
+    msg = await prep_message_film( idf, id_usr, count_str )
     
+
     # Create buttons for message
     f_prev = 'PREV'+f'{index}'
     f_next = 'NEXT'+f'{index}'
     f_curr = 'HOME_MENU'
+    f_add = f'{index}'+'XX'+f'{idf}'
     buttons_film = [
-            Button.inline(_("◀"), f_prev),
-            Button.inline(_("◼"), f_curr),
-            Button.inline(_("▶"), f_next)
+            Button.inline(_("◀️"), f_prev),#◀️◀︎
+            Button.inline(_("⏹️"), f_curr),#⏹️⏹︎
+            Button.inline(_("▶️"), f_next) #▶️▶︎
             ]
-        
+    if show_add_button == sts.SHOW_ADD_BUTTON:
+        buttons_film = buttons_film,[Button.inline(_("ADD to you list"), f_add)]
+
+    if show_add_button == sts.SHOW_NO_BUTTON:
+        buttons_film = None
+
     #FIXME as send? as respond or as send_file message
     #await event.respond(message, parse_mode='html', link_preview=0)
-    logging.debug(f"Event:{event}")
-    await bot.send_file(event.original_update.peer, dict(msg).get('file'), caption=dict(msg).get('message'), buttons=buttons_film, parse_mode="html" )
-    
-async def send_lists_records( rows, num_per_message, event ):
+    logging.debug(f"Event in send_card_one_record:{event}")
+    await bot.send_file( id_usr, dict(msg).get('file'), caption=dict(msg).get('message'), buttons=buttons_film, parse_mode="html" )
+    #event.original_update.peer replace to id_usr
+
+async def send_lists_records( rows, num_per_message, event, search=False ):
     ''' Create messages from  list records and send to channel 
         rows - list records {url,name,magnet_url}
         num_per_message - module how many records insert in one messag
@@ -232,6 +285,10 @@ async def send_lists_records( rows, num_per_message, event ):
             if mag_link_str and sts.magnet_helper:
                message = message + f"<a href='{sts.magnet_helper}+{mag_link_str}'>🧲Примагнититься</a>\n"
             i = i + 1
+            if search:
+                message = message + f"<a href='https://t.me/{sts.bot_name}?start=XX{dict(row).get('id')}'>☑️ Добавить в список</a>\n\n"
+                message = message + f"<a href='https://t.me/{sts.bot_name}?start=VV{dict(row).get('id')}'>ℹ️ Показать карточку</a>\n\n"
+
             if not i%num_per_message:
                 try:
                     await event.respond(message, parse_mode='html', link_preview=0)
@@ -607,16 +664,42 @@ async def query_user_tag_film(event, idf, id_usr):
     ''' User set tag to film '''
     async with dbm.DatabaseBot(sts.db_name) as db:
         res = await db.db_get_tag( idf, id_usr )
-    if res:
-       await event.answer(_('Film already in database!'), alert=True)
-       logging.info(f"User tag film but already in database id={idf} with result={res}")
-       return
+    
+    logging.info(f"Checkfor User {id_usr} tag film id={idf} with result={res}")
+    if res == sts.UNSETTAG:
+        async with dbm.DatabaseBot(sts.db_name) as db:   
+            res = await db.db_switch_film_tag( idf, sts.SETTAG, id_usr )
+        if isinstance(event, events.CallbackQuery.Event):
+            await event.answer(_('Film switch to active list'), alert=True)
+        if isinstance(event, events.NewMessage.Event):
+            await event.delete()
+            await event.reply(_('Film switch to active list'))
+            #await asyncio.sleep(1)
+        logging.info(f"User switch tag film to active list id={idf} with result={res}")
+        return
+    if res == sts.SETTAG:
+        if isinstance(event, events.CallbackQuery.Event):
+            await event.answer(_('Film already in you list!'), alert=True)
+        if isinstance(event, events.NewMessage.Event):
+            await event.delete()
+            await event.reply(_('Film already in you list!'))
+            #await asyncio.sleep(1)
+            
+        
+        logging.info(f"User tag film but already in database id={idf} with result={res}")
+        return
+    # Set tag for user    
     async with dbm.DatabaseBot(sts.db_name) as db:   
         res = await db.db_add_tag( idf, sts.SETTAG, id_usr )
     logging.info(f"User {id_usr} tag film id={idf} with result={res}")
     #bdata = 'TAG'+id_nnm
-    await event.answer(_('Film added to database'), alert=True)
-
+    if isinstance(event, events.CallbackQuery.Event):
+        await event.answer(_('Film added to you list'), alert=True)
+    if isinstance(event, events.NewMessage.Event):
+            await event.delete()
+            await event.reply(_('Film added to you list'))
+            await asyncio.sleep(1)
+            
 async def add_new_user(event):
     '''
     Add new user to DB
@@ -709,7 +792,7 @@ async def main_frontend():
             "button1": [_("Yes"), "YES_NEW_USER",add_new_user,[event_bot]],
             "button2": [_("No"), "NO_NEW_USER", event_bot.respond,[_('Goodbye! See you later...')]]
             }
-            await create_choice_dialog(_('**Y realy want tag/untag films**'), choice_buttons, event_bot, menu_level)
+            await create_choice_dialog(_('**Y realy want control personal lists of films**'), choice_buttons, event_bot, menu_level)
             send_menu = sts.NO_MENU
             return
         elif ret == sts.USER_BLOCKED:   # Blocked
@@ -722,7 +805,22 @@ async def main_frontend():
         if event_bot.message.message == '/start':
           # show menu
           await create_basic_menu(menu_level, event_bot)
-         
+
+        #/start XX764
+        if event_bot.message.message.find('XX', 7) != -1:
+           # Add to Film to DB 
+           data = event_bot.message.message
+           data = data.replace('/start XX', '')
+           logging.info(f"Button 'Add...' pressed on list data={event_bot.message.message} write {data}")
+           await query_user_tag_film(event_bot, data, event_bot.message.peer_id.user_id)
+       
+        #/start VV764
+        if event_bot.message.message.find('VV', 7) != -1:
+           # Add to Film to DB 
+           data = event_bot.message.message
+           data = data.replace('/start VV', '')
+           logging.info(f"Button 'Show card...' pressed on list data={event_bot.message.message} write {data}")
+           await send_card_one_record( data, 0, event_bot, show_add_button=sts.SHOW_NO_BUTTON )
             
     # Handle basic Menu
     @bot.on(events.CallbackQuery())
@@ -755,7 +853,7 @@ async def main_frontend():
             "button2": [_("List"), "LIST", query_all_records,[event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
-            await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
+            await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
             send_menu = sts.NO_MENU            
         elif button_data == '/bm_dwclear':
             # Clear all tag
@@ -770,7 +868,7 @@ async def main_frontend():
             "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.SETTAG, event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
-            await create_choice_dialog(_("Output all in one List or in Card format one by one"), choice_buttons, event_bot, menu_level)
+            await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
             send_menu = sts.NO_MENU
         elif button_data == '/bm_dwearly':
             # Get films tagget early
@@ -779,7 +877,7 @@ async def main_frontend():
             "button2": [_("List"), "LIST", query_tagged_records_list,[id_user, sts.UNSETTAG, event_bot],sts.BASIC_MENU],
             "button3": [_("Cancel"), "HOME_MENU", home,[]]
             }
-            await create_choice_dialog(_("Get list or card format"), choice_buttons, event_bot, menu_level)
+            await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
             send_menu = sts.NO_MENU
         elif button_data == '/bm_dbinfo':
             # Get info about DB
@@ -787,43 +885,28 @@ async def main_frontend():
             send_menu =sts.BASIC_MENU
         elif button_data == '/bm_search':
             # Search Films
-            await event_bot.respond(_("Write and send what you search:"))
+            await event_bot.respond(_("Inputs search string (3 chars min.):"))
             send_menu = sts.NO_MENU
             @bot.on(events.NewMessage()) 
             async def search_handler(event_search):
                 logging.info(f"Get search string: {event_search.message.message}")
-                await query_search(event_search.message.message, event_bot)
-                await event_bot.respond(_("🏁............Done............🏁"))
-                bot.remove_event_handler(search_handler)
-                await create_basic_menu(menu_level, event_bot)
-        elif button_data == '/bm_share':
-            # Go to Share menu           
-            send_menu = sts.SHARE_MENU
-        elif button_data == '/sm_list':
-            #List share
-            await create_list_share(event_bot)
-            send_menu = sts.SHARE_MENU
-        elif button_data == '/sm_remove':
-            #Remove share
-            await create_remove_share(event_bot)            
-            send_menu = sts.SHARE_MENU    
-        elif button_data == '/sm_add':
-            #add share
-            await create_add_share(event_bot, menu_level)
-            send_menu = sts.NO_MENU    
-        elif button_data == '/sm_bbm':
-            # Back to basic menu form share menu
-            send_menu = sts.BASIC_MENU
-        elif button_data.find('DEL_SHARE_USER_', 0, 15) != -1:
-            # Real remove share
-            data = button_data
-            del_share4user = data.replace('DEL_SHARE_USER_', '')
-            await dbm.db_del_share_from_table(del_share4user, id_user)
-            async with dbm.DatabaseBot(sts.db_name) as db:
-                user_db = await db.db_exist_user(del_share4user)
-            user_name=dict(user_db[0]).get('name_user')
-            await event_bot.respond(_("User: ")+user_name+_(" Unshared"))
-            send_menu = sts.SHARE_MENU
+                if (len(event_search.message.message)  < 3 ):
+                    await event_bot.respond(_("Search string very short - 3 chars min.:"))
+                    bot.remove_event_handler(search_handler)
+                    await create_basic_menu(menu_level, event_bot)
+                    #send_menu =sts.BASIC_MENU
+                else:
+                    # Get films tagget early
+                    choice_buttons = {
+                    "button1": [_("Card"), "CARD", query_search_by_one,[event_search.message.message, event_bot]],
+                    "button2": [_("List"), "LIST", query_search_list,[event_search.message.message, event_bot],sts.BASIC_MENU],
+                    "button3": [_("Cancel"), "HOME_MENU", home,[]]
+                    }
+                    await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
+                    #await query_search_list(event_search.message.message, event_bot)
+                    #await event_bot.respond(_("🏁............Done............🏁"))
+                    bot.remove_event_handler(search_handler)
+                    #await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_cum':
             # Go to control users menu 
             send_menu = sts.CUSER_MENU
@@ -936,8 +1019,10 @@ async def main():
     ''' Main function '''
     global Channel_my_id
 
+    print("Start frontend Bot...")
+    
     async with dbm.DatabaseBot(sts.db_name) as db:
-        print('Create db if not exist.')
+        logging.debug('Create db if not exist.')
         await db.db_create()
 
     # Get data for admin user for check and add to db (initialization)

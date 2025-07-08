@@ -1,0 +1,14 @@
+[Unit]
+Description=NNM Filter Telegram bot frontend  service
+After=network.target
+
+[Service]
+Type=idle
+Restart=always
+RestartSec=3
+User=nnmbot
+WorkingDirectory=/home/nnmbot
+ExecStart=python3 frontend_nnmbot.py
+
+[Install]
+WantedBy=multi-user.target

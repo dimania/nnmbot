@@ -47,8 +47,11 @@ CURIGHTS_MENU = 3
 SHARE_MENU = 4
 
 LIST_REC_IN_MSG = 20
-#-----------------
+
 RETRIES_DB_LOCK = 5 
+
+SHOW_ADD_BUTTON = 1
+SHOW_NO_BUTTON = 2
 
 
 
