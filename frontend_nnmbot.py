@@ -913,7 +913,9 @@ async def main():
 
 sts.get_config()
 # Enable logging
-logging.basicConfig(level=sts.log_level, filename="fronend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
+
+filename=os.path.join(os.path.dirname(sts.logfile),'fronend_'+os.path.basename(sts.logfile))
+logging.basicConfig(level=sts.log_level, filename=filename, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
 logging.info("Start frontend bot.")
 
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')

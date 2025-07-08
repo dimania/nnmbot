@@ -8,26 +8,26 @@ services:
     volumes:
           # mount config file
         - type: bind
-          source: /home/dima/src/nnmbot/myconfig.cfg
-          target: /home/nnmbot/myconfig.cfg
+          source: /home/dima/opt/nnmbot/etc/myconfig.py
+          target: /home/nnmbot/myconfig.py
           read_only: true
           
           # mount dir for database file
           # settings path file database must be changed in config file!
         - type: bind
-          source: /home/dima/src/nnmbot/data
+          source: /home/dima/opt/nnmbot/data
           target: /home/nnmbot/data
         
           # mount dir for logs
           # settings path log file must be changed in config file!
         - type: bind
-          source: /home/dima/src/nnmbot/log
-          target: /home/nnmbot/log
+          source: /home/dima/opt/nnmbot/logs
+          target: /home/nnmbot/logs
 
           # mount dir for session telegram file if need
           # settings path log file must be changed in config file!
         - type: bind
-          source: /home/dima/src/nnmbot/session
+          source: /home/dima/opt/nnmbot/session
           target: /home/nnmbot/session
           
     # Critical secret keys can set over env vars 
@@ -43,26 +43,26 @@ services:
     volumes:
           # mount config file
         - type: bind
-          source: /home/dima/src/nnmbot/myconfig.cfg
-          target: /home/nnmbot/myconfig.cfg
+          source: /home/dima/opt/nnmbot/etc/myconfig.py
+          target: /home/nnmbot/myconfig.py
           read_only: true
           
           # mount dir for database file
           # settings path file database must be changed in config file!
         - type: bind
-          source: /home/dima/src/nnmbot/data
+          source: /home/dima/opt/nnmbot/data
           target: /home/nnmbot/data
         
           # mount dir for logs
           # settings path log file must be changed in config file!
         - type: bind
-          source: /home/dima/src/nnmbot/log
-          target: /home/nnmbot/log
+          source: /home/dima/opt/nnmbot/logs
+          target: /home/nnmbot/logs
 
           # mount dir for session telegram file if need
           # settings path log file must be changed in config file!
         - type: bind
-          source: /home/dima/src/nnmbot/session
+          source: /home/dima/opt/nnmbot/session
           target: /home/nnmbot/session
 
           
