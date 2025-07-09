@@ -25,7 +25,7 @@ class DatabaseBot:
         self.dbm.row_factory = aiosqlite.Row
         await self.dbm.execute("PRAGMA foreign_keys = ON")
         await self.dbm.commit()
-
+        #TODO move load extension only for search fnction
         if sts.ICU_extension_lib and os.path.isfile(sts.ICU_extension_lib):
             await self.dbm.enable_load_extension(True)
             await self.dbm.load_extension(sts.ICU_extension_lib)

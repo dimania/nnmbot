@@ -6,23 +6,26 @@ WORKDIR /home/nnmbot
 # copy all the files to the container
 COPY . .
 
-# install dependencies
+# install python dependencies
 RUN apk update
 RUN apk add python3
 RUN apk add py3-pip
 RUN python3 -m venv /home/nnmbot/venv
 RUN . /home/nnmbot/venv/bin/activate
 ENV PATH=/home/nnmbot/venv/bin:$PATH
-#RUN . /home/nnmbot/venv/bin/activate ;  pip install --no-cache-dir -r requirements.txt ; pip install --no-cache-dir pysocks
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir pysocks
-#RUN mkdir /home/nnmbot/etc
-#RUN mkdir /home/nnmbot/data
-#RUN mkdir /home/nnmbot/logs
 
-#VOLUME /home/nnmbot/etc
-# tell the port number the container should expose
-#EXPOSE 5000
-#-v /my/own/datadir:/var/lib/mysql -v /my/own/myconfig.py:/home/nnmbot/myconfig.py
-# run the command
-#CMD ["python", "./frontend_nnmbot.py"]
+# compile icu extension for unicode select in sqlite 
+COPY icu icu
+RUN apk add build-base
+RUN apk add pkgconf
+RUN apk add icu-dev
+RUN apk add sqlite-dev
+
+RUN gcc -shared icu/icu.c -g -o libsqliteicu.so -fPIC `pkg-config --libs --cflags icu-uc icu-io`
+
+RUN apk del build-base
+RUN apk del icu-dev
+RUN apk del sqlite-dev
+RUN apk del pkgconf
