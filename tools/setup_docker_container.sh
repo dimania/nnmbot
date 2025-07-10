@@ -1,6 +1,7 @@
 #
 # Create docker container nnmbot 
-#
+# run script in tools dir.
+# If run in other location change SRC var
 
 SRC='../'
 NAME_IMAGE='dimania/nnmbot'
