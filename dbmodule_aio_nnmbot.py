@@ -699,18 +699,20 @@ async def main():
     #await db_add_share_to_table(select_users_list0, id_user0)
     user_list=[]
     user_list.append(id_user1)
-    await db_add_share_to_table(user_list, id_user0)
+    async with DatabaseBot(sts.db_name) as db:
+        await db.db_add_share_to_table(user_list, id_user0)
 
     #await db_add_share_to_table(select_users_list1, id_user1) 
 
     # Test share to not existed user - user4
     select_users_list2.append(id_user3)
     select_users_list2.append(id_user4)
-   
-    await db_add_share_to_table(select_users_list2, id_user2)
+    async with DatabaseBot(sts.db_name) as db:
+        await db.db_add_share_to_table(select_users_list2, id_user2)
     
     #Remove share User0 -> User1
-    await db_del_share_from_table(id_user1, id_user0)
+    async with DatabaseBot(sts.db_name) as db:
+        await db.db_del_share_from_table(id_user1, id_user0)
 
     # Test share 
     #select_users_list3.append(id_user3)
