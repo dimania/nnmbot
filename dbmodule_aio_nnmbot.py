@@ -319,7 +319,7 @@ class DatabaseBot:
             return int(dict(res).get('tag'))
         else: return 0
 
-    async def db_add_share( field, share2users, id_user ):
+    async def db_add_share(self, field, share_list, id_user):
         ''' Add to user table users to whom share lists '''
         
         # From deepseeek
@@ -332,65 +332,117 @@ class DatabaseBot:
             current_list = json.loads(result[0]) if result and result[0] else []
             
             # Добавляем новые элементы (поддерживает как одиночные, так и множественные значения)
-            if isinstance(share2users, list):
-                current_list.extend(share2users)
+            if isinstance(share_list, list):
+                current_list.extend(share_list)
             else:
-                current_list.append(share2users)
+                current_list.append(share_list)
             
             # Обновляем запись в базе
-            cursor = await self.dbm.execute( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
+            await self.db_modify( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
                 (json.dumps(current_list, ensure_ascii=False), id_user) )
-            
-        except json.JSONDecodeError:
-            logging.error(f"Error in format data: {share2users}\n")   
-        finally:
             return True
-            #sts.connection.close()
-
-    #def remove_from_list(db_path, record_id, value_to_remove, remove_all=False)
-    async def db_del_share( field, users_to_remove, id_user ):
+        except json.JSONDecodeError:
+            logging.error(f"ADD SHARE: Error in format data: {share_list}\n")
+            return False   
+        
+    async def db_del_share(self, field, users_to_remove, id_user):
         '''Delete users from table to whom share lists '''
 
         try:
             # Получаем текущие данные
-            #logging.error(f"Run del: {users_to_remove}/{field}/{id_user} \n")
-            cursor = await self.dbm.execute.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+            logging.error(f"DELETE SHARE: {users_to_remove}/{field}/{id_user} \n")
+            cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
             result = await cursor.fetchone()
-            logging.error(f"Result list: {result}\n")
+            logging.debug(f"DELETE SHARE: Result shared list for delete: {result}\n")
+
+            users_to_remove=int(users_to_remove)
+            
             if not result or not result[0]:
                 return False
 
             current_list = json.loads(result[0])
-            #logging.error(f"Current list: {current_list}\n")
+            logging.debug(f"DELETE SHARE: Current list: {current_list}\n")
 
             new_list = [item for item in current_list if item != users_to_remove]
-            #logging.error(f"New list: {new_list}\n")
+            logging.debug(f"DELETE SHARE: New list: {new_list}\n")
 
             # Обновляем запись
-            cursor = await self.dbm.execute.execute( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
-                (json.dumps(new_list, ensure_ascii=False), id_user)
-            )
+            await self.db_modify( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
+                (json.dumps(new_list, ensure_ascii=False), id_user))
+
             return True
 
         except json.JSONDecodeError:
-            logging.error(f"Error in format data: {users_to_remove}\n") 
+            logging.error(f"DELETE SHARE: Error in format data: {users_to_remove}\n") 
             return False
-        finally:
-            return True
 
-    async def db_get_share( field, id_user ):
+async def db_get_share(self, field, id_user):
         '''Get share users '''
 
-        cursor = await self.dbm.execute.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
-        result = cursor.fetchone()
+        cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+        result = await cursor.fetchone()
         
         if not result or not result[0]:
             return False
 
         current_list = json.loads(result[0])
-        #logging.error(f"Current list: {current_list}\n")
+        #logging.debug(f"Current get share list: {current_list}\n")
         return current_list
     
+async def db_add_share_to_table(share_list, id_user):
+        ''' Complex add shares to table '''
+        
+        async with DatabaseBot(sts.db_name) as db:
+            # Exclude users not in DB
+            for id_cur_user in share_list:               
+                if not await db.db_exist_user(id_cur_user):
+                    share_list.remove(id_cur_user)
+                    logging.info(f"SHARE: User {id_cur_user} not exist in DB." )
+                    #print(f"User {id_cur_user} not exist in DB.")
+
+            # Exclude already exist share
+            exist_share = await db.db_get_share('share2users', id_user)            
+            if exist_share:                
+                for id_user_exist in exist_share:
+                    if id_user_exist in share_list:
+                        share_list.remove(id_user_exist)
+                        logging.info(f"SHARE: Share for user {id_user_exist}" )
+                        #print(f"Share for user {id_user_exist} already exist")                                    
+            # Add share to users in DB
+            if not share_list: # for test
+                logging.info(f"SHARE: Share list now empty for user: {id_user} already exist" )
+                #print(f"Share list is empty: {share_list}")
+                return False
+            
+            ret = await db.db_add_share( 'share2users', share_list, id_user )
+            logging.debug(f"SHARE: share2users add ret={ret} id_user={id_user} share_list={share_list}")
+            #print(f"ret={ret} id_user={id_user} share_list={share_list}")
+
+            # Add who share list to DB
+            if ret:
+                for id_user_u4s in share_list:                    
+                    ret = await db.db_add_share( 'users4share', id_user, id_user_u4s )
+                    logging.debug(f"SHARE: users4share add ret={ret} id_user_u4s={id_user_u4s}")
+                    #print(f"ret={ret} id_user_u4s={id_user_u4s}")
+                    if ret: 
+                        continue
+                    else:
+                        return False
+            else: 
+                return False
+            return True
+
+async def db_del_share_from_table(del_user, id_user):
+    '''Delete share from id_user to del_user'''
+
+    async with DatabaseBot(sts.db_name) as db:
+        rec_id = await db.db_del_share( 'share2users', del_user, id_user )
+        #if not rec_id: return False
+        rec_id = await db.db_del_share( 'users4share', id_user, del_user )
+        #if not rec_id: return False
+
+        return True
+
 # For test block task
 async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                         film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0):
