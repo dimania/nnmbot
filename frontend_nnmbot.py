@@ -640,12 +640,12 @@ async def main_frontend():
     async def bot_handler_nm_bot(event_bot):
         logging.debug(f"Get NewMessage event_bot: {event_bot}")
         menu_level = 0
-        #user = event_bot.message.peer_id.user_id
-        logging.info(f"LOGIN USER_ID:{event_bot.message.peer_id.user_id}")
+        #user = event_bot.message.peer_id.user_id        
         try:
             ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id)
+            logging.info(f"LOGIN USER_ID:{event_bot.message.peer_id.user_id}")
         except Exception as error:
-            logging.error(f"Error get user: {error}")
+            logging.error(f"Error get user: {error}\n For event={event_bot}")
             return
         
         if ret == sts.USER_NEW:     # New user
