@@ -319,6 +319,78 @@ class DatabaseBot:
             return int(dict(res).get('tag'))
         else: return 0
 
+    async def db_add_share( field, share2users, id_user ):
+        ''' Add to user table users to whom share lists '''
+        
+        # From deepseeek
+        try:
+            # Получаем текущий JSON
+            cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+            result = await cursor.fetchone()
+            
+            # Десериализация или создание нового списка
+            current_list = json.loads(result[0]) if result and result[0] else []
+            
+            # Добавляем новые элементы (поддерживает как одиночные, так и множественные значения)
+            if isinstance(share2users, list):
+                current_list.extend(share2users)
+            else:
+                current_list.append(share2users)
+            
+            # Обновляем запись в базе
+            cursor = await self.dbm.execute( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
+                (json.dumps(current_list, ensure_ascii=False), id_user) )
+            
+        except json.JSONDecodeError:
+            logging.error(f"Error in format data: {share2users}\n")   
+        finally:
+            return True
+            #sts.connection.close()
+
+    #def remove_from_list(db_path, record_id, value_to_remove, remove_all=False)
+    async def db_del_share( field, users_to_remove, id_user ):
+        '''Delete users from table to whom share lists '''
+
+        try:
+            # Получаем текущие данные
+            #logging.error(f"Run del: {users_to_remove}/{field}/{id_user} \n")
+            cursor = await self.dbm.execute.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+            result = await cursor.fetchone()
+            logging.error(f"Result list: {result}\n")
+            if not result or not result[0]:
+                return False
+
+            current_list = json.loads(result[0])
+            #logging.error(f"Current list: {current_list}\n")
+
+            new_list = [item for item in current_list if item != users_to_remove]
+            #logging.error(f"New list: {new_list}\n")
+
+            # Обновляем запись
+            cursor = await self.dbm.execute.execute( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
+                (json.dumps(new_list, ensure_ascii=False), id_user)
+            )
+            return True
+
+        except json.JSONDecodeError:
+            logging.error(f"Error in format data: {users_to_remove}\n") 
+            return False
+        finally:
+            return True
+
+    async def db_get_share( field, id_user ):
+        '''Get share users '''
+
+        cursor = await self.dbm.execute.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+        result = cursor.fetchone()
+        
+        if not result or not result[0]:
+            return False
+
+        current_list = json.loads(result[0])
+        #logging.error(f"Current list: {current_list}\n")
+        return current_list
+    
 # For test block task
 async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
                         film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0):
