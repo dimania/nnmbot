@@ -87,7 +87,8 @@ pattern_filter=r'(?:.*Фильм.*)|(?:.*Новинки.*)'
 #magnet_helper = 'https://ivan386.github.io/#'
 
 #ICU extension for case independet search  in DB if Not when set in None
-ICU_extension_lib = "/usr/lib64/sqlite3/libSqliteIcu.so"
+#defaul search in current dir
+ICU_extension_lib = "libsqliteicu.so"
 
 #Set logging level for bot
 #Possible value: NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL  

@@ -779,12 +779,12 @@ async def main_frontend():
     async def bot_handler_nm_bot(event_bot):
         logging.debug(f"Get NewMessage event_bot: {event_bot}")
         menu_level = 0
-        #user = event_bot.message.peer_id.user_id
-        logging.info(f"LOGIN USER_ID:{event_bot.message.peer_id.user_id}")
+        #user = event_bot.message.peer_id.user_id        
         try:
             ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id)
+            logging.info(f"LOGIN USER_ID:{event_bot.message.peer_id.user_id}")
         except Exception as error:
-            logging.error(f"Error get user: {error}")
+            logging.error(f"Error get user: {error}\n For event={event_bot}")
             return
         
         if ret == sts.USER_NEW:     # New user
@@ -1051,7 +1051,9 @@ async def main():
 
 sts.get_config()
 # Enable logging
-logging.basicConfig(level=sts.log_level, filename="fronend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
+
+filename=os.path.join(os.path.dirname(sts.logfile),'fronend_'+os.path.basename(sts.logfile))
+logging.basicConfig(level=sts.log_level, filename=filename, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
 logging.info("Start frontend bot.")
 
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')

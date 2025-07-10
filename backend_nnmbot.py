@@ -347,7 +347,8 @@ async def main():
 sts.get_config()
 
 # Enable logging
-logging.basicConfig(level=sts.log_level, filename="backend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
+filename=os.path.join(os.path.dirname(sts.logfile),'backend_'+os.path.basename(sts.logfile))
+logging.basicConfig(level=sts.log_level, filename=filename, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
 logging.info("--------------------------------------\nStart backend bot.")
 
 localedir = os.path.join(os.path.dirname(os.path.realpath(os.path.normpath(sys.argv[0]))), 'locales')
