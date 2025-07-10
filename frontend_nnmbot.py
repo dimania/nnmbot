@@ -38,7 +38,7 @@ def set_image(film_photo):
         file_photo.name = "image.jpg" 
         file_photo.seek(0)  # set cursor to the beginning        
     else:
-        file_photo='no_image.jpg' #FIXME A needed?
+        file_photo='no_image.jpg'
     logging.debug(f"File_photo:{file_photo}")
 
     return file_photo 
@@ -335,6 +335,9 @@ async def create_basic_menu(level, event):
             Button.inline(_("List Films tagged"), b"/bm_dwlist")
         ],
         [
+            Button.inline(_("List Shared Lists"), b"/bm_shared_list")
+        ],
+        [
             Button.inline(_("List Films tagged early"), b"/bm_dwearly")
         ],
         [
@@ -425,6 +428,30 @@ async def create_share_menu(event):
 
     await event.respond(_("**☣ Share list Films:**"), parse_mode='md', buttons=keyboard)
 
+async def create_share_list_menu(event):
+    ''' Create share lists menu for get shared lists'''
+
+    logging.debug("Create share lists buttons")
+    async with dbm.DatabaseBot(sts.db_name) as db:
+        share2users_list = await db.db_get_share( 'users4share', event.query.user_id )
+    bdata_id='VIEW_SHARE_LIST_USER_'
+    button=[]
+    if share2users_list:        
+        for share_user in share2users_list:
+            async with dbm.DatabaseBot(sts.db_name) as db:
+                rows = await db.db_list_users(id_user=share_user, active=None, rights=None )
+            user_name = dict(rows[0]).get('name_user')
+            bdata=bdata_id+str(share_user)
+            button.append([ Button.inline(user_name, bdata)])
+            message=_("Select user for view list")
+            await event.respond(message, buttons=button)
+        return True
+    else:
+        message = ("Nobody shared with you 😔")
+        await event.respond(message)
+        return False 
+    
+    
 async def create_choice_dialog(question, choice_buttons, event, level):
     ''' Create dialog for choice buttons with text question
         and run function when choice was 
@@ -891,7 +918,7 @@ async def main_frontend():
             @bot.on(events.NewMessage()) 
             async def search_handler(event_search):
                 logging.info(f"Get search string: {event_search.message.message}")
-                if (len(event_search.message.message)  < 3 ):
+                if len(event_search.message.message)  < 3:
                     await event_bot.respond(_("Search string very short - 3 chars min.:"))
                     bot.remove_event_handler(search_handler)
                     await create_basic_menu(menu_level, event_bot)
@@ -911,6 +938,13 @@ async def main_frontend():
         elif button_data == '/bm_share':
             # Go to Share menu           
             send_menu = sts.SHARE_MENU
+        elif button_data == '/bm_shared_list':
+            # View shared lists
+            res = await create_share_list_menu(event_bot)
+            if res:
+                send_menu = sts.NO_MENU
+            else:
+                send_menu = sts.BASIC_MENU
         elif button_data == '/sm_list':
             #List share
             await create_list_share(event_bot)
@@ -936,6 +970,17 @@ async def main_frontend():
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("User: ")+user_name+_(" Unshared"))
             send_menu = sts.SHARE_MENU
+        elif button_data.find('VIEW_SHARE_LIST_USER_', 0, 22) != -1:
+            # view shared user list
+            data = button_data
+            view_share_list_user = data.replace('VIEW_SHARE_LIST_USER_', '')
+            choice_buttons = {
+            "button1": [_("Card"), "CARD", query_tagged_records_by_one,[view_share_list_user, sts.SETTAG, event_bot]],
+            "button2": [_("List"), "LIST", query_tagged_records_list,[view_share_list_user, sts.SETTAG, event_bot],sts.BASIC_MENU],
+            "button3": [_("Cancel"), "HOME_MENU", home,[]]
+            }
+            await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
+            send_menu = sts.NO_MENU
         elif button_data == '/bm_cum':
             # Go to control users menu 
             send_menu = sts.CUSER_MENU
