@@ -509,7 +509,8 @@ async def create_add_share(event , level):
                     logging.debug(f"Get selected users:{users_id_list}")
                     
                     #FIXME Need get new id_user or not?
-                    ret = await dbm.db_add_share_to_table(users_id_list, id_user)
+                    async with dbm.DatabaseBot(sts.db_name) as db:
+                        ret = await db.db_add_share_to_table(users_id_list, id_user)
                     if ret:
                         text_reply=_("🏁............Done............🏁")
                     else: 
@@ -929,9 +930,9 @@ async def main_frontend():
             # Real remove share
             data = button_data
             del_share4user = data.replace('DEL_SHARE_USER_', '')
-            await dbm.db_del_share_from_table(del_share4user, id_user)
             async with dbm.DatabaseBot(sts.db_name) as db:
-                user_db = await dbm.db_exist_user(del_share4user)
+                await db.db_del_share_from_table(del_share4user, id_user)
+                user_db = await db.db_exist_user(del_share4user)
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("User: ")+user_name+_(" Unshared"))
             send_menu = sts.SHARE_MENU

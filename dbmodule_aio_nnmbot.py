@@ -376,7 +376,7 @@ class DatabaseBot:
             logging.error(f"DELETE SHARE: Error in format data: {users_to_remove}\n") 
             return False
 
-async def db_get_share(self, field, id_user):
+    async def db_get_share(self, field, id_user):
         '''Get share users '''
 
         cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
@@ -388,8 +388,8 @@ async def db_get_share(self, field, id_user):
         current_list = json.loads(result[0])
         #logging.debug(f"Current get share list: {current_list}\n")
         return current_list
-    
-async def db_add_share_to_table(share_list, id_user):
+        
+    async def db_add_share_to_table(self, share_list, id_user):
         ''' Complex add shares to table '''
         
         async with DatabaseBot(sts.db_name) as db:
@@ -432,16 +432,16 @@ async def db_add_share_to_table(share_list, id_user):
                 return False
             return True
 
-async def db_del_share_from_table(del_user, id_user):
-    '''Delete share from id_user to del_user'''
+    async def db_del_share_from_table(self, del_user, id_user):
+        '''Delete share from id_user to del_user'''
 
-    async with DatabaseBot(sts.db_name) as db:
-        rec_id = await db.db_del_share( 'share2users', del_user, id_user )
-        #if not rec_id: return False
-        rec_id = await db.db_del_share( 'users4share', id_user, del_user )
-        #if not rec_id: return False
+        async with DatabaseBot(sts.db_name) as db:
+            rec_id = await db.db_del_share( 'share2users', del_user, id_user )
+            #if not rec_id: return False
+            rec_id = await db.db_del_share( 'users4share', id_user, del_user )
+            #if not rec_id: return False
 
-        return True
+            return True
 
 # For test block task
 async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
