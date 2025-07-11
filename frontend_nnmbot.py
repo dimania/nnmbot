@@ -431,13 +431,13 @@ async def create_share_menu(event):
 async def create_share_list_menu(event):
     ''' Create share lists menu for get shared lists'''
 
-    logging.debug("Create share lists buttons")
+    logging.debug("Create share users buttons")
     async with dbm.DatabaseBot(sts.db_name) as db:
-        share2users_list = await db.db_get_share( 'users4share', event.query.user_id )
+        users_list = await db.db_get_share( 'users4share', event.query.user_id )
     bdata_id='VIEW_SHARE_LIST_USER_'
     button=[]
-    if share2users_list:        
-        for share_user in share2users_list:
+    if users_list:        
+        for share_user in users_list:
             async with dbm.DatabaseBot(sts.db_name) as db:
                 rows = await db.db_list_users(id_user=share_user, active=None, rights=None )
             user_name = dict(rows[0]).get('name_user')
@@ -447,10 +447,9 @@ async def create_share_list_menu(event):
             await event.respond(message, buttons=button)
         return True
     else:
-        message = ("Nobody shared with you 😔")
+        message = _("Nobody shared with you 😔")
         await event.respond(message)
         return False 
-    
     
 async def create_choice_dialog(question, choice_buttons, event, level):
     ''' Create dialog for choice buttons with text question
@@ -757,8 +756,7 @@ async def home():
 
 async def main_frontend():
     ''' Loop for bot connection '''
-    
-    
+        
     # First run check db for new Films and publish in Channel
     await publish_all_new_films()
     
@@ -960,7 +958,7 @@ async def main_frontend():
         elif button_data == '/sm_bbm':
             # Back to basic menu form share menu
             send_menu = sts.BASIC_MENU
-        elif button_data.find('DEL_SHARE_USER_', 0, 15) != -1:
+        elif 'DEL_SHARE_USER_' in button_data:
             # Real remove share
             data = button_data
             del_share4user = data.replace('DEL_SHARE_USER_', '')
@@ -970,8 +968,8 @@ async def main_frontend():
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("User: ")+user_name+_(" Unshared"))
             send_menu = sts.SHARE_MENU
-        elif button_data.find('VIEW_SHARE_LIST_USER_', 0, 22) != -1:
-            # view shared user list
+        elif 'VIEW_SHARE_LIST_USER_' in button_data:
+            # view shared list of user 
             data = button_data
             view_share_list_user = data.replace('VIEW_SHARE_LIST_USER_', '')
             choice_buttons = {
@@ -991,7 +989,7 @@ async def main_frontend():
             # Approve waiting users
             await query_wait_users(event_bot)
             send_menu = sts.CUSER_MENU
-        elif button_data.find('ENABLE', 0, 6) != -1:
+        elif 'ENABLE' in button_data:
             data = button_data
             id_user_approve = data.replace('ENABLE', '') 
             # Approve waiting users
@@ -1012,7 +1010,7 @@ async def main_frontend():
             # List user for select 4 delete
             await query_all_users(event_bot,'DELETE',_('Select user for delete:'))
             send_menu = sts.CUSER_MENU   
-        elif button_data.find('DELETE', 0, 6) != -1:
+        elif 'DELETE' in button_data:
             # Get user for delete
             data = button_data
             id_user_delete = data.replace('DELETE', '') #FIXME change id_user_delete id_user
@@ -1028,7 +1026,7 @@ async def main_frontend():
             # Change rights user
             await query_all_users(event_bot,'RIGHTS',_('Select user for change rights:'))
             send_menu = sts.NO_MENU
-        elif button_data.find('RIGHTS', 0, 6) != -1:
+        elif 'RIGHTS' in button_data:
             data = button_data
             id_user = data.replace('RIGHTS', '')
             logging.info(f"Change rights for user={id_user}")
@@ -1037,7 +1035,7 @@ async def main_frontend():
             user_name=dict(user_db[0]).get('name_user')
             await event_bot.respond(_("Change righst for user: ")+user_name)
             send_menu = sts.CURIGHTS_MENU
-        elif button_data.find('/cr_ro', 0, 7) != -1:
+        elif '/cr_ro' in button_data:
             #Change to RO
             data = button_data
             id_user = data.replace('/cr_ro', '')
@@ -1045,7 +1043,7 @@ async def main_frontend():
                 await db.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ )
             logging.info(f"Change rights RO for user={id_user}")
             send_menu = sts.CUSER_MENU
-        elif button_data.find('/cr_rw', 0, 7) != -1:
+        elif '/cr_rw' in button_data:
             #Change to RW
             data = button_data
             id_user = data.replace('/cr_rw', '')
@@ -1057,7 +1055,7 @@ async def main_frontend():
             # Block/Unblock user
             await query_all_users(event_bot,'BLOCK_UNBLOCK',_('Select user for block/unblock:'))
             send_menu = sts.NO_MENU
-        elif button_data.find('BLOCK_UNBLOCK', 0,13 ) != -1:
+        elif 'BLOCK_UNBLOCK' in button_data:
             data = button_data
             id_user = data.replace('BLOCK_UNBLOCK', '')
             async with dbm.DatabaseBot(sts.db_name) as db:
