@@ -969,7 +969,7 @@ async def main_frontend():
                 await db.db_del_share_from_table(del_share4user, id_user)
                 user_db = await db.db_exist_user(del_share4user)
             user_name=dict(user_db[0]).get('name_user')
-            await event_bot.respond(_("User: ")+user_name+_(" Unshared"))
+            await event_bot.respond(_("Share to user: ")+user_name+_(" Unshared"))
             send_menu = sts.SHARE_MENU
         elif 'VIEW_SHARE_LIST_USER_' in button_data:
             # view shared list of user 
@@ -1069,8 +1069,8 @@ async def main_frontend():
                 logging.info(f"Unblock user={id_user}")
                 async with dbm.DatabaseBot(sts.db_name) as db:
                     await db.db_ch_rights_user( id_user, sts.USER_ACTIVE, sts.USER_READ_WRITE )
-                    user_db = await db.db_exist_user(id_user_approve)
                 await event_bot.respond(_("User: ")+user_name+_(" Unblocked"))
+                send_menu = sts.CUSER_MENU
             else:
                 logging.info(f"Block user={id_user}")
                 async with dbm.DatabaseBot(sts.db_name) as db:
