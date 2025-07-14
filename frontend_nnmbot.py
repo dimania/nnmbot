@@ -178,7 +178,7 @@ async def publish_new_film( idf ):
                 buttons=buttons_film, parse_mode="html" )
     except errors.FloodWaitError as e:
         logging.info(f"Have to sleep {e.seconds} seconds")
-        asyncio.sleep(e.seconds)
+        await asyncio.sleep(e.seconds)
 
     logging.debug(f"Send new film Message:{send_msg}")
 
@@ -294,14 +294,14 @@ async def send_lists_records( rows, num_per_message, event, search=False ):
                     await event.respond(message, parse_mode='html', link_preview=0)
                 except errors.FloodWaitError as e:
                     logging.info(f"Have to sleep {e.seconds} seconds")
-                    asyncio.sleep(e.seconds)
+                    await asyncio.sleep(e.seconds)
                 message=""
         if i%num_per_message:
             try: 
                 await event.respond(message, parse_mode='html', link_preview=0) 
             except errors.FloodWaitError as e:
                     logging.info(f"Have to sleep {e.seconds} seconds")
-                    asyncio.sleep(e.seconds)
+                    await asyncio.sleep(e.seconds)
     else:
         message = _("😔 No records")
         await event.respond(message, parse_mode='html', link_preview=0)
