@@ -6,11 +6,11 @@
 
 
 from datetime import datetime
+import json
 import logging
 import os.path
 import asyncio
 import aiosqlite
-import json
 
 import settings as sts
 
@@ -103,7 +103,6 @@ class DatabaseBot:
                 await asyncio.sleep(0.1)                  
             except aiosqlite.IntegrityError as error:               
                 logging.error(f"DB Modify Error is: {error}")
-                #FIXME 
                 return -1            
         else: 
             logging.error(f"Error MODIFY data in DB! Retries pass:{i}")
@@ -194,7 +193,7 @@ class DatabaseBot:
         if sts.ICU_extension_lib and os.path.isfile(sts.ICU_extension_lib):
             await self.dbm.enable_load_extension(True)
             await self.dbm.load_extension(sts.ICU_extension_lib)
-            
+
         cursor = await self.dbm.execute(
             "SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, id FROM Films \
                 WHERE name LIKE ? COLLATE NOCASE", (str_search,))
