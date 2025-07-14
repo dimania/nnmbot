@@ -335,7 +335,7 @@ async def create_basic_menu(level, event):
             Button.inline(_("List Films tagged"), b"/bm_dwlist")
         ],
         [
-            Button.inline(_("List Shared Lists"), b"/bm_shared_list")
+            Button.inline(_("Shared Lists"), b"/bm_share")
         ],
         [
             Button.inline(_("List Films tagged early"), b"/bm_dwearly")
@@ -413,6 +413,9 @@ async def create_share_menu(event):
     logging.debug("Create share buttons")
     keyboard = [
         [
+            Button.inline(_("View users lists"), b"/bm_shared_list")
+        ],
+        [
             Button.inline(_("List Share"), b"/sm_list")
         ],
         [
@@ -443,7 +446,7 @@ async def create_share_list_menu(event):
             user_name = dict(rows[0]).get('name_user')
             bdata=bdata_id+str(share_user)
             button.append([ Button.inline(user_name, bdata)])
-            message=_("Select user for view list")
+            message=_("Select user for view list:")
             await event.respond(message, buttons=button)
         return True
     else:
@@ -570,10 +573,10 @@ async def create_remove_share(event):
         for share_user in share2users_list:
             async with dbm.DatabaseBot(sts.db_name) as db:
                 rows = await db.db_list_users(id_user=share_user, active=None, rights=None )
-            user_name = dict(rows[0]).get('name_user')
+            user_name = '👤 '+dict(rows[0]).get('name_user')
             bdata=bdata_id+str(share_user)
             button.append([ Button.inline(user_name, bdata)])
-            message=_("Select user to remove share")
+            message=_("Select user to remove share:")
             await event.respond(message, buttons=button)
     else:
         message = _(".....No records.....")
@@ -592,7 +595,7 @@ async def create_list_share(event):
         for share_user in share2users_list:
             async with dbm.DatabaseBot(sts.db_name) as db:
                 rows = await db.db_list_users(id_user=share_user, active=None, rights=None )
-            user_name = dict(rows[0]).get('name_user')
+            user_name = '👤 '+dict(rows[0]).get('name_user')
             message=message+f"{user_name}\n"
         await event.respond(message)
     else:
@@ -681,7 +684,7 @@ async def query_all_users(event, bdata_id, message):
             date = dt.strftime('%d-%m-%y %H:%M')
             logging.info(f"Get user username={user_name} status={status} date={date}",)
             bdata=bdata_id+id_user
-            button.append([ Button.inline(user_name+' '+status+' '+date , bdata)])
+            button.append([ Button.inline('👤 '+user_name+' '+status+' '+date , bdata)])
         await event.respond(message, buttons=button)
     else:
         message = _(".....No records.....")
@@ -917,7 +920,7 @@ async def main_frontend():
             async def search_handler(event_search):
                 logging.info(f"Get search string: {event_search.message.message}")
                 if len(event_search.message.message)  < 3:
-                    await event_bot.respond(_("Search string very short - 3 chars min.:"))
+                    await event_bot.respond(_("Search string very short - 3 chars min."))
                     bot.remove_event_handler(search_handler)
                     await create_basic_menu(menu_level, event_bot)
                     #send_menu =sts.BASIC_MENU
