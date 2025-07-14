@@ -25,11 +25,6 @@ class DatabaseBot:
         self.dbm.row_factory = aiosqlite.Row
         await self.dbm.execute("PRAGMA foreign_keys = ON")
         await self.dbm.commit()
-        #TODO move load extension only for search fnction
-        if sts.ICU_extension_lib and os.path.isfile(sts.ICU_extension_lib):
-            await self.dbm.enable_load_extension(True)
-            await self.dbm.load_extension(sts.ICU_extension_lib)
-
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
@@ -195,6 +190,11 @@ class DatabaseBot:
     async def db_search_list(self, str_search):
         ''' Search in db '''
         str_search = '%'+str_search+'%'
+        
+        if sts.ICU_extension_lib and os.path.isfile(sts.ICU_extension_lib):
+            await self.dbm.enable_load_extension(True)
+            await self.dbm.load_extension(sts.ICU_extension_lib)
+            
         cursor = await self.dbm.execute(
             "SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, id FROM Films \
                 WHERE name LIKE ? COLLATE NOCASE", (str_search,))
