@@ -727,9 +727,9 @@ async def query_user_tag_film(event, idf, id_usr):
     if isinstance(event, events.CallbackQuery.Event):
         await event.answer(_('Film added to you list'), alert=True)
     if isinstance(event, events.NewMessage.Event):
-            await event.delete()
-            await event.reply(_('Film added to you list'))
-            await asyncio.sleep(1)
+        await event.delete()
+        await event.reply(_('Film added to you list'))
+        await asyncio.sleep(1)
             
 async def add_new_user(event):
     '''
@@ -782,12 +782,12 @@ async def main_frontend():
         
         button_data = event.data.decode()
         if button_data.find('XX', 0, 2) != -1:
-           # Add to Film to DB 
-           data = button_data
-           data = data.replace('XX', '')
-           logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
-           await query_user_tag_film(event, data, event.query.user_id)
-           raise StopPropagation
+            # Add to Film to DB 
+            data = button_data
+            data = data.replace('XX', '')
+            logging.info(f"Button 'Add...' pressed data={button_data} write {data}")
+            await query_user_tag_film(event, data, event.query.user_id)
+            raise StopPropagation
 
     # Handle messages from backend as inline_query
     @bot.on(events.InlineQuery(users=sts.backend_user, pattern=r'PUBLISH#[:digital:]*'))
