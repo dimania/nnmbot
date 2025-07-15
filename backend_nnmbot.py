@@ -1,9 +1,9 @@
-
-# Telegram Bot for filter films from NNMCLUB channel
-# version 0.5
-# Module backend_nnmbot.py listen NNMCLUB channel,
-# filter films and write to database
-#
+'''
+Telegram Bot for filter films from NNMCLUB channel
+version 0.6
+Module backend_nnmbot.py listen NNMCLUB channel,
+Filter films and write to database
+'''
 
 import io
 import re

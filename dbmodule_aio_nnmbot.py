@@ -1,9 +1,8 @@
-# Telegram Bot for filter films from NNMCLUB channel
-# version 0.5
-# Module dbmodule_nnmbot.py use aiosqlite Dbatabase functions  
-#
-#
-
+'''
+ Telegram Bot for filter films from NNMCLUB channel
+ version 0.6
+ Module dbmodule_nnmbot.py use aiosqlite Dbatabase functions  
+'''
 
 from datetime import datetime
 import json

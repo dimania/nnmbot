@@ -1,12 +1,13 @@
-# Telegram Bot for filter films from NNMCLUB channel
-# version 0.5
-# Module settings.py Set internal variables
-# and constants, get global configs from file myconfig.py
-#
-#
+'''
+ Telegram Bot for filter films from NNMCLUB channel
+ version 0.6
+ Module settings.py Set internal variables
+ and constants, get global configs from file myconfig.py
+'''
 #
 #!!!!!!!! Replace with you config file here !!!!!!!
 # replace myconfig with config by example
+
 
 import re
 import os

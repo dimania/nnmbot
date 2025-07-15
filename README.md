@@ -18,6 +18,7 @@ Bot получает описание фильма с сайта https://nnmclub
 * Просматривать список добавленных фильмов.
 * Очищать список добавленных фильмов.
 * Просматривать ранее добавленные и очищенные фильмы.
+* Делиться своим списком с другими пользователями
 * Искать фильмы в базе данных.
 * Получить информацию о базе данных.
 
@@ -52,7 +53,7 @@ Bot получает описание фильма с сайта https://nnmclub
 Для работы Bot(а) требуется:
 1. Получить на сайте [Telegram](https://my.telegram.org) api_id и api_hash
 2. Зарегистрировать в Telegram через FatherBot нового Bot(a) и получить bot_token, изменить у бота режим /setprivacy на DISABLED
-3. Создать новый канал куда будут пересылаться сообщения. Если хотите в конфигурационном файле указывать этот канал по имени, то сделайте канал публичным (public).
+3. Создать новый канал, куда будут пересылаться сообщения. Если хотите в конфигурационном файле указывать этот канал по имени, то сделайте канал публичным (public).
 4. Получить на сайте [Kinopoisk API Unofficial](https://kinopoiskapiunofficial.tech/) API KEY (500 запросов в сутки бесплатно) 
 5. Внести настройки в конфигурационный файл *config.py*
 6. Изменить имя подгружаемого конфигурационного файла в файле *settings.py*   
@@ -78,6 +79,7 @@ New users can apply for registration, after reviewing the application by the adm
 * View the list of added movies.
 * Clear the list of added movies.
 * View previously added and cleared movies.
+* Share you list to other users
 * Search movies in the database.
 * Get information about the database.
 
