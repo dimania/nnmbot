@@ -427,7 +427,7 @@ async def create_share_menu(event):
         ]
     ]
 
-    await event.respond(_("**☣ Share list Films:**"), parse_mode='md', buttons=keyboard)
+    await event.respond(_("**☣ Shared lists:**"), parse_mode='md', buttons=keyboard)
 
 async def create_share_list_menu(event):
     ''' Create share lists menu for get shared lists'''
