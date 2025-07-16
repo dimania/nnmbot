@@ -349,9 +349,6 @@ async def create_basic_menu(level, event):
         ],
         [
             Button.inline(_("Search Films in database "), b"/bm_search")
-        ],
-        [
-            Button.inline(_("Share you tagget Films "), b"/bm_share")
         ]
     ]
 
