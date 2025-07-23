@@ -1125,7 +1125,7 @@ async def main():
 sts.get_config()
 # Enable logging
 
-filename=os.path.join(os.path.dirname(sts.logfile),'fronend_'+os.path.basename(sts.logfile))
+filename=os.path.join(os.path.dirname(sts.logfile),'frontend_'+os.path.basename(sts.logfile))
 logging.basicConfig(level=sts.log_level, filename=filename, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
 logging.info("Start frontend bot.")
 
