@@ -325,8 +325,9 @@ async def main_backend():
         
         try:
             # Send inline query message to frondend bot for publish Film
-            result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
-            logging.debug(f"Send inline_query:{result}")
+            if sts.SHOW_DUPLICATE_FILMS:
+                result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
+                logging.debug(f"Send inline_query:{result}")
         except Exception as error:
             logging.warning(f'Cant send inline_query to bot. Ignore this because frondend not running:\n {error}')
        

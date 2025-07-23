@@ -82,7 +82,7 @@ use_proxy = 0 # if use proxy set to 1
 #Pattern for filter messages from channelId 
 pattern_filter=r'(?:.*Фильм.*)|(?:.*Новинки.*)'
 
-#Helper for open magnet links in telegram. if commented out then 
+#Helper for open magnet links in telegram. if comment out then 
 # magnet link not will show  
 #magnet_helper = 'https://ivan386.github.io/#'
 
@@ -96,3 +96,7 @@ log_level='INFO'
 
 # Set lang for dialogs. Possible values ru,en 
 Lang='en'
+
+# Show or not dublicate Films: True -show, False - don't show
+# Defaut True
+SHOW_DUPLICATE_FILMS = True

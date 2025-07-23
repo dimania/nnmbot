@@ -84,6 +84,7 @@ def get_config(config=cfg):
     global ses_bot_str
     global ukp_api_key
     global ukp_api_url
+    global SHOW_DUPLICATE_FILMS
      
 
     cursor = None
@@ -142,6 +143,10 @@ def get_config(config=cfg):
         if 'ICU_extension_lib' in vars(config):
             ICU_extension_lib = config.ICU_extension_lib
         else: ICU_extension_lib = None
+
+        if 'SHOW_DUPLICATE_FILMS' in vars(config):
+            SHOW_DUPLICATE_FILMS = config.SHOW_DUPLICATE_FILMS
+        else: SHOW_DUPLICATE_FILMS = True
 
         if use_proxy:
             proxies = config.proxies
