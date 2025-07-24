@@ -336,8 +336,9 @@ async def main_backend():
 
 async def main():
     # main()
+    print("Start backend Bot...")
     async with dbm.DatabaseBot(sts.db_name) as db:
-        print('Create db if not exist.')
+        logging.debug("Create db if not exist.")
         await db.db_create()
 
     await main_backend()    

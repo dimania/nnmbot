@@ -802,6 +802,7 @@ async def main_frontend():
         raise StopPropagation
 
     # Handle messages in bot chat
+    #FIXME try use only bot chat 
     @bot.on(events.NewMessage())
     async def bot_handler_nm_bot(event_bot):
         logging.debug(f"Get NewMessage event_bot: {event_bot}")
@@ -811,7 +812,7 @@ async def main_frontend():
             ret = await check_user(PeerChannel(Channel_my_id), event_bot.message.peer_id.user_id)
             logging.info(f"LOGIN USER_ID:{event_bot.message.peer_id.user_id}")
         except Exception as error:
-            logging.error(f"Error get user: {error}\n For event={event_bot}")
+            logging.error(f"Error get user - ignore message: {error}\n")
             return
         
         if ret == sts.USER_NEW:     # New user
