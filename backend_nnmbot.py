@@ -316,6 +316,7 @@ async def main_backend():
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
                         description, image_nnm_url, image_msg, sts.PUBL_UPD)
             logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
+            if sts.SHOW_DUPLICATE_FILMS: return client                
         else:
             # Add new film to DB
             async with dbm.DatabaseBot(sts.db_name) as db:
@@ -324,10 +325,9 @@ async def main_backend():
             logging.info(f"Film not exist in db - add and send id={rec_id}, name={film_name} id_kpsk={id_kpsk} id_imdb={id_imdb} id_nnm:{id_nnm}\n")
         
         try:
-            # Send inline query message to frondend bot for publish Film
-            if sts.SHOW_DUPLICATE_FILMS:
-                result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
-                logging.debug(f"Send inline_query:{result}")
+            # Send inline query message to frondend bot for publish Film            
+            result = await client.inline_query(sts.bot_name,"PUBLISH#"+str(rec_id))
+            logging.debug(f"Send inline_query:{result}")
         except Exception as error:
             logging.warning(f'Cant send inline_query to bot. Ignore this because frondend not running:\n {error}')
        
