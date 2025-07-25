@@ -316,7 +316,7 @@ async def main_backend():
                         id_kpsk, id_imdb, mag_link, section, genres, kpsk_r, imdb_r, \
                         description, image_nnm_url, image_msg, sts.PUBL_UPD)
             logging.info(f"Dublicate in DB: Film id={rec_id} id_nnm={id_nnm} exist in db - update to new release.")
-            if sts.SHOW_DUPLICATE_FILMS: return client                
+            if not sts.SHOW_DUPLICATE_FILMS: return client                
         else:
             # Add new film to DB
             async with dbm.DatabaseBot(sts.db_name) as db:
