@@ -1,5 +1,5 @@
 myconfig.py
-*database*.db
+*.db*
 *.session
 test/*
 test*
@@ -8,3 +8,6 @@ test*
 __pycache__/*
 *swp
 *.old
+.venv/*
+.idea
+.vscode

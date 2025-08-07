@@ -1,0 +1,738 @@
+'''
+ Telegram Bot for filter films from NNMCLUB channel
+ version 0.6
+ Module dbmodule_nnmbot.py use aiosqlite Dbatabase functions  
+'''
+
+from datetime import datetime
+import json
+import logging
+import os.path
+import asyncio
+import aiosqlite
+
+import settings as sts
+
+class DatabaseBot:
+
+    def __init__(self, db_file):
+        self.db_file = db_file
+        self.lock = asyncio.Lock()
+
+    async def __aenter__(self):
+        self.dbm = await aiosqlite.connect(self.db_file)
+        self.dbm.row_factory = aiosqlite.Row
+        await self.dbm.execute("PRAGMA foreign_keys = ON")
+        await self.dbm.commit()
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.dbm.close()
+   
+    async def db_create( self ):
+        ''' Creta DB if not exist '''
+
+        # Create basic table Films
+        await self.dbm.execute('''PRAGMA journal_mode=WAL''')  # Активация WAL
+
+        await self.dbm.execute('''
+        CREATE TABLE IF NOT EXISTS Films (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_nnm TEXT,
+        id_kpsk TEXT,
+        id_imdb TEXT,
+        nnm_url TEXT,
+        name TEXT,
+        mag_link TEXT DEFAULT NULL,
+        section  TEXT DEFAULT NULL,
+        genre  TEXT DEFAULT NULL,
+        rating_kpsk TEXT DEFAULT NULL,
+        rating_imdb TEXT DEFAULT NULL,
+        description TEXT DEFAULT NULL,
+        image_nnm_url TEXT NULL,
+        image_nnm BLOB DEFAULT NULL,
+        publish INTEGER DEFAULT 0,
+        date TEXT
+        )
+        ''')
+        # Ctreate table Users
+        await self.dbm.execute('''
+        CREATE TABLE IF NOT EXISTS Users (
+        id_user TEXT NOT NULL PRIMARY KEY,
+        name_user TEXT NOT NULL,
+        date TEXT NOT NULL,
+        active INTEGER DEFAULT 0,
+        rights INTEGER DEFAULT 0,
+        setings TEXT DEFAULT NULL,
+        share2users TEXT DEFAULT NULL, 
+        users4share TEXT DEFAULT NULL 
+        )
+        ''')
+        # Create table Ufilms - films tagged users
+        await self.dbm.execute('''
+        CREATE TABLE IF NOT EXISTS Ufilms (
+        ufilms_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_user TEXT NOT NULL,
+        id_Films  TEXT NOT NULL,
+        date  TEXT NOT NULL,
+        tag INTEGER DEFAULT 0,
+        FOREIGN KEY (id_user)
+        REFERENCES Users (id_user)
+            ON DELETE CASCADE
+        )
+        ''')
+
+        await self.dbm.commit()
+
+        return None
+
+    async def db_modify(self, *args):
+        ''' Update or insert data in db - common function'''
+
+        global FAIL_MODIFY #for test raice condition - remove in prod
+        for i in range(sts.RETRIES_DB_LOCK):
+            try:
+                async with self.lock:
+                    async with self.dbm.execute(args[0],args[1]) as cursor:
+                        await self.dbm.commit()
+                        logging.debug(f"SQL MODIFY: result={str(cursor.rowcount)}" )
+                        return cursor
+            except aiosqlite.OperationalError as error:        
+                logging.info(f"Retry modify records in db:{i} Error:{error}") 
+                await asyncio.sleep(0.1)                  
+            except aiosqlite.IntegrityError as error:               
+                logging.error(f"DB Modify Error is: {error}")
+                return -1            
+        else: 
+            logging.error(f"Error MODIFY data in DB! Retries pass:{i}")
+            FAIL_MODIFY = FAIL_MODIFY + 1  #for test raice condition - remove in prod
+            return None           
+            
+    async def db_add_film(self, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 ):
+        ''' Add new Film to database '''
+        cur_date = datetime.now()
+
+        cursor = await self.db_modify("INSERT INTO Films (id_nnm, nnm_url, name, id_kpsk, id_imdb, \
+                              mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, image_nnm, \
+                              publish, date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
+                                (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url,\
+                                        image_nnm, publish, cur_date ))
+        if cursor: 
+            return str(cursor.lastrowid)
+        else:
+            return None
+                        
+    async def db_update_film(self, idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
+        ''' Update Film in database '''
+        cur_date = datetime.now()
+      
+        cursor = await self.db_modify("UPDATE Films SET id_nnm=?, nnm_url=?, name=?, id_kpsk=?, id_imdb=?, \
+                        mag_link=?, section=?, genre=?, rating_kpsk=?, rating_imdb=?, \
+                            description=?, image_nnm_url=?, image_nnm=?, publish=?, date=? WHERE id = ?", \
+                            (id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, \
+                                film_section, film_genre, film_rating_kpsk, film_rating_imdb, \
+                                    film_description, image_nnm_url, image_nnm, publish, cur_date, idf ))
+        if cursor:              
+            logging.debug(f"SQL UPDATE FILM: id={idf} result={str(cursor.rowcount)}" )
+            return str(cursor.rowcount)
+        else:
+            return None
+
+    async def db_exist_Id(self, id_kpsk, id_imdb):
+        ''' Test exist Film in database '''
+        if id_kpsk == 0: 
+            cursor = await self.dbm.execute("SELECT id FROM Films WHERE id_imdb = ?", (id_imdb,))
+        elif id_imdb == 0:
+            cursor = await self.dbm.execute("SELECT id FROM Films WHERE id_kpsk = ?", (id_kpsk,))
+        else:
+            cursor = await self.dbm.execute("SELECT id FROM Films WHERE id_kpsk = ? OR id_imdb = ?", (id_kpsk, id_imdb))
+        
+        return await cursor.fetchone()
+
+    async def db_info(self, id_user):
+        ''' Get Info database: all records, tagged records and tagged early records for user '''        
+        cursor = await self.dbm.execute("SELECT COUNT(*) FROM Films UNION ALL SELECT COUNT(*) FROM Ufilms \
+            WHERE tag = ? AND id_user = ? UNION ALL SELECT COUNT(*) FROM Ufilms \
+                WHERE tag = ? AND id_user = ?", (sts.SETTAG, id_user, sts.UNSETTAG, id_user,) )
+        
+        return await cursor.fetchall()
+
+    async def db_list_4_publish(self):
+        ''' List records for publish on Channel form database '''
+    
+        cursor = await self.dbm.execute("SELECT id FROM Films WHERE publish = ? OR publish = ?", (sts.PUBL_NOT, sts.PUBL_UPD) )
+        return await cursor.fetchall()
+
+    async def db_update_publish(self, idf ):
+        ''' Update record to PUBL_YES when publish on Channel  '''
+        
+        cursor = await self.db_modify("UPDATE Films SET publish = ? WHERE id = ?", (sts.PUBL_YES, idf,))
+        if cursor:                          
+            return str(cursor.rowcount)
+        else:
+            return None
+        
+    async def db_list_all(self):
+        ''' List all records form database '''
+        cursor = await self.dbm.execute("SELECT name, nnm_url, mag_link FROM Films")
+        return  await cursor.fetchall()
+
+    async def db_list_all_id(self):
+        ''' List only id all records from database '''
+        cursor = await self.dbm.execute("SELECT id FROM Films")
+        return await cursor.fetchall()
+
+    async def db_search_list(self, str_search):
+        ''' Search in db '''
+        str_search = '%'+str_search+'%'
+        
+        if sts.ICU_extension_lib and os.path.isfile(sts.ICU_extension_lib):
+            await self.dbm.enable_load_extension(True)
+            await self.dbm.load_extension(sts.ICU_extension_lib)
+
+        cursor = await self.dbm.execute(
+            "SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url, id FROM Films \
+                WHERE name LIKE ? COLLATE NOCASE", (str_search,))
+        return await cursor.fetchall()
+
+    async def db_search_id(self, str_search): 
+        ''' Search in db '''
+        str_search = '%'+str_search+'%'
+        cursor = await self.dbm.execute(
+            "SELECT id FROM Films WHERE name LIKE ? COLLATE NOCASE", (str_search,))
+        return await cursor.fetchall()
+
+    async def db_add_user(self, id_user, name_user):
+        ''' Add new user to database '''
+        cur_date=datetime.now()
+        #FIXME need another analize return values
+        cursor = await self.db_modify("INSERT INTO Users (id_user, name_user, date) VALUES(?, ?, ?)",\
+            (id_user, name_user, cur_date,))
+        if cursor == -1:           
+            logging.error("User already exist in BD\n")            
+            return 1
+        if cursor is None:             
+            return None
+        return 0           
+
+    async def db_del_user(self, id_user):
+        '''Delete user from database and user tagged films'''
+        cursor = await self.dbm.execute("DELETE FROM Users WHERE id_user = ?", (id_user,))
+        await self.dbm.commit()
+        return await cursor.fetchall()
+
+    async def db_exist_user(self, id_user):
+        ''' Test exist User in database '''
+        cursor = await self.dbm.execute("SELECT active,rights,name_user FROM Users WHERE id_user = ?", (id_user,))
+        return await cursor.fetchall()
+        
+    async def db_ch_rights_user(self, id_user, active, rights):
+        ''' Change rights and status (active or blocked) for user '''
+        
+        cursor = await self.db_modify("UPDATE Users SET active=?, rights=? WHERE id_user = ?", (active,rights,id_user))
+        if cursor:    
+            logging.info(f"SQL UPDATE: id_user={id_user} active={active}, rights={rights} result={str(cursor.rowcount)}" )                      
+            return str(cursor.rowcount)
+        else:
+            return None
+                
+    async def db_list_users(self, id_user=None, active=None, rights=None ):
+        '''List users in database '''
+        
+        if id_user is not None and active is not None and rights is not None:
+            cursor = await self.dbm.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE id_user = ? AND active = ? AND rights = ?", (id_user, active, rights,))
+        elif id_user is not None and active is not None:
+            cursor = await self.dbm.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE id_user = ? AND active = ?", (id_user, active,))
+        elif id_user is not None and rights is not None:
+            cursor = await self.dbm.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE id_user = ? AND rights = ?", (id_user, rights,))
+        elif active is not None and rights is not None:
+            cursor = await self.dbm.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE active = ? AND rights = ?", (active, rights,))
+        elif id_user is not None:
+            cursor = await self.dbm.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE id_user = ?", (id_user,))
+        elif active is not None:
+            cursor = await self.dbm.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE active = ?", (active,))
+        elif rights is not None:
+            cursor = await self.dbm.execute("SELECT active,rights,name_user,id_user,date FROM Users WHERE rights = ?", (rights,))
+        else:            
+            cursor = await self.dbm.execute("SELECT active,rights,name_user,id_user,date FROM Users")
+
+        rows = await cursor.fetchall()
+        logging.debug(f"SELECT USERS: id_user={id_user} active={active}, rights={rights} result={len(rows)}" )        
+        return rows
+        
+    async def db_list_tagged_films(self,  id_user=None, tag=sts.SETTAG):
+        ''' List only records with set tag '''
+        cursor = await self.dbm.execute("SELECT name,nnm_url,mag_link FROM Films WHERE id IN (SELECT id_Films FROM Ufilms \
+            WHERE id_user=? and tag=?)", (id_user,tag,))
+        return await cursor.fetchall()
+
+    async def db_list_tagged_films_id(self, id_user=None, tag=sts.SETTAG):
+        ''' List only records with set tag '''
+        cursor = await self.dbm.execute("SELECT id FROM Films WHERE id IN (SELECT id_Films FROM Ufilms WHERE id_user=? and tag=?)", (id_user,tag,))
+        return await cursor.fetchall()
+
+    async def db_film_by_id(self, idf=None):
+        ''' List info by id record '''
+        cursor = await self.dbm.execute("SELECT name, nnm_url, mag_link, section, genre, rating_kpsk, rating_imdb, description, image_nnm_url,\
+                            image_nnm, publish, id_nnm FROM Films WHERE id=?", (idf,))
+        return await cursor.fetchone()
+
+    async def db_add_tag(self, idf, tag, id_user):
+        ''' User first Tag film in database '''
+        cur_date=datetime.now()        
+        cursor = await self.db_modify("INSERT INTO Ufilms (id_user, id_Films, date, tag) VALUES (?,?,?,?)",
+                    (id_user,idf,cur_date,tag))
+        if cursor:                                    
+            return str(cursor.rowcount)
+        else:
+            return None
+
+    async def db_switch_film_tag(self, idf, tag, id_user): 
+        ''' Update user tagging in database for films  '''
+        
+        cursor = await self.db_modify("UPDATE Ufilms SET tag = ? WHERE id_user = ? AND id_Films = ?",
+                    (tag,id_user,idf)) 
+        if cursor:                                    
+            return str(cursor.rowcount)
+        else:
+            return None
+
+    async def db_switch_user_tag(self, id_user, tag):
+        ''' Update tag in database for user '''
+        
+        cursor = await self.db_modify("UPDATE Ufilms SET tag=? WHERE id_user = ? AND tag <> ?", (tag,id_user,tag))
+        if cursor:                                    
+            return str(cursor.rowcount)
+        else:
+            return None               
+
+    async def db_get_tag(self, idf, id_user ):
+        ''' Get if exist current tag for user '''
+        cursor = await self.dbm.execute("SELECT tag FROM Ufilms WHERE id_Films = ? AND id_user = ?", (idf, id_user,))
+        res = await cursor.fetchone()
+        if res:
+            return int(dict(res).get('tag'))
+        else: return 0
+
+    async def db_add_share(self, field, share_list, id_user):
+        ''' Add to user table users to whom share lists '''
+        
+        # From deepseeek
+        try:
+            # Получаем текущий JSON
+            cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+            result = await cursor.fetchone()
+            
+            # Десериализация или создание нового списка
+            current_list = json.loads(result[0]) if result and result[0] else []
+            
+            # Добавляем новые элементы (поддерживает как одиночные, так и множественные значения)
+            if isinstance(share_list, list):
+                current_list.extend(share_list)
+            else:
+                current_list.append(share_list)
+            
+            # Обновляем запись в базе
+            await self.db_modify( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
+                (json.dumps(current_list, ensure_ascii=False), id_user) )
+            return True
+        except json.JSONDecodeError:
+            logging.error(f"ADD SHARE: Error in format data: {share_list}\n")
+            return False   
+        
+    async def db_del_share(self, field, users_to_remove, id_user):
+        '''Delete users from table to whom share lists '''
+
+        try:
+            # Получаем текущие данные
+            logging.error(f"DELETE SHARE: {users_to_remove}/{field}/{id_user} \n")
+            cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+            result = await cursor.fetchone()
+            logging.debug(f"DELETE SHARE: Result shared list for delete: {result}\n")
+
+            users_to_remove=int(users_to_remove)
+            
+            if not result or not result[0]:
+                return False
+
+            current_list = json.loads(result[0])
+            logging.debug(f"DELETE SHARE: Current list: {current_list}\n")
+
+            new_list = [item for item in current_list if item != users_to_remove]
+            logging.debug(f"DELETE SHARE: New list: {new_list}\n")
+
+            # Обновляем запись
+            await self.db_modify( f"UPDATE Users SET {field} = ? WHERE id_user = ?",
+                (json.dumps(new_list, ensure_ascii=False), id_user))
+
+            return True
+
+        except json.JSONDecodeError:
+            logging.error(f"DELETE SHARE: Error in format data: {users_to_remove}\n") 
+            return False
+
+    async def db_get_share(self, field, id_user):
+        '''Get share users '''
+
+        cursor = await self.dbm.execute(f"SELECT {field} FROM Users WHERE id_user = ?", (id_user,))
+        result = await cursor.fetchone()
+        
+        if not result or not result[0]:
+            return False
+
+        current_list = json.loads(result[0])
+        #logging.debug(f"Current get share list: {current_list}\n")
+        return current_list
+        
+    async def db_add_share_to_table(self, share_list, id_user):
+        ''' Complex add shares to table '''
+        
+        async with DatabaseBot(sts.db_name) as db:
+            # Exclude users not in DB
+            for id_cur_user in share_list:               
+                if not await db.db_exist_user(id_cur_user):
+                    share_list.remove(id_cur_user)
+                    logging.info(f"SHARE: User {id_cur_user} not exist in DB." )
+                    #print(f"User {id_cur_user} not exist in DB.")
+
+            # Exclude already exist share
+            exist_share = await db.db_get_share('share2users', id_user)            
+            if exist_share:                
+                for id_user_exist in exist_share:
+                    if id_user_exist in share_list:
+                        share_list.remove(id_user_exist)
+                        logging.info(f"SHARE: Share for user {id_user_exist}" )
+                        #print(f"Share for user {id_user_exist} already exist")                                    
+            # Add share to users in DB
+            if not share_list: # for test
+                logging.info(f"SHARE: Share list now empty for user: {id_user} already exist" )
+                #print(f"Share list is empty: {share_list}")
+                return False
+            
+            ret = await db.db_add_share( 'share2users', share_list, id_user )
+            logging.debug(f"SHARE: share2users add ret={ret} id_user={id_user} share_list={share_list}")
+            #print(f"ret={ret} id_user={id_user} share_list={share_list}")
+
+            # Add who share list to DB
+            if ret:
+                for id_user_u4s in share_list:                    
+                    ret = await db.db_add_share( 'users4share', id_user, id_user_u4s )
+                    logging.debug(f"SHARE: users4share add ret={ret} id_user_u4s={id_user_u4s}")
+                    #print(f"ret={ret} id_user_u4s={id_user_u4s}")
+                    if ret: 
+                        continue
+                    else:
+                        return False
+            else: 
+                return False
+            return True
+
+    async def db_del_share_from_table(self, del_user, id_user):
+        '''Delete share from id_user to del_user'''
+
+        async with DatabaseBot(sts.db_name) as db:
+            rec_id = await db.db_del_share( 'share2users', del_user, id_user )
+            #if not rec_id: return False
+            rec_id = await db.db_del_share( 'users4share', id_user, del_user )
+            #if not rec_id: return False
+
+            return True
+
+# For test block task
+async def test_db_add(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                        film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0):
+    ''' Test dblock'''
+   
+    async with DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                        film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    print(f'INS: id_nnm={id_nnm}   rec_id={rec_id}')
+                     
+async def test_db_update(idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 2 ):
+    '''Test dblock update db'''
+   
+    async with DatabaseBot(sts.db_name) as db:    
+        rec_id = await db.db_update_film(idf, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    print(f'UPD: id_nnm={id_nnm}   rec_id={rec_id}')
+      
+async def test_db_list_all():
+    '''Test dblock list all rec'''
+    async with DatabaseBot(sts.db_name) as db:   
+            rec_id = await db.db_list_all_id()
+    #print(f'rec_id={rec_id}')
+    print(f'------------------------------rec_id={len(rec_id)}-------------------------------------')
+        
+
+FAIL_MODIFY=0
+
+async def main():
+    """
+    This is the main entry point for the program
+    """
+    print("Begin main")
+    
+    sts.get_config()
+    sts.logfile = 'db_module_aio.log'
+    sts.db_name='test_aio_db.db'
+
+    # Enable logging
+    logging.basicConfig(level=sts.log_level, filename="backend_"+sts.logfile, filemode="a", format="%(asctime)s %(levelname)s %(message)s")
+    logging.info("--------------------------------------\nStart db_module_aio.")
+
+    
+      
+    id_nnm='12345'
+    nnm_url='http://test.ru'
+    name='Test film'
+    id_kpsk='kp12345'
+    id_imdb='imdb12345'
+    film_magnet_link=None
+    film_section='Test Section'
+    film_genre='Genre'
+    film_rating_kpsk='5'
+    film_rating_imdb='8'
+    film_description='Description test'
+    image_nnm_url='http://test_image.ru'
+    image_nnm=None
+    idf=1
+    #---
+    id_user='12345678'
+    
+    id_user0='0_87654321'
+    id_user1='1_000333000'
+    id_user2='2_87654321'
+    id_user3='3_000333000'
+    id_user4='4_000333000' # Not existen user
+
+    name_user='test_user'
+    active=1
+    rights=0
+    select_users_list0=[]
+    select_users_list1=[]
+    select_users_list2=[]
+    select_users_list3=[]
+    select_users_list4=[]
+
+    
+    select_users_list0.append(id_user1)
+    select_users_list0.append(id_user2)
+    select_users_list0.append(id_user3)
+    
+    select_users_list1.append(id_user2)
+    select_users_list1.append(id_user3)
+
+    async with DatabaseBot(sts.db_name) as db:
+        await db.db_create()
+
+    async with DatabaseBot(sts.db_name) as db:    
+        rec_id = await db.db_add_film(id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    print(f'INS FIRST: id_nnm={id_nnm}   rec_id={rec_id}')
+   
+       
+    # Test race condition for best res count set more 300
+    count=5
+    tasks=[]
+    for i in range(1, count+1):
+        # создаем задачи
+        task = test_db_add(id_nnm+str(i), nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                        film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0)
+        # складываем задачи в список
+        tasks.append(task)
+        
+        task=test_db_list_all()
+
+        # складываем задачи в список
+        tasks.append(task)
+        
+        # создаем задачи
+        task = test_db_update(i,id_nnm+str(i), nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                        film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0)
+        # складываем задачи в список
+        tasks.append(task)
+        
+    # планируем одновременные вызовы
+    await asyncio.gather(*tasks)
+    
+    async with DatabaseBot(sts.db_name) as db:    
+        rec_id = await db.db_update_film(1, id_nnm, nnm_url, name, id_kpsk, id_imdb, film_magnet_link, film_section, \
+                    film_genre, film_rating_kpsk, film_rating_imdb, film_description, image_nnm_url, image_nnm, publish = 0 )
+    print(f'UPD LAST: id_nnm={id_nnm}   rec_id={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:    
+        rec_id = await db.db_exist_Id(id_kpsk, id_imdb)
+    for row in rec_id: print(f"[db_list_4_publish]={row}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_list_4_publish()
+    for row in rec_id: print(f"[db_list_4_publish]={dict(row)}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_update_publish( 1 )
+    print(f'[db_update_publish]={rec_id}')
+        
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_list_all()
+    for row in rec_id: print(f"[db_list_all]={dict(row)}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_list_all_id()
+    for row in rec_id: print(f"[db_list_all_id]={dict(row)}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_search_list('test')
+    for row in rec_id: print(f"[db_list_all_id]={dict(row)}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_search_id('test')
+    for row in rec_id: print(f"[db_search_id]={dict(row)}")   
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user, name_user )
+    print(f'[db_add_user]={rec_id}')
+    
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_del_user( id_user )
+    print(f'db_del_user={rec_id}')
+    # Yet one for test
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user, name_user )
+    print(f'[db_add_user]={rec_id}')
+     # Yet one for test exception
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user, name_user )
+    print(f'[db_add_user+]={rec_id}')
+    
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user0, name_user )
+    print(f'[db_add_user0]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user1, name_user )
+    print(f'[db_add_user1]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user2, name_user )
+    print(f'[db_add_user2]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_user( id_user3, name_user )
+    print(f'[db_add_user3]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_exist_user(id_user)    
+    for row in rec_id: print(f"db_exist_user]={dict(row)}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_ch_rights_user(id_user, active, rights)
+    for row in rec_id: print(f"[db_ch_rights_user]={row}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_list_users( id_user, active, rights )
+    for row in rec_id: print(f"[db_list_users]={dict(row)}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_film_by_id(idf=1)
+    for row in rec_id: print(f"[db_film_by_id]={row}")
+    
+    print(f"Add tag: idf:{idf},tag:{sts.SETTAG}, id_user:{id_user}")
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_tag(idf, sts.SETTAG, id_user)
+    for row in rec_id: print(f"[db_add_tag]={row}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_switch_user_tag(id_user, sts.UNSETTAG)
+    for row in rec_id: print(f"[db_switch_user_tag]={row}")
+
+    print(f"Add tag: idf:{idf},tag:{sts.SETTAG}, id_user:{id_user}")
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_tag(idf+1, sts.SETTAG, id_user)
+    for row in rec_id: print(f"[db_add_tag]={row}")
+
+    print(f"Add tag: idf:{idf},tag:{sts.SETTAG}, id_user:{id_user}")
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_add_tag(idf+2, sts.SETTAG, id_user)
+    for row in rec_id: print(f"[db_add_tag]={row}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_switch_user_tag(id_user, sts.UNSETTAG)
+    for row in rec_id: print(f"[db_switch_user_tag]={row}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_list_tagged_films( id_user, tag=sts.SETTAG )
+    print(f'(db_list_tagged_films)={rec_id}')
+    for row in rec_id: print(f"[db_list_tagged_films]={dict(row)}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_list_tagged_films_id( id_user, tag=sts.SETTAG )
+    print(f'(db_list_tagged_films_id)={rec_id}')
+    for row in rec_id: print(f"[db_list_tagged_films_id]={dict(row)}")
+
+    # async with DatabaseBot(sts.db_name) as db:   
+    #     rec_id = await db.db_switch_film_tag(idf, sts.SETTAG, id_user)
+    # for row in rec_id: print(f"[db_switch_film_tag]={row}")
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_get_tag( idf, id_user )
+    for row in rec_id: print(f"[db_get_tag]={dict(row)}")
+
+    #async with DatabaseBot(sts.db_name) as db:    
+    #        rec_id = await db.db_add_share( 'share2users', share2users_list, id_user )
+    #print(f'[db.db_add_share users {share2users_list} for user {id_user}]={rec_id}')
+
+    #async with DatabaseBot(sts.db_name) as db:    
+    #        rec_id = await db.db_add_share( 'users4share', id_user, id_user2 )
+    #print(f'[db.db_add_share user {id_user} for user {id_user2}]={rec_id}')
+    
+    #async with DatabaseBot(sts.db_name) as db:    
+    #        rec_id = await db.db_del_share( 'share2users', id_user2, id_user )  
+    #print(f'[db.db_del_share user {id_user2} for user {id_user}]={rec_id}')
+
+    # Test share to user
+    #await db_add_share_to_table(select_users_list0, id_user0)
+    user_list=[]
+    user_list.append(id_user1)
+    async with DatabaseBot(sts.db_name) as db:
+        await db.db_add_share_to_table(user_list, id_user0)
+
+    #await db_add_share_to_table(select_users_list1, id_user1) 
+
+    # Test share to not existed user - user4
+    select_users_list2.append(id_user3)
+    select_users_list2.append(id_user4)
+    async with DatabaseBot(sts.db_name) as db:
+        await db.db_add_share_to_table(select_users_list2, id_user2)
+    
+    #Remove share User0 -> User1
+    async with DatabaseBot(sts.db_name) as db:
+        await db.db_del_share_from_table(id_user1, id_user0)
+
+    # Test share 
+    #select_users_list3.append(id_user3)
+    #select_users_list3.append(id_user4)
+
+    async with DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_get_share( 'share2users', id_user0 )
+    print(f'[db.db_get_share for user {id_user0}]={rec_id}')
+
+    async with DatabaseBot(sts.db_name) as db:    
+            rec_id = await db.db_get_share( 'users4share', id_user3 )
+    print(f'[db.db_get_share for user {id_user3}]={rec_id}')    
+
+    print('--------------INFO--------------')
+
+    async with DatabaseBot(sts.db_name) as db:   
+        rec_id = await db.db_info( id_user )
+    for row in rec_id: print(f"[db_info]={dict(row)}\n")
+    
+    print('--------------INFO--------------')
+
+    print(f'FAIL_MODIFY(test for race condition)={FAIL_MODIFY} ')
+
+if __name__ == "__main__":
+    asyncio.run(main())

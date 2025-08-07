@@ -2,6 +2,8 @@
 #
 # bash scripts for create i18n   
 #
+
+#source ../.venv/bin/activate
 domain=nnmbot
 PATH_TR="../locales"
 PATH_IN=".."
@@ -44,6 +46,11 @@ case "$1" in
                 python3 setup.py compile_catalog --directory ${PATH_TR} --domain ${domain}
                 ;;
              *)
+                echo "Sequence:"
+                echo "1. extract - exctract from code" 
+                echo "2. update - update translation files - add no translate stirngs"
+                echo "3. compile - compile to end point"
+                echo "init - only first once time when not translation yet"
                 echo "${0##*/} {extract|init|update|compile}"
                 RETVAL=1
 esac

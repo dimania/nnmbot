@@ -1,0 +1,72 @@
+#version: "2"
+name: nnmbot
+services:
+  nnmbot_fe:
+    image: dimania/nnmbot
+    command: python frontend_nnmbot.py
+        
+    volumes:
+          # mount config file
+        - type: bind
+          source: /home/dima/opt/nnmbot/etc/myconfig.py
+          target: /home/nnmbot/myconfig.py
+          read_only: true
+          
+          # mount dir for database file
+          # settings path file database must be changed in config file!
+        - type: bind
+          source: /home/dima/opt/nnmbot/data
+          target: /home/nnmbot/data
+        
+          # mount dir for logs
+          # settings path log file must be changed in config file!
+        - type: bind
+          source: /home/dima/opt/nnmbot/logs
+          target: /home/nnmbot/logs
+
+          # mount dir for session telegram file if need
+          # settings path log file must be changed in config file!
+        - type: bind
+          source: /home/dima/opt/nnmbot/session
+          target: /home/nnmbot/session
+          
+    # Critical secret keys can set over env vars 
+    env_file:
+        - path: ./config_over_env.env
+          format: raw
+
+  nnmbot_be:
+    image: dimania/nnmbot
+    command: python backend_nnmbot.py
+    
+    
+    volumes:
+          # mount config file
+        - type: bind
+          source: /home/dima/opt/nnmbot/etc/myconfig.py
+          target: /home/nnmbot/myconfig.py
+          read_only: true
+          
+          # mount dir for database file
+          # settings path file database must be changed in config file!
+        - type: bind
+          source: /home/dima/opt/nnmbot/data
+          target: /home/nnmbot/data
+        
+          # mount dir for logs
+          # settings path log file must be changed in config file!
+        - type: bind
+          source: /home/dima/opt/nnmbot/logs
+          target: /home/nnmbot/logs
+
+          # mount dir for session telegram file if need
+          # settings path log file must be changed in config file!
+        - type: bind
+          source: /home/dima/opt/nnmbot/session
+          target: /home/nnmbot/session
+
+          
+    # Critical secret keys can set over env vars 
+    env_file:
+        - path: ./config_over_env.env
+          format: raw

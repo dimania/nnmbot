@@ -70,7 +70,7 @@ sqlite3 <<EOF_2
 ATTACH "$OLD_DB" AS old;
 ATTACH "$NEW_DB" AS new;
 .databases
-INSERT INTO new.Films(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, date) SELECT id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, mag_link, date FROM old.Films;
+INSERT INTO new.Films(id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, date) SELECT id_msg, id_nnm, nnm_url, name, id_kpsk, id_imdb, date FROM old.Films;
 INSERT INTO new.Users(id_user, name_user, date, active, rights) SELECT id_user, name_user, date, active, rights FROM old.Users;
 INSERT INTO new.Ufilms(ufilms_id, id_user, id_Films, date, tag ) SELECT ufilms_id, id_user, id_Films, date, tag FROM old.Ufilms;
 
