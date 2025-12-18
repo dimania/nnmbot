@@ -21,6 +21,7 @@ from telethon.tl.custom import Button
 from telethon import errors
 from telethon.events import StopPropagation
 from telethon.sessions import StringSession
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 #from requests.packages.urllib3.util.retry import Retry
 # --------------------------------
 import settings as sts
@@ -151,6 +152,8 @@ async def publish_all_new_films():
     async with dbm.DatabaseBot(sts.db_name) as db:
         rows = await db.db_list_4_publish()
 
+    logging.debug(f"Publish new and updates films. Count films: {len(rows)}")
+    
     if rows:
        for row in rows:
          idf=dict(row).get('id')
@@ -241,6 +244,8 @@ async def send_card_one_record( idf, index, event, show_add_button=None, count_s
         idf - number film in db
         event - descriptor channel '''
     
+    id_usr = None
+
     if isinstance(event, events.CallbackQuery.Event):
         id_usr = event.query.user_id
     if isinstance(event, events.NewMessage.Event):
@@ -761,6 +766,11 @@ async def main_frontend():
     # First run check db for new Films and publish in Channel
     await publish_all_new_films()
     
+    # Set sheduler for publish updated films
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(publish_all_new_films, "interval", hours=24)
+    scheduler.start()
+
     # Get reaction user on inline Buttons in Channel
     @bot.on(events.CallbackQuery(chats=[PeerChannel(Channel_my_id)]))
     async def callback(event):
