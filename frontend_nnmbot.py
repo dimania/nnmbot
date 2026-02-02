@@ -491,6 +491,78 @@ async def create_choice_dialog(question, choice_buttons, event, level):
                 if sts.BASIC_MENU in choice_buttons[button_press]: #FIXME sts.BASIC_MENU in list may be or not accidentally?
                     await create_basic_menu(level, event)
 
+async def create_search_dialog(question, choice_buttons, event, level):
+    ''' Create dialog for choice buttons with text question
+        and run function when choice was 
+        question = "Text message for choice"
+        dict choice_buttons = {
+            "button1": ["Yes", "_yes",func_show_sombody0,[arg1,arg2...], SHOW_OR_NOT_MENU (optional) ],
+            "button2": ["No", "_no", func_show_sombody1,[arg1,arg2...]],
+            "button3": ["Cancel", "_cancel", func_show_sombody0,[arg1,arg2...]]
+        }
+        event = bot event handled id
+        level = user level for show menu exxtended or no
+    '''
+    rating_items=["5","6","7","8","9","10"]
+    buttons_rating = []
+    i=0
+    for r_item in rating_items:
+        buttons_rating.append( Button.inline(rating_items[i],f"rating_{r_item}".encode()) )
+        i=i+1
+
+    logging.debug("Create choice buttons")
+    search_data = {}
+    search_data["rating"]=''
+        
+    await event.respond(question, parse_mode='md', buttons=buttons_rating)
+    #msg = await bot.send_message(event.query.user_id, question, parse_mode='md', buttons=buttons_rating)
+
+    # Run hundler for dialog
+    @bot.on(events.CallbackQuery(pattern='rating_.*'))
+    async def callback_bot_choice(event):
+        logging.debug(f"Get callback event_bot_list {event}")  
+        button_data = event.data.decode()
+        #await event.delete()
+        logging.info(f"Get callbackquery -> : {button_data}")
+        button_data = button_data.replace('rating_','') 
+        for r_item in rating_items:
+            # clear previous selection
+            logging.info(f"All cycle selection: {r_item} -> {search_data["rating"]}")
+            if r_item == '✅'+search_data["rating"]:
+                index_item=rating_items.index(r_item)
+                rating_items[index_item] = rating_items[index_item].replace('✅','') #remove ✅  
+                logging.info(f"Clear previous selection: {r_item} -> {search_data["rating"]} -> {index_item} -> {rating_items[index_item]}")
+                #if already set
+                r_item=r_item.replace('✅','')
+            
+            if button_data == r_item:
+                logging.info(f"Set on button: {r_item}")
+                index_item=rating_items.index(r_item)
+                rating_items[index_item] = "✅" + rating_items[index_item] #add ✅
+
+        buttons_rating.clear() # clear all old buttons
+        # Craeate new buttons with clear ✅
+        i=0
+        for r_item in rating_items:
+            buttons_rating.append( Button.inline(rating_items[i],f"rating_{r_item}".encode()) ) 
+            i=i+1     
+        
+        search_data["rating"]=button_data #add selection for return result 
+        await event.respond(question, parse_mode='md',buttons=buttons_rating) #FIXME may be edit buttons?
+        #await bot.edit_message(msg, buttons=buttons_rating)            
+
+    @bot.on(events.NewMessage()) 
+    async def search_handler(event_search):
+        logging.info(f"Get search string: {event_search.message.message}")
+        if len(event_search.message.message)  < 3:
+            await event.respond(_("Search string very short - 3 chars min."))
+            #send_menu =sts.BASIC_MENU
+        search_data["sstr"]=event_search.message.message
+        logging.info(f"Return search data:  rating={search_data["rating"]} sstr={search_data["sstr"]} ")
+        bot.remove_event_handler(search_handler)
+        #await create_basic_menu(level, event)    
+        return search_data
+
 async def create_add_share(event , level):
     ''' Select users for share list films
         event = bot event handled id
@@ -923,28 +995,47 @@ async def main_frontend():
             send_menu =sts.BASIC_MENU
         elif button_data == '/bm_search':
             # Search Films
-            await event_bot.respond(_("Inputs search string (3 chars min.):"))
+            #await event_bot.respond(_("Inputs search string (3 chars min.):"))
             send_menu = sts.NO_MENU
-            @bot.on(events.NewMessage()) 
-            async def search_handler(event_search):
-                logging.info(f"Get search string: {event_search.message.message}")
-                if len(event_search.message.message)  < 3:
-                    await event_bot.respond(_("Search string very short - 3 chars min."))
-                    bot.remove_event_handler(search_handler)
-                    await create_basic_menu(menu_level, event_bot)
-                    #send_menu =sts.BASIC_MENU
-                else:
-                    # Get films tagget early
-                    choice_buttons = {
-                    "button1": [_("Card"), "CARD", query_search_by_one,[event_search.message.message, event_bot]],
-                    "button2": [_("List"), "LIST", query_search_list,[event_search.message.message, event_bot],sts.BASIC_MENU],
-                    "button3": [_("Cancel"), "HOME_MENU", home,[]]
+            choice_buttons = {
+                    "button1": [_("5+"), "5"],
+                    "button2": [_("6+"), "6"],
+                    "button3": [_("7+"), "7"],
+
+                    "button4": [_("8+"), "8"],
+                    "button5": [_("9+"), "9"],
+                    "button6": [_("10"), "10"]
+
+                    #"button7": [_("2018"), "2018"],
+                    #"button8": [_("2019"), "2019"],
+                    #"button9": [_("2020"), "2020"],
+
+                    #"button10": [_("2021"), "2021"],
+                    #"button11": [_("2017"), "2017"]
+
                     }
-                    await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
-                    #await query_search_list(event_search.message.message, event_bot)
-                    #await event_bot.respond(_("🏁............Done............🏁"))
-                    bot.remove_event_handler(search_handler)
-                    #await create_basic_menu(menu_level, event_bot)
+            await create_search_dialog(_("Inputs search string (3 chars min.):"), choice_buttons, event_bot, menu_level)
+
+            #@bot.on(events.NewMessage()) 
+            #async def search_handler(event_search):
+            #    logging.info(f"Get search string: {event_search.message.message}")
+            #    if len(event_search.message.message)  < 3:
+            #        await event_bot.respond(_("Search string very short - 3 chars min."))
+            #        bot.remove_event_handler(search_handler)
+            #        await create_basic_menu(menu_level, event_bot)
+            #        #send_menu =sts.BASIC_MENU
+            #    else:
+            #        # Get films tagget early
+            #        choice_buttons = {
+            #        "button1": [_("Card"), "CARD", query_search_by_one,[event_search.message.message, event_bot]],
+            #        "button2": [_("List"), "LIST", query_search_list,[event_search.message.message, event_bot],sts.BASIC_MENU],
+            #        "button3": [_("Cancel"), "HOME_MENU", home,[]]
+            #        }
+            #        await create_choice_dialog(_("Output all in one List or in Card format?"), choice_buttons, event_bot, menu_level)
+            #        #await query_search_list(event_search.message.message, event_bot)
+            #        #await event_bot.respond(_("🏁............Done............🏁"))
+            #        bot.remove_event_handler(search_handler)
+            #        #await create_basic_menu(menu_level, event_bot)
         elif button_data == '/bm_share':
             # Go to Share menu           
             send_menu = sts.SHARE_MENU
